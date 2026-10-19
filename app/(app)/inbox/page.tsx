@@ -1,0 +1,60 @@
+import Link from "next/link";
+import { getDb } from "@/lib/db";
+import { requireUser } from "@/lib/auth/dal";
+import { listLeads } from "@/lib/db/repos/leads";
+import { listMessages } from "@/lib/db/repos/messages";
+import { STAGE_LABEL } from "@/lib/domain/stages";
+import { ago } from "@/lib/format";
+import { Empty, PageHeader } from "@/components/ui";
+import { changeStage } from "../leads/actions";
+import { writeReply } from "./actions";
+
+export const dynamic = "force-dynamic";
+
+export default async function Inbox() {
+  await requireUser();
+  const db = getDb();
+  const leads = [...listLeads(db, { stage: "replied" }), ...listLeads(db, { stage: "call_offered" })];
+  return (
+    <>
+      <PageHeader title="Inbox" sub="People who wrote back. Automatic replies from their accounts are ignored." />
+      {leads.length === 0 ? <Empty title="No replies yet">When someone answers a DM, the conversation shows up here.</Empty> : (
+        <div className="flex flex-col gap-4">
+          {leads.map((l) => {
+            const msgs = listMessages(db, { leadId: l.id, limit: 6 }).reverse();
+            const queued = msgs.find((m) => m.direction === "out" && ["pending_approval", "approved"].includes(m.status));
+            return (
+              <article key={l.id} className="card p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <Link href={`/leads/${l.id}`} className="font-medium text-accent">@{l.handle}</Link>
+                  <span className="badge badge-ok">{STAGE_LABEL[l.stage]}</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {msgs.map((m) => (
+                    <div key={m.id} className={`max-w-xl rounded-2xl px-4 py-2 ${m.direction === "out" ? "self-end bg-accent-soft" : "self-start border border-line"}`}>
+                      {m.parts.join(" ")}
+                      <div className="mt-1 text-xs text-muted">{m.direction === "out" ? `${m.kind} · ${m.status}` : "reply"} · {ago(m.sentAt ?? m.createdAt)}</div>
+                    </div>
+                  ))}
+                </div>
+                {queued ? (
+                  <p className="mt-3 text-xs text-muted">{queued.status === "pending_approval" ? "A reply is waiting for approval." : "A reply is approved and queued to send."}</p>
+                ) : (
+                  <form action={writeReply} className="mt-3 flex gap-2">
+                    <input type="hidden" name="id" value={l.id} />
+                    <input name="text" required placeholder="Write a reply…" className="input" aria-label={`Reply to @${l.handle}`} />
+                    <button className="btn btn-primary">Send</button>
+                  </form>
+                )}
+                <div className="mt-3 flex gap-2">
+                  {l.stage === "replied" && <form action={changeStage}><input type="hidden" name="id" value={l.id} /><input type="hidden" name="to" value="call_offered" /><button className="btn">Mark call offered</button></form>}
+                  {l.stage === "call_offered" && <form action={changeStage}><input type="hidden" name="id" value={l.id} /><input type="hidden" name="to" value="booked" /><button className="btn">Mark booked</button></form>}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
