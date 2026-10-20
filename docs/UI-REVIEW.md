@@ -42,3 +42,17 @@ npm run smoke:ui
 ```
 
 Uses local port 3190, its own temporary database and random in-memory credentials. The worker is never started. Database and browser session are cleaned up; screenshots remain under ignored `data/ui-smoke/`. Stop another Next development server in the same checkout before running it. Set `UI_SCREENSHOT_DIR` to choose another screenshot output folder.
+
+## Plain-language usability pass (2026-10-20)
+
+The owner requested an everyday-user experience while keeping the approved visual design. Applied the supplied HIG foundations `references/writing.md` (Be clear, Build language patterns, Give clear guidance) and patterns `references/onboarding.md`, `entering-data.md`, `feedback.md`, `offering-help.md`, and `settings.md`. Web implementation uses native forms, labels and disclosures rather than native Apple components.
+
+- Navigation and stage descriptions now explain the work: Overview, Lead progress, Review messages and History. Display labels are separate from stored stage identifiers and audit codes.
+- Overview offers contextual first steps using actual account/campaign counts. No account row is presented as proof of an authenticated Instagram session or running assistant.
+- Campaign forms retain entries after validation errors, focus the field to fix, preserve approval-on defaults, and disclose booking/follow-ups separately. Creating a campaign is clearly distinguished from starting it.
+- Approvals say “Approve for sending”; Inbox says “Save reply.” Pending review, approved/waiting and sent messages remain distinct. Empty approvals get an in-place correction instead of an error page.
+- Action forms show saving/success/error feedback, prevent repeat clicks while pending, and retain values on failure. Teammate passwords stay out of React state and are cleared from the field after a successful save. Duplicate emails/accounts receive useful messages.
+- Instagram setup and search prerequisites live in contextual help. History uses readable entries that fit a phone and keeps exact audit details available under “Details for support.” Blocked Instagram accounts have no Resume button. Global do-not-contact effects are explained before the action.
+- Added four presentation tests (62 total); expanded isolated browser coverage for invalid follower ranges/booking links, retained values, empty approval and rejection, account errors/duplicates, budget persistence, teammate duplicates/password clearing, notes and reply approval. The browser checks also cover populated Inbox, Accounts, History and lead pages in both themes at 1440/390px, and assert no runtime or console errors. Screenshots preserve the cursor to avoid Playwright mutating input styles before hydration. The browser checks use temporary data and never run the worker.
+
+All original outreach rules, schema, migrations, dependency versions and live-verification limits remain unchanged. No usability study with a representative nontechnical user or full assistive-technology audit has been performed.
