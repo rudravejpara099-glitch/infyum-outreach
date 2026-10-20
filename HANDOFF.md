@@ -87,3 +87,13 @@ The owner's sign-in attempt exposed that the review server was still using the d
 
 ## Parallel accounts (Claude, 2026-10-20)
 Worker now runs one lane per Instagram account plus a shared lane (`worker/runner.ts`: `runOne(deps, lane)`, `runLanesUntilIdle`, `currentLanes`; `lib/db/repos/jobs.ts`: `claimNext(db, types?, lane?)`). New leads go to the least-loaded account (`leastLoadedAccount`). Tests: `tests/runner.test.ts` "parallel accounts". Still unverified with the real Playwright driver and real Instagram.
+
+## At-cost billing planning (Codex, 2026-10-20)
+
+The owner's new billing task explicitly brings at-cost billing into scope, superseding the earlier deferral for this task only. Branch `feat/billing-at-cost`; plan and requests to Claude are in docs/COLLAB.md, Codex #3. Claimed migration 2 there; no schema or billing code has been written. Implementation waits for the required single grilling round and owner confirmation. Codex owns the new `lib/billing/` and UI; Claude owns paid AI/worker/Apify hooks, with board ACK required before integration.
+
+Locked by the new task: actual metered costs plus processor costs, no plans/tiers/subscription price, integer USD micro-dollars, owner-only `markup_percent` default 0, paid API for billed AI, hosted checkout, TEST mode only and no real money without a later explicit owner instruction. The rough daily estimates are planning figures, not prices to charge. Attribution, explicit owner authority, billing periods, fee reconciliation and spending-policy details remain questions for the owner. No provider secrets were inspected, no paid API calls ran, and no payment flow has been verified.
+
+Baseline on `a633bf8`: `npm test` 60 passed, `npm run typecheck` passed, `npx next build` passed. The real-data preview remains stopped. All new billing functionality is unimplemented/unverified at this planning stage.
+
+Proposals/out of scope: plans, tiers, free trials, discounts, taxes and invoicing-law implementation, multi-company accounts. Taxes and terms of service need review by a qualified person before taking real money. Do not treat the test implementation as legal or tax clearance.
