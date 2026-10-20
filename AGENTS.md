@@ -1,3 +1,6 @@
+# Start here
+Read `HANDOFF.md` first: product rules, decisions, what is built, what is untested, and the next tasks.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
