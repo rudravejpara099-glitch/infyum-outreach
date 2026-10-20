@@ -2,6 +2,29 @@
 
 Internal web app for Instagram outreach: choose an audience, find and check leads, warm them up, send three custom DMs, handle replies and follow-ups, until a call is booked.
 
+## Quick start for a teammate (about 10 minutes)
+
+You need: a Mac or PC with Node.js 22 or newer, Git, and Google Chrome.
+
+1. Get the code and install:
+   ```bash
+   git clone https://github.com/rudravejpara099-glitch/infyum-outreach.git
+   cd infyum-outreach
+   npm install
+   npx playwright install chromium
+   ```
+2. Copy `.env.example` to `.env.local` and set `SESSION_SECRET` to any long random text.
+3. Start the app in one terminal: `npm run dev`, then open http://localhost:3000. The first visit asks you to create the first account (the first person to do this on a computer becomes its admin). Add teammates later in Settings.
+4. Optional, to let the app work on its own, start the worker in a second terminal: `npm run worker`.
+5. Run `claude` once in a terminal and sign in (the worker uses it to write DMs).
+6. On the Accounts page, connect an Instagram account and sign in by hand in the window that opens.
+
+Each computer has its own private database (`data/`, never uploaded). Leads and settings do NOT sync between computers yet. To share one set of data, run the app on one computer and have everyone use that one.
+
+Start here to understand it: `HANDOFF.md` (rules, decisions, what is done and what is not), `docs/DESIGN.md` (how it must look), `AGENTS.md` (for coding agents).
+
+Check it works: `npm test` (52 tests) and `npm run typecheck`.
+
 ## Run it
 
 ```bash
