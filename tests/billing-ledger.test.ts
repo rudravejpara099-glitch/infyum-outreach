@@ -71,8 +71,16 @@ describe("durable ledger and reservations", () => {
     expect(() => reserveUsage(db, input())).toThrow();
     db.exec("INSERT INTO billing_integration_ack VALUES(1,'fixture-only','tests','2026-01-01'); INSERT INTO settings VALUES('apify_monthly_cap_usd','10');");
     expect(() => reserveUsage(db, { ...input(), provider: "apify" })).toThrow();
-    reserveUsage(db, { ...input("apify-a"), provider: "apify", apifyMonthlyUsageMicros: 7000000 });
-    expect(() => reserveUsage(db, { ...input("apify-b"), provider: "apify", apifyMonthlyUsageMicros: 7000000 })).toThrow();
+    reserveUsage(db, { ...input("apify-a"), provider: "apify", apifyMonthlyUsageMicros: 7000000, apifyUsageObservedAt: jan });
+    expect(() => reserveUsage(db, { ...input("apify-b"), provider: "apify", apifyMonthlyUsageMicros: 7000000, apifyUsageObservedAt: jan })).toThrow();
+  });
+  it("counts Apify settlements from another lane after an aggregate observation and refuses stale aggregates", () => {
+    db.exec("INSERT INTO settings VALUES('apify_monthly_cap_usd','10')");
+    const apify = { ...input("apify-a"), provider: "apify" as const, apifyMonthlyUsageMicros: 7000000, apifyUsageObservedAt: jan };
+    reserveUsage(db, apify);
+    settleUsage(db, "apify-a", [{ eventKey: "run-a", userId: 1, occurredAt: jan, kind: "apify", quantity: 1, unitCostMicros: 1000000, unitQuantity: 1, costMicros: 1000000, providerRef: "run-a", source: apify.source }], jan);
+    expect(() => reserveUsage(db, { ...apify, operationId: "apify-b" })).toThrow("cap");
+    expect(() => reserveUsage(db, { ...apify, operationId: "stale", now: "2026-01-01T00:01:00.000Z" })).toThrow("Refresh");
   });
   it("rejects costs predating assignment and requires the model price captured at dispatch", () => {
     expect(() => reserveUsage(db, { ...input(), now: "2025-12-31T00:00:00.000Z" })).toThrow();

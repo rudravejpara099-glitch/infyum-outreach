@@ -32,7 +32,7 @@ export function billingHold(db: Db, userId: number, now = new Date().toISOString
   if (!canReserve(snapshot)) return "Your monthly spending limit is approaching or reached. New paid work is paused at 90%.";
   return null;
 }
-export function reserveUsage(db: Db, input: { userId: number; operationId: string; provider: "ai" | "apify"; model?: string; maxCostMicros: number; source: Source; now?: string; apifyMonthlyUsageMicros?: number }): Reservation & { fresh: boolean } {
+export function reserveUsage(db: Db, input: { userId: number; operationId: string; provider: "ai" | "apify"; model?: string; maxCostMicros: number; source: Source; now?: string; apifyMonthlyUsageMicros?: number; apifyUsageObservedAt?: string }): Reservation & { fresh: boolean } {
   const now = input.now ?? new Date().toISOString();
   return db.transaction(() => {
     integer(input.maxCostMicros);
@@ -53,10 +53,15 @@ export function reserveUsage(db: Db, input: { userId: number; operationId: strin
     if (!canReserve({ ...current, projectedMicros: projected.totalCents * 10000 })) throw new BillingError("This task would reach the 90% spending cutoff");
     if (input.provider === "apify") {
       const setting = db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string } | undefined;
-      if (!setting?.value || input.apifyMonthlyUsageMicros === undefined) throw new BillingError("Apify cap and authoritative current-month usage are required");
+      if (!setting?.value || input.apifyMonthlyUsageMicros === undefined || !input.apifyUsageObservedAt) throw new BillingError("Apify cap and authoritative current-month usage are required");
+      const observed = Date.parse(input.apifyUsageObservedAt), currentTime = Date.parse(now);
+      if (!Number.isFinite(observed) || observed > currentTime || currentTime - observed > 30000 || periodFor(input.apifyUsageObservedAt).start !== periodFor(now).start) throw new BillingError("Refresh Apify’s authoritative monthly usage before reserving");
       const cap = parseUsd(setting.value); integer(input.apifyMonthlyUsageMicros);
       const held = total(db, "SELECT coalesce(sum(max_cost_micros),0) n FROM billing_reservations WHERE provider='apify' AND status='held'");
-      const used = sum([input.apifyMonthlyUsageMicros, held, input.maxCostMicros]);
+      // A second lane can settle while the monthly-usage request is in flight.
+      // Keep those charges counted after their reservations have been released.
+      const settledSinceObservation = total(db, "SELECT coalesce(sum(cost_micros),0) n FROM billing_usage_events WHERE kind='apify' AND created_at>=?", new Date(observed).toISOString());
+      const used = sum([input.apifyMonthlyUsageMicros, settledSinceObservation, held, input.maxCostMicros]);
       if (BigInt(used) * 10n >= BigInt(cap) * 9n) throw new BillingError("Apify’s monthly cap would be reached");
     }
     db.prepare("INSERT INTO billing_reservations(operation_id,user_id,provider,model,rate_id,max_cost_micros,period_start,source_json,created_at) VALUES(?,?,?,?,?,?,?,?,?)").run(input.operationId, input.userId, input.provider, input.provider === "ai" ? input.model : null, rate?.id ?? null, input.maxCostMicros, periodFor(now).start, source, now);
