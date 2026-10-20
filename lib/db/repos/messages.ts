@@ -52,12 +52,16 @@ export function getMessage(db: Db, id: number): Message | null {
   const r = db.prepare("SELECT * FROM messages WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   return r ? map(r) : null;
 }
-export function listMessages(db: Db, f: { leadId?: number; campaignId?: number; status?: MessageStatus; limit?: number } = {}): Message[] {
+export function countPendingMessages(db: Db): number {
+  return (db.prepare("SELECT COUNT(*) AS count FROM messages WHERE status='pending_approval'").get() as { count: number }).count;
+}
+
+export function listMessages(db: Db, f: { leadId?: number; campaignId?: number; status?: MessageStatus; limit?: number; oldestFirst?: boolean } = {}): Message[] {
   const where: string[] = []; const args: unknown[] = [];
   if (f.leadId) { where.push("lead_id = ?"); args.push(f.leadId); }
   if (f.campaignId) { where.push("lead_id IN (SELECT id FROM leads WHERE campaign_id = ?)"); args.push(f.campaignId); }
   if (f.status) { where.push("status = ?"); args.push(f.status); }
-  const sql = `SELECT * FROM messages ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY id DESC LIMIT ?`;
+  const sql = `SELECT * FROM messages ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY id ${f.oldestFirst ? "ASC" : "DESC"} LIMIT ?`;
   return (db.prepare(sql).all(...args, f.limit ?? 300) as Record<string, unknown>[]).map(map);
 }
 

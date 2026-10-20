@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { addLead } from "@/lib/db/repos/leads";
-import { createOutgoing, approveMessage, listMessages } from "@/lib/db/repos/messages";
+import { createOutgoing, approveMessage, listMessages, countPendingMessages } from "@/lib/db/repos/messages";
 import { campaignOverview } from "@/lib/queries/campaign-overview";
 
 let db: Db;
@@ -23,6 +23,7 @@ it("returns honest zero counts for an empty campaign", () => {
 it("scopes the review count and previews to the campaign", () => {
   const a = campaign("A"), b = campaign("B");
   const message = draft(a, "alice"); draft(b, "bob");
+  expect(countPendingMessages(db)).toBe(2);
   expect(campaignOverview(db, a.id)).toMatchObject({ total: 1, pendingCount: 1, pending: [{ id: message.id, handle: "alice", partCount: 3 }] });
   expect(listMessages(db, { campaignId: a.id, status: "pending_approval" }).map(m => m.id)).toEqual([message.id]);
 });
@@ -37,6 +38,15 @@ it("removes an approved message from the waiting count immediately", () => {
   const c = campaign("Review"); const m = draft(c, "review");
   approveMessage(db, m.id, "test");
   expect(campaignOverview(db, c.id).pendingCount).toBe(0);
+});
+it("keeps the oldest preview reachable when the approval queue exceeds one page", () => {
+  const c = campaign("Backlog");
+  const first = draft(c, "oldest");
+  for (let index = 0; index < 101; index++) draft(c, `backlog${index}`);
+  const queue = listMessages(db, { campaignId: c.id, status: "pending_approval", limit: 100, oldestFirst: true });
+  expect(queue[0].id).toBe(first.id);
+  expect(queue).toHaveLength(100);
+  expect(campaignOverview(db, c.id).pendingCount).toBe(102);
 });
 it("counts inbox conversations by stage without claiming they are unread", () => {
   const a = campaign("A"), b = campaign("B");
