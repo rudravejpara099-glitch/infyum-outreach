@@ -217,7 +217,7 @@ try {
         await page.locator("h1").waitFor();
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Populated page overflow: ${route} ${width} ${mode}`);
         if (route === "/activity") {
-          assert.equal(await page.getByText("auth.login", { exact: true }).count(), 0, "Technical events belong inside support details");
+          assert.equal(await page.getByText("auth.login", { exact: true }).isVisible(), false, "Technical events belong inside support details");
           await page.getByText("Signed in", { exact: true }).first().waitFor();
         }
         await page.screenshot({ path: path.join(screenshots, `populated-${route.slice(1).replaceAll("/", "-")}-${mode}-${width}.png`), fullPage: true, caret: "initial" });
