@@ -145,3 +145,14 @@ describe("jobs", () => {
     const j = claimNext(db)!; completeJob(db, j.id);
   });
 });
+
+describe("worker status", () => {
+  it("is running only while the heartbeat is fresh", async () => {
+    const { beat, workerStatus } = await import("@/lib/queries/worker-status");
+    const t = new Date("2026-10-20T12:00:00Z");
+    expect(workerStatus(db, t).running).toBe(false);
+    beat(db, t);
+    expect(workerStatus(db, new Date(t.getTime() + 10_000)).running).toBe(true);
+    expect(workerStatus(db, new Date(t.getTime() + 60_000)).running).toBe(false);
+  });
+});

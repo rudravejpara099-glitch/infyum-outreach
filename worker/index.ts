@@ -6,6 +6,7 @@ import { requeueStuck } from "@/lib/db/repos/jobs";
 import { defaultEngine } from "@/lib/engine";
 import { ApifyClient } from "@/lib/leads/apify";
 import { humanDelayMs } from "@/lib/domain/pacing";
+import { beat } from "@/lib/queries/worker-status";
 import { PlaywrightInstagram } from "./instagram";
 import { currentLanes, planWork, runOne, type Deps } from "./runner";
 
@@ -30,6 +31,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const running = new Map<string, Promise<void>>();
   while (!stopping) {
     try {
+      beat(db, new Date());
       planWork(deps);
       for (const lane of currentLanes(db)) {
         const key = String(lane.accountId);
