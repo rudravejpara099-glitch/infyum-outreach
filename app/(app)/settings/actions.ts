@@ -11,8 +11,10 @@ import { logActivity } from "@/lib/db/repos/activity";
 
 export async function addTeammate(form: FormData) {
   const user = await requireUser();
-  const p = z.object({ name: z.string().min(1), email: z.string().email(), password: z.string().min(8) }).parse(Object.fromEntries(form));
-  if (findUserByEmail(getDb(), p.email)) return;
+  const parsed = z.object({ name: z.string().min(1), email: z.string().email(), password: z.string().min(8) }).safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { error: "Enter a name, a valid email and a password with at least 8 characters.", field: String(parsed.error.issues[0].path[0]) };
+  const p = parsed.data;
+  if (findUserByEmail(getDb(), p.email)) return { error: "This email already has access to the workspace.", field: "email" };
   createUser(getDb(), p.email, p.name, hashPassword(p.password));
   logActivity(getDb(), user.email, "team.added", { detail: p.email });
   revalidatePath("/settings");

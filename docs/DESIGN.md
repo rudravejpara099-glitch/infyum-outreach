@@ -16,7 +16,7 @@ Goal: calm, fast, trustworthy. A tool people use all day, so information design 
 5. Every control has a visible keyboard focus. Respect reduced motion. Use real labels, not placeholders only.
 6. One accent colour. Do not decorate every card the same way; reserve border, fill and shadow for the element that needs setting apart.
 7. Optical gradients, highlights and shadows may express material depth, per the owner’s approved liquid-glass direction. Avoid the generic-AI look: purple-to-blue gradients, emoji as section markers, everything centred, the same radius and shadow on everything, hero banners on a tool.
-8. Copy: plain and specific, active voice, say what happens ("Approve and queue"). No filler, no apologies, no clever labels.
+8. Copy: plain and specific, active voice, say what happens ("Approve for sending"). No filler, no apologies, no clever labels.
 9. Numbers align (`tabular-nums`). Dates and times are shown in the team time zone.
 10. Most-used screens (Pipeline board, Approvals, Inbox) get the most polish: fast scan, clear primary action, safe destructive actions.
 

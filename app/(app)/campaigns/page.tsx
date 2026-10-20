@@ -25,7 +25,7 @@ export default async function CampaignsPage() {
             return (
               <Link key={c.id} href={`/campaigns/${c.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-bg">
                 <div>
-                  <div className="font-medium">{c.name} <span className={`badge ml-2 ${STATUS_BADGE[c.status]}`}>{c.status}</span></div>
+                  <div className="font-medium">{c.name} <span className={`badge ml-2 ${STATUS_BADGE[c.status]}`}>{{ draft: "Draft", active: "Running", paused: "Paused", done: "Finished" }[c.status]}</span></div>
                   <div className="mt-0.5 text-xs text-muted">{c.niches.join(", ") || "No niche chosen"} · {c.minFollowers.toLocaleString()} to {c.maxFollowers.toLocaleString()} followers · {c.country}</div>
                 </div>
                 <div className="text-right text-xs text-muted tabular-nums">{total} leads · {s.dm_sent ?? 0} sent · {(s.replied ?? 0) + (s.call_offered ?? 0)} replied · {s.booked ?? 0} booked</div>

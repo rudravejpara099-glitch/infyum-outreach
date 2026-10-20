@@ -84,3 +84,13 @@ Verification and remaining limits are recorded in `docs/UI-REVIEW.md`. Next work
 
 ### Local login follow-up (2026-10-20)
 The owner's sign-in attempt exposed that the review server was still using the disposable `data/ui-review.db`. The production preview at port 3100 has now been restarted against the original database at `/Users/rudravejpara/ai work/infyum-outreach/data/outreach.db`, using a private, ignored `.env.local` with a new random session secret and the matching original profiles path. The original database had 132 imported leads and no users or campaigns at the time of reconnecting, so `/setup` is the intended next step for the owner to create their own local app account. A SQLite backup was saved to ignored `data/before-login-reconnect.db`. No password was requested, reset or displayed, and no worker was started. Keep the owner's data separate from the repeatable UI smoke fixtures.
+
+## Everyday-user UX pass (2026-10-20)
+
+Branch `feat/plain-language-ux`, based on the unmerged `feat/liquid-glass-workspace` branch. Keep PR #1 as its dependency when reviewing/merging.
+
+Applied the repo's Apple HIG foundations/patterns to the existing workflow: plain navigation and stage/status labels, useful first steps, optional campaign details, retained values and focused correction on campaign errors, visible saving/results, clearer Instagram/search setup help, support-only audit codes, accurate approval/reply button wording, and a clear explanation of global do-not-contact effects. Blocked accounts no longer offer Resume in the UI. Business rules, stored stage identifiers, migrations and dependencies are unchanged.
+
+Verification: 62 unit/integration tests, typecheck, lint, production build and expanded isolated Playwright smoke. Browser coverage includes light/dark desktop/mobile layouts, lead detail, invalid forms, retained entries, empty approval/rejection, duplicate accounts/teammates, budget/notes persistence and a saved reply that remains pending approval. Temporary browser fixtures are separate from the owner's real database; no worker, external search or Instagram interaction was started. See `docs/UI-REVIEW.md` for details and remaining accessibility/live-integration limitations.
+
+The owner's original-data preview remains at port 3100 using ignored `.env.local`. Preserve this data connection. Next live work still requires the owner's Claude and Instagram sign-ins, read-only checks first, then explicit approval before engagement or sending.

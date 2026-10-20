@@ -71,3 +71,15 @@
 .auth-description { color:var(--muted); font-size:13px; line-height:1.7; margin:12px 0 28px; }
 .auth-footnote { color:var(--muted); font-size:10px; margin-top:24px; }
 @media (max-width:420px) { .auth-panel { padding:28px 24px; } }
+
+/* Everyday feedback stays next to the action. Allow longer, plain-language labels. */
+.feedback-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: contents; }
+.feedback-fields:disabled { opacity: .65; }
+.form-feedback { font-size: .8125rem; line-height: 1.6; flex-basis: 100%; grid-column: 1 / -1; margin: 0; }
+.form-feedback:empty { display: none; }
+.support-detail { font-size: .75rem; max-width: 32rem; overflow-wrap: anywhere; }
+.support-detail summary { cursor: pointer; color: var(--muted); }
+.form-section { border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.form-section > summary { cursor: pointer; font-weight: 600; }
+.form-section[open] > summary { margin-bottom: 1rem; }
+@media (max-width: 640px) { .form-columns { grid-template-columns: 1fr; } }
