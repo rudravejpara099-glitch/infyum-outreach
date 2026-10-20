@@ -5,10 +5,10 @@ import { InstagramBlockedError } from "./driver";
 import { commentPrompt, SYSTEM } from "@/lib/engine/prompts";
 import { qualify } from "@/lib/domain/qualify";
 import { remainingToday } from "@/lib/domain/limits";
-import { getAccount, setAccountStatus } from "@/lib/db/repos/accounts";
+import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { activeJobExists, claimNext, completeJob, deferJob, enqueue, failJob } from "@/lib/db/repos/jobs";
+import { activeJobExists, claimNext, completeJob, deferJob, enqueue, failJob, type Lane } from "@/lib/db/repos/jobs";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
@@ -39,11 +39,12 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
     const accounts = campaignAccountIds(db, c.id);
     if (accounts.length === 0) continue;
     for (const lead of listLeads(db, { campaignId: c.id, limit: 2000 })) {
-      if (!lead.accountId) assignLead(db, lead.id, c.id, accounts[lead.id % accounts.length]);
+      const chosen = lead.accountId ?? leastLoadedAccount(db, accounts)!;
+      if (!lead.accountId) assignLead(db, lead.id, c.id, chosen);
       const step = { found: "qualify", qualified: "warmup", warmed: "draft_dm" }[lead.stage as "found" | "qualified" | "warmed"];
       if (!step || activeJobExists(db, step, lead.id)) continue;
       if (step === "draft_dm" && hasOutgoing(db, lead.id, "dm")) continue;
-      enqueue(db, { type: step, leadId: lead.id, accountId: lead.accountId ?? accounts[lead.id % accounts.length] });
+      enqueue(db, { type: step, leadId: lead.id, accountId: chosen });
     }
   }
   for (const lead of dueFollowups(db, now().toISOString().replace("T", " ").slice(0, 19))) {
@@ -72,9 +73,9 @@ function hasOutgoing(db: Db, leadId: number, kind: string, statuses = ["draft", 
   return listMessages(db, { leadId }).some((m) => m.direction === "out" && m.kind === kind && statuses.includes(m.status));
 }
 
-/** Runs at most one job. Returns false when nothing was due. */
-export async function runOne(deps: Deps): Promise<boolean> {
-  const job = claimNext(deps.db);
+/** Runs at most one job (from one lane when given). Returns false when nothing was due. */
+export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
+  const job = claimNext(deps.db, undefined, lane);
   if (!job) return false;
   try {
     await process(deps, job);
@@ -189,4 +190,29 @@ export async function runUntilIdle(deps: Deps, maxJobs = 200): Promise<number> {
   let n = 0;
   while (n < maxJobs && (await runOne(deps))) { n++; planWork(deps); }
   return n;
+}
+
+/** The lanes that exist right now: one per Instagram account, plus the shared lane for jobs without an account. */
+export function currentLanes(db: Db): Lane[] {
+  return [{ accountId: null }, ...listAccounts(db).map((a) => ({ accountId: a.id }))];
+}
+
+/**
+ * Works through everything due, with every lane running at the same time.
+ * Inside one lane jobs run strictly one after another, so an Instagram account is never used twice at once.
+ */
+export async function runLanesUntilIdle(deps: Deps, maxJobsPerLane = 200): Promise<number> {
+  let total = 0;
+  // A lane can go quiet while another lane's work queues the next step for it, so repeat until a full pass finds nothing.
+  for (;;) {
+    planWork(deps);
+    const counts = await Promise.all(currentLanes(deps.db).map(async (lane) => {
+      let n = 0;
+      while (n < maxJobsPerLane && (await runOne(deps, lane))) { n++; planWork(deps); }
+      return n;
+    }));
+    const pass = counts.reduce((a, b) => a + b, 0);
+    total += pass;
+    if (pass === 0) return total;
+  }
 }
