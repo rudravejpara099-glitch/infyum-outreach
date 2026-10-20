@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "worker": "tsx worker/index.ts",
+    "import": "tsx scripts/import-csv.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
