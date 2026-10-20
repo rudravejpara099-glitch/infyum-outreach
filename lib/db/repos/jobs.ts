@@ -68,3 +68,9 @@ export function activeJobExists(db: Db, type: string, leadId: number | null, acc
 export function deferJob(db: Db, job: Job, minutes: number): void {
   db.prepare("UPDATE jobs SET status='queued', attempts = attempts - 1, run_after = datetime('now', ?) WHERE id = ?").run(`+${minutes} minutes`, job.id);
 }
+
+/** Try again at a specific moment (used by human pacing: breaks, lunch, off hours). Does not count as a failure. */
+export function deferJobUntil(db: Db, job: Job, until: Date): void {
+  db.prepare("UPDATE jobs SET status='queued', attempts = attempts - 1, run_after = ? WHERE id = ?")
+    .run(until.toISOString().replace("T", " ").slice(0, 19), job.id);
+}

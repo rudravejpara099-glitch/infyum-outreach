@@ -70,7 +70,7 @@ try {
   await page.getByRole("heading", { name: "3 leads in this campaign" }).waitFor();
   const db = openDb(dbPath);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
-    maxFollowers: 150000, bookingLink: "", approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+    maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
   for (const lead of listLeads(db, { campaignId: id })) {
     createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"], campaign: { approvalRequired: true } }, "ui-fixture");
   }

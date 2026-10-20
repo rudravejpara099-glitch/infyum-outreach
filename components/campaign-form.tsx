@@ -30,8 +30,6 @@ export function CampaignForm({ campaign, accounts, selected }: { campaign?: Camp
         <div><label className="label" htmlFor="country">Country</label><input id="country" name="country" defaultValue={campaign?.country ?? "United States"} className="input" /></div>
       </div>
 
-      <div><label className="label" htmlFor="bookingLink">Booking link for this campaign</label><input id="bookingLink" name="bookingLink" defaultValue={campaign?.bookingLink} placeholder="https://calendly.com/…" className="input" /></div>
-
       <fieldset>
         <legend className="label">Instagram accounts that can send</legend>
         {accounts.length === 0 ? <p className="text-muted">Connect an account first on the Accounts page.</p> : (

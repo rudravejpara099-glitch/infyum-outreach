@@ -52,7 +52,7 @@ async function main() {
     saveCeiling(db, 1, 200000000, previous);
     db.prepare("INSERT INTO billing_integration_ack VALUES(1,'local-fixture-only','simulated-worker',?)").run(previous);
     saveModelRate(db, 1, { model: "fixture-model", inputMicros: 3000000, outputMicros: 15000000, cacheReadMicros: null, cacheWriteMicros: null, source: "https://provider.example.test/prices", confirmed: true }, previous);
-    const campaign = createCampaign(db, { name: "Billing test campaign", niches: [], country: "United States", minFollowers: 2000, maxFollowers: 150000, audienceText: "Only disposable test data", bookingLink: "", approvalRequired: true, followupsEnabled: false }, [], "fixture");
+    const campaign = createCampaign(db, { name: "Billing test campaign", niches: [], country: "United States", minFollowers: 2000, maxFollowers: 150000, audienceText: "Only disposable test data", approvalRequired: true, followupsEnabled: false }, [], "fixture");
     const account = createAccount(db, { handle: "billing.fixture", profileDir: path.join(temp, "unused") }, "fixture");
     claimResource(db, 1, "campaign", campaign.id, previous); claimResource(db, 1, "account", account.id, previous);
     addResourceCost(db, 1, { userId: 1, accountId: account.id, kind: "proxy_share", amountMicros: 10000000, reference: "simulated-provider-invoice" }, previous);

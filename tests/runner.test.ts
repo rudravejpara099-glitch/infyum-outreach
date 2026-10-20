@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
 import { createAccount, getAccount } from "@/lib/db/repos/accounts";
 import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
-import { addLead, getLead } from "@/lib/db/repos/leads";
+import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, listMessages } from "@/lib/db/repos/messages";
 import { InstagramBlockedError, type InstagramDriver } from "@/worker/driver";
-import { runLanesUntilIdle, runUntilIdle, type Deps } from "@/worker/runner";
+import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 
 const LINK = "https://portfolio.infyum.com/sales-funnel";
 const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudra at Infyum, a small team in India. ${LINK}`, "Which link do most callers use?"] });
@@ -36,7 +36,7 @@ const engine = { async complete({ prompt }: { prompt: string }) {
 function setup(approvalRequired: boolean) {
   const acct = createAccount(db, { handle: "me", profileDir: "/tmp/x", dailyCap: 35 }, "t");
   db.prepare("UPDATE ig_accounts SET ramp_start = '2026-01-01'").run();
-  const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, bookingLink: "https://cal.test/a", approvalRequired, followupsEnabled: true }, [acct.id], "t");
+  const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired, followupsEnabled: true }, [acct.id], "t");
   setCampaignStatus(db, camp.id, "active", "t");
   return { acct, camp };
 }
@@ -107,7 +107,7 @@ describe("worker pipeline", () => {
     expect(driver.sent).toHaveLength(0);
   });
 
-  it("reads replies, ignores auto-replies, and queues a drafted answer", async () => {
+  it("reads replies, ignores auto-replies, and hands off without drafting", async () => {
     const { camp } = setup(false);
     const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");
     await runUntilIdle(deps);
@@ -119,7 +119,7 @@ describe("worker pipeline", () => {
     clock = new Date("2026-10-20T12:00:00Z");
     await runUntilIdle(deps);
     expect(getLead(db, lead.id)!.stage).toBe("replied");
-    expect(listMessages(db, { leadId: lead.id }).some((m) => m.kind === "reply")).toBe(true);
+    expect(listMessages(db, { leadId: lead.id }).some((m) => m.kind === "reply")).toBe(false);
   });
 
   it("drafts a follow-up when it is due and nobody replied", async () => {
@@ -140,7 +140,7 @@ describe("parallel accounts", () => {
     const a1 = createAccount(db, { handle: "one", profileDir: "/tmp/1", dailyCap: 35 }, "t");
     const a2 = createAccount(db, { handle: "two", profileDir: "/tmp/2", dailyCap: 35 }, "t");
     db.prepare("UPDATE ig_accounts SET ramp_start = '2026-01-01'").run();
-    const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, bookingLink: "", approvalRequired: false, followupsEnabled: true }, [a1.id, a2.id], "t");
+    const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: false, followupsEnabled: true }, [a1.id, a2.id], "t");
     setCampaignStatus(db, camp.id, "active", "t");
     for (const h of ["a", "b", "c", "d"]) addLead(db, { handle: h, campaignId: camp.id }, "t");
 
@@ -177,5 +177,62 @@ describe("parallel accounts", () => {
     addLead(db, { handle: "x", campaignId: camp.id }, "t");
     const n = await runLanesUntilIdle(deps);
     expect(n).toBeGreaterThan(0);
+  });
+});
+
+describe("human pace in the worker", () => {
+  const rng = () => 0.5;
+  const sentCount = () => driver.sent.length;
+
+  it("does nothing at night and keeps the job for the morning", async () => {
+    const { camp } = setup(false);
+    addLead(db, { handle: "target", campaignId: camp.id }, "t");
+    clock = new Date("2026-10-21T03:00:00Z");                  // 23:00 in New York
+    deps = { ...deps, now: () => clock, humanPace: { rng } };
+    planWork(deps);
+    await runOne(deps, { accountId: 1 });                      // qualify is held back
+    const jobs = db.prepare("SELECT type, status, run_after FROM jobs WHERE type='qualify'").all() as { status: string }[];
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].status).toBe("queued");                     // not lost, not failed
+    expect(driver.sent).toHaveLength(0);
+    expect(db.prepare("SELECT 1 FROM activity WHERE action='pace.off_hours'").get()).toBeTruthy();
+  });
+
+  it("works in the morning and then leaves a gap before the next action", async () => {
+    const { camp } = setup(false);
+    addLead(db, { handle: "target", campaignId: camp.id }, "t");
+    clock = new Date("2026-10-20T14:00:00Z");                  // 10:00 local
+    deps = { ...deps, now: () => clock, humanPace: { rng } };
+    planWork(deps);
+    expect(await runOne(deps, { accountId: 1 })).toBe(true);   // qualify runs
+    const state = JSON.parse((db.prepare("SELECT value FROM settings WHERE key='pace_1'").get() as { value: string }).value);
+    expect(Date.parse(state.nextActionAt)).toBeGreaterThan(clock.getTime() + 20_000);   // a gap now exists
+    const before = db.prepare("SELECT COUNT(*) c FROM jobs WHERE status='done'").get() as { c: number };
+    planWork(deps);
+    await runOne(deps, { accountId: 1 });                      // next step is held by the gap, not run
+    expect(db.prepare("SELECT COUNT(*) c FROM jobs WHERE status='done'").get()).toEqual(before);
+    expect(sentCount()).toBe(0);
+  });
+
+  it("uses the team time zone setting", async () => {
+    const { camp } = setup(false);
+    addLead(db, { handle: "target", campaignId: camp.id }, "t");
+    db.prepare("INSERT INTO settings (key, value) VALUES ('team_timezone','Asia/Kolkata')").run();
+    clock = new Date("2026-10-20T14:00:00Z");                  // 19:30 in India: still a working hour
+    deps = { ...deps, now: () => clock, humanPace: { rng } };
+    planWork(deps);
+    expect(await runOne(deps, { accountId: 1 })).toBe(true);
+    expect(db.prepare("SELECT 1 FROM activity WHERE action='pace.off_hours'").get()).toBeFalsy();
+  });
+
+  it("does not pace AI drafting", async () => {
+    const { camp } = setup(false);
+    const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");
+    moveStage(db, lead.id, "qualified", "t"); moveStage(db, lead.id, "warmed", "t");
+    clock = new Date("2026-10-21T03:00:00Z");                  // night
+    deps = { ...deps, now: () => clock, humanPace: { rng } };
+    planWork(deps);
+    await runOne(deps, { accountId: 1 });
+    expect(listMessages(db, { leadId: lead.id }).some((m) => m.kind === "dm")).toBe(true);
   });
 });

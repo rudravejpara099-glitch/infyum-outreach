@@ -15,7 +15,7 @@ describe("stages", () => {
   it("allows the normal path and blocks skipping ahead", () => {
     expect(canMove("found", "qualified")).toBe(true);
     expect(canMove("found", "dm_sent")).toBe(false);
-    expect(canMove("booked", "found")).toBe(false);
+    expect(canMove("closed", "found")).toBe(false);
     expect(canMove("skipped", "found")).toBe(true);
   });
 });

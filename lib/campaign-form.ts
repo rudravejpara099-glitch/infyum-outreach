@@ -9,7 +9,6 @@ const schema = z.object({
   country: z.string().trim().min(1).default("United States"),
   minFollowers: z.coerce.number().int().min(0),
   maxFollowers: z.coerce.number().int().min(1),
-  bookingLink: z.string().trim().refine((v) => v === "" || /^https?:\/\//.test(v), "Booking link must start with http:// or https://"),
 }).refine((v) => v.minFollowers <= v.maxFollowers, { message: "Minimum followers cannot be above the maximum", path: ["minFollowers"] });
 
 export function parseCampaignForm(form: FormData): { input: CampaignInput; accountIds: number[] } {

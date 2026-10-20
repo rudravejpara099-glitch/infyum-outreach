@@ -23,8 +23,8 @@ export default async function Dashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Leads" value={number(d.totalLeads)} />
         <Stat label="DMs sent today" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
-        <Stat label="Replies" value={(d.stages.replied ?? 0) + (d.stages.call_offered ?? 0)} />
-        <Stat label="Booked" value={d.stages.booked ?? 0} />
+        <Stat label="Replies" value={d.stages.replied ?? 0} />
+        <Stat label="Reply rate" value={`${Math.round(((d.stages.replied ?? 0) / Math.max(1, (d.stages.dm_sent ?? 0) + (d.stages.replied ?? 0))) * 100)}%`} hint="of leads we messaged" />
       </div>
 
       {d.pending > 0 && (
