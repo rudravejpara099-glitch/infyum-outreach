@@ -45,3 +45,18 @@ export function listJobs(db: Db, limit = 100): Job[] {
 export function requeueStuck(db: Db): number {
   return db.prepare("UPDATE jobs SET status='queued' WHERE status='running'").run().changes;
 }
+
+/** True when the same kind of job for the same lead (and account, when given) is already waiting or running. */
+export function activeJobExists(db: Db, type: string, leadId: number | null, accountId?: number | null): boolean {
+  const byAccount = accountId === undefined ? "" : "AND COALESCE(account_id,0) = COALESCE(?,0)";
+  const args: unknown[] = [type, leadId];
+  if (accountId !== undefined) args.push(accountId);
+  return !!db.prepare(
+    `SELECT 1 FROM jobs WHERE type = ? AND status IN ('queued','running') AND COALESCE(lead_id,0) = COALESCE(?,0) ${byAccount} LIMIT 1`,
+  ).get(...args);
+}
+
+/** Try again later without counting it as a failure (used when a daily limit is reached). */
+export function deferJob(db: Db, job: Job, minutes: number): void {
+  db.prepare("UPDATE jobs SET status='queued', attempts = attempts - 1, run_after = datetime('now', ?) WHERE id = ?").run(`+${minutes} minutes`, job.id);
+}

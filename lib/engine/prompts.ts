@@ -61,3 +61,9 @@ ${opts.profileNotes || "(nothing captured)"}
 
 Return exactly: {"parts":["..."]}`;
 }
+
+export function commentPrompt(postContext: string): string {
+  return `Write one short Instagram comment on this post. 3 to 8 words, 1 to 3 emojis, specific to the post, warm, no dashes, no hashtags, no questions about business. Answer with only the comment text.
+
+Post: ${postContext}`;
+}
