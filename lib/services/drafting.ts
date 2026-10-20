@@ -1,0 +1,74 @@
+import type { Db } from "@/lib/db/core";
+import type { AiEngine } from "@/lib/engine/types";
+import { firstDmPrompt, followupPrompt, PORTFOLIO_LINK, replyPrompt, SYSTEM } from "@/lib/engine/prompts";
+import { checkDraft, parseParts } from "@/lib/engine/validate";
+import { checkAgainstRecent } from "@/lib/domain/similarity";
+import { getCampaign } from "@/lib/db/repos/campaigns";
+import { getLead } from "@/lib/db/repos/leads";
+import { createOutgoing, listMessages, recentSentTexts } from "@/lib/db/repos/messages";
+import { getSetting } from "@/lib/db/repos/settings";
+import type { Campaign, Message } from "@/lib/db/types";
+
+const ATTEMPTS = 3;
+
+/** Asks the AI, checks the answer against the hard rules and the similarity guard, retries with feedback. */
+async function draft(engine: AiEngine, db: Db, kind: "dm" | "reply" | "followup", prompt: string): Promise<string[]> {
+  const link = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
+  let feedback = "";
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    const raw = await engine.complete({ system: SYSTEM, prompt: prompt + feedback });
+    let problem: string | null = null;
+    let parts: string[] = [];
+    try {
+      parts = parseParts(raw);
+      problem = checkDraft(parts, kind, link);
+      if (!problem) {
+        const similar = checkAgainstRecent(parts.join(" "), recentSentTexts(db));
+        if (similar.tooSimilar) problem = similar.reason;
+      }
+    } catch (e) {
+      problem = e instanceof Error ? e.message : "Unreadable answer";
+    }
+    if (!problem) return parts;
+    feedback = `\n\nYour last attempt was rejected: ${problem}. Fix that and answer again with JSON only.`;
+  }
+  throw new Error(`Could not get an acceptable ${kind} draft after ${ATTEMPTS} tries`);
+}
+
+function context(db: Db, leadId: number) {
+  const lead = getLead(db, leadId);
+  if (!lead) throw new Error(`Lead ${leadId} not found`);
+  const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
+  return { lead, campaign };
+}
+const fallbackCampaign: Pick<Campaign, "approvalRequired"> = { approvalRequired: true };
+
+export async function draftFirstDm(db: Db, engine: AiEngine, leadId: number, profileNotes: string, actor = "worker"): Promise<Message> {
+  const { lead, campaign } = context(db, leadId);
+  const openings = recentSentTexts(db).map((t) => t.split(/\s+/).slice(0, 6).join(" "));
+  const parts = await draft(engine, db, "dm", firstDmPrompt({
+    handle: lead.handle, niche: lead.niche, followers: lead.followers, profileNotes,
+    audienceText: campaign?.audienceText ?? "", recentOpenings: openings,
+    portfolioLink: getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK,
+  }));
+  return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "dm", parts, campaign: campaign ?? fallbackCampaign }, actor);
+}
+
+export async function draftReply(db: Db, engine: AiEngine, leadId: number, actor = "worker"): Promise<Message> {
+  const { lead, campaign } = context(db, leadId);
+  const thread = listMessages(db, { leadId, limit: 12 }).reverse().filter((m) => m.status === "sent");
+  const conversation = thread.map((m) => `${m.direction === "out" ? "Rudra" : "@" + lead.handle}: ${m.parts.join(" ")}`).join("\n");
+  const lastIncoming = [...thread].reverse().find((m) => m.direction === "in");
+  const parts = await draft(engine, db, "reply", replyPrompt({ handle: lead.handle, conversation, bookingLink: campaign?.bookingLink ?? "", stage: lead.stage }));
+  return createOutgoing(db, {
+    leadId, accountId: lead.accountId, kind: "reply", parts, campaign: campaign ?? fallbackCampaign,
+    incomingText: lastIncoming?.parts.join(" "),
+  }, actor);
+}
+
+export async function draftFollowup(db: Db, engine: AiEngine, leadId: number, profileNotes = "", actor = "worker"): Promise<Message> {
+  const { lead, campaign } = context(db, leadId);
+  const previous = listMessages(db, { leadId, limit: 6 }).filter((m) => m.direction === "out" && m.status === "sent").map((m) => m.parts.join(" ")).join("\n---\n");
+  const parts = await draft(engine, db, "followup", followupPrompt({ handle: lead.handle, previous, number: lead.followupsSent + 1, profileNotes }));
+  return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "followup", parts, campaign: campaign ?? fallbackCampaign }, actor);
+}
