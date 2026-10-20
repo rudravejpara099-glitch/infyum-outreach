@@ -1,9 +1,10 @@
+import { stageCopy } from "@/lib/ui/copy";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { listLeads } from "@/lib/db/repos/leads";
 import { listCampaigns } from "@/lib/db/repos/campaigns";
-import { STAGES, STAGE_LABEL } from "@/lib/domain/stages";
+import { STAGES } from "@/lib/domain/stages";
 import { number } from "@/lib/format";
 import { PageHeader } from "@/components/ui";
 
@@ -22,7 +23,7 @@ export default async function Pipeline({ searchParams }: PageProps<"/pipeline">)
 
   return (
     <>
-      <PageHeader title="Pipeline" sub="Every lead, by where it is in the journey."
+      <PageHeader title="Lead progress" sub="See who matches your audience, who has replied, and who has booked a call."
         actions={
           <form className="flex gap-2">
             <select name="campaign" defaultValue={campaignId ?? ""} className="input w-52" aria-label="Campaign">
@@ -31,14 +32,16 @@ export default async function Pipeline({ searchParams }: PageProps<"/pipeline">)
             </select>
             <button className="btn">Filter</button>
           </form>} />
+      <p className="mb-3 text-xs text-muted">Swipe or scroll across to see later stages. Open a lead for its conversation and history.</p>
       <div className="flex gap-3 overflow-x-auto pb-4">
         {columns.map((stage) => {
           const items = leads.filter((l) => l.stage === stage);
           return (
             <section key={stage} id={stage} className="w-64 shrink-0">
               <h2 className="mb-2 flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                {STAGE_LABEL[stage]}<span className="tabular-nums">{items.length}</span>
+                {stageCopy[stage].label}<span className="tabular-nums">{items.length}</span>
               </h2>
+              <p className="mb-3 px-1 text-xs text-muted">{stageCopy[stage].description}</p>
               <div className="flex flex-col gap-2">
                 {items.slice(0, PER_COLUMN).map((l) => (
                   <Link key={l.id} href={`/leads/${l.id}`} className="card p-3 transition-colors hover:border-accent">
@@ -54,7 +57,7 @@ export default async function Pipeline({ searchParams }: PageProps<"/pipeline">)
         })}
       </div>
       <details id="skipped" className="mt-6">
-        <summary className="cursor-pointer text-sm font-medium">Skipped ({skipped.length}) and why</summary>
+        <summary className="cursor-pointer text-sm font-medium">Not selected ({skipped.length}) — see why</summary>
         <ul className="card mt-3 divide-y divide-line">
           {skipped.map((l) => (
             <li key={l.id}><Link href={`/leads/${l.id}`} className="flex justify-between px-4 py-2 hover:bg-bg"><span>@{l.handle}</span><span className="text-muted">{l.skipReason || "No reason recorded"}</span></Link></li>

@@ -4,13 +4,13 @@ import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./icon";
 
 const ITEMS = [
-  { href: "/", label: "Dashboard", icon: "dashboard" },
+  { href: "/", label: "Overview", icon: "dashboard" },
   { href: "/campaigns", label: "Campaigns", icon: "campaign" },
-  { href: "/pipeline", label: "Pipeline", icon: "pipeline" },
-  { href: "/approvals", label: "Approvals", icon: "approval" },
+  { href: "/pipeline", label: "Lead progress", icon: "pipeline" },
+  { href: "/approvals", label: "Review messages", icon: "approval" },
   { href: "/inbox", label: "Inbox", icon: "inbox" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
-  { href: "/activity", label: "Activity", icon: "activity" },
+  { href: "/activity", label: "History", icon: "activity" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 

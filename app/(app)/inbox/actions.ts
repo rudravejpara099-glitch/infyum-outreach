@@ -15,9 +15,10 @@ export async function writeReply(form: FormData) {
   if (!lead || !text) return;
   const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
   const lastIncoming = listMessages(db, { leadId: lead.id }).find((m) => m.direction === "in");
-  createOutgoing(db, {
+  const message = createOutgoing(db, {
     leadId: lead.id, accountId: lead.accountId, kind: "reply", parts: [text],
     campaign: campaign ?? { approvalRequired: true }, incomingText: lastIncoming?.parts.join(" "),
   }, user.email);
   revalidatePath("/inbox");
+  return { message: message.status === "pending_approval" ? "Reply saved for review. Open Review messages to approve it." : "Reply saved and waiting to send." };
 }
