@@ -1,3 +1,4 @@
+import { BillingError } from "./errors";
 import type { Db } from "@/lib/db/core";
 import type { StatementRow } from "./types";
 import type { Statement } from "./statement";
@@ -15,11 +16,11 @@ export function statementState(db: Db, row: StatementRow, now = new Date().toISO
 export function finalizeStatement(db: Db, userId: number, periodStart: string, now = new Date().toISOString()): StatementRow {
   return db.transaction(() => {
     const period = periodFor(periodStart);
-    if (period.start !== periodStart || period.end > now.slice(0, 10)) throw new Error("Only completed calendar months can be finalized");
+    if (period.start !== periodStart || period.end > now.slice(0, 10)) throw new BillingError("Only completed calendar months can be finalized");
     const existing = db.prepare("SELECT * FROM billing_statements WHERE user_id=? AND period_start=?").get(userId, period.start) as StatementRow | undefined;
     if (existing) return existing;
     const prior = db.prepare("SELECT * FROM billing_statements WHERE user_id=? ORDER BY period_start DESC LIMIT 1").get(userId) as StatementRow | undefined;
-    if (prior && prior.period_start >= period.start) throw new Error("Statements must be generated in order");
+    if (prior && prior.period_start >= period.start) throw new BillingError("Statements must be generated in order");
     const events = db.prepare("SELECT id,kind,cost_micros FROM billing_usage_events WHERE user_id=? AND occurred_at<? AND id NOT IN(SELECT event_id FROM billing_statement_usage)").all(userId, period.end + "T00:00:00.000Z") as { id: number; kind: string; cost_micros: number }[];
     const adjustments = db.prepare("SELECT id,cost_micros FROM billing_adjustments WHERE user_id=? AND created_at<? AND id NOT IN(SELECT adjustment_id FROM billing_statement_adjustments)").all(userId, period.end + "T00:00:00.000Z") as { id: number; cost_micros: number }[];
     const cfg = billingConfig(db, period.start + "T00:00:00.000Z");

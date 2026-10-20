@@ -1,3 +1,4 @@
+import { BillingForm } from "./billing-form";
 import Link from "next/link";
 import type { Campaign, IgAccount, Lead } from "@/lib/db/types";
 import { STAGES, STAGE_LABEL } from "@/lib/domain/stages";
@@ -27,13 +28,13 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
           <p className="help-text">One per line. Existing leads and do-not-contact handles are skipped.</p>
           <SubmitButton>Add to campaign</SubmitButton>
         </form>
-        <form action={findLeads}>
+        <BillingForm action={findLeads}>
           <input type="hidden" name="id" value={campaign.id} />
           <h3>Find leads automatically</h3>
           <p className="help-text">Search for the audience saved in this campaign.</p>
           <SubmitButton disabled={!searchOn}>Queue lead search</SubmitButton>
           <p className="help-text">{searchOn ? "Requires the worker and an Apify connection. Usage limits still apply." : <>Search is off. Set a monthly cap in <Link href="/settings">Settings</Link> first.</>}</p>
-        </form>
+        </BillingForm>
       </div>
     </details>
     <details className="disclosure" id="leads">

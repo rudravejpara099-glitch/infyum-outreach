@@ -1,8 +1,9 @@
+import { BillingError } from "./errors";
 import { CENT, integer, roundedRatio, safe, sum } from "./money";
 export const LABELS: Record<string, string> = { apify: "Lead search", ai_input_tokens: "AI writing · input", ai_output_tokens: "AI writing · output", proxy_share: "Instagram network", hosting_share: "Hosting" };
 export function processorFeeMicros(totalCents: number, bps: number, fixedMicros: number): number {
   integer(totalCents); integer(bps); integer(fixedMicros);
-  if (bps >= 10000 || fixedMicros % CENT) throw new Error("Invalid processor schedule");
+  if (bps >= 10000 || fixedMicros % CENT) throw new BillingError("Invalid processor schedule");
   return sum([roundedRatio(BigInt(totalCents) * BigInt(bps), 10000n) * CENT, fixedMicros]);
 }
 export function statement(input: {
@@ -11,7 +12,7 @@ export function statement(input: {
 }) {
   const { events, markupPercent = 0, feeBps = 290, fixedFeeMicros = 300000, minimumCents = 50 } = input;
   integer(markupPercent); integer(minimumCents);
-  if (markupPercent > 100) throw new Error("Markup must be from 0 to 100 percent");
+  if (markupPercent > 100) throw new BillingError("Markup must be from 0 to 100 percent");
   processorFeeMicros(0, feeBps, fixedFeeMicros);
   const subtotalMicros = sum(events.map(e => integer(e.costMicros)));
   const markupMicros = roundedRatio(BigInt(subtotalMicros) * BigInt(markupPercent), 100n);

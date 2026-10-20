@@ -1,6 +1,7 @@
+import { BillingError } from "./errors";
 export function isoDay(value = new Date().toISOString()): string {
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) throw new Error("Invalid date");
+  if (!Number.isFinite(date.getTime())) throw new BillingError("Invalid date");
   return date.toISOString().slice(0, 10);
 }
 export function periodFor(value: string) {
@@ -14,14 +15,14 @@ export function closedPeriods(since: string, now: string): string[] {
   let start = periodFor(since).start;
   while (start < end) {
     result.push(start); start = periodFor(start).end;
-    if (result.length > 1200) throw new Error("Period range too large");
+    if (result.length > 1200) throw new BillingError("Period range too large");
   }
   return result;
 }
 export function daysBetween(start: string, end: string): string[] {
   const result: string[] = [];
   for (let day = isoDay(start); day <= isoDay(end); day = isoDay(new Date(Date.parse(day + "T00:00:00Z") + 86400000).toISOString())) {
-    result.push(day); if (result.length > 36600) throw new Error("Date range too large");
+    result.push(day); if (result.length > 36600) throw new BillingError("Date range too large");
   }
   return result;
 }

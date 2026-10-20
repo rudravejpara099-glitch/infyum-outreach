@@ -1,3 +1,4 @@
+import { BillingForm } from "@/components/billing-form";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
@@ -34,10 +35,10 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
       <div><div className="campaign-title"><h1>{campaign.name}</h1><span className={`status-label ${campaign.status === "active" ? "text-ok" : "text-muted"}`}><i />{STATUS[campaign.status]}</span></div>
         <p>{campaign.country} <span aria-hidden="true">·</span> {campaign.minFollowers.toLocaleString("en-US")}–{campaign.maxFollowers.toLocaleString("en-US")} followers</p>
       </div>
-      {campaign.status !== "done" && <form action={changeCampaignStatus}>
+      {campaign.status !== "done" && <BillingForm action={changeCampaignStatus}>
         <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value={next.to} />
         <SubmitButton>{campaign.status === "active" && <Icon name="pause" size={16} />}{next.label}</SubmitButton>
-      </form>}
+      </BillingForm>}
     </header>
     <section className="audience-summary" aria-labelledby="audience-title">
       <div><h2 id="audience-title">Who you’re reaching</h2><p>{campaign.audienceText || campaign.niches.join(", ") || "Describe your audience in campaign settings."}</p></div>

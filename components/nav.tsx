@@ -11,6 +11,7 @@ const ITEMS = [
   { href: "/inbox", label: "Inbox", icon: "inbox" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
   { href: "/activity", label: "Activity", icon: "activity" },
+  { href: "/billing", label: "Usage and billing", icon: "billing" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 

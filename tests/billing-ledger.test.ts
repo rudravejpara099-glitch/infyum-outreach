@@ -11,12 +11,13 @@ import type { UsageEvent } from "@/lib/billing/types";
 let db: Db;
 const jan = "2026-01-01T00:00:00.000Z";
 const feb = "2026-02-01T00:00:00.000Z";
-const input = (operationId = "op-1", maxCostMicros = 1000000) => ({ userId: 1, operationId, maxCostMicros, provider: "ai" as const, source: { campaignId: 1, accountId: 1 }, now: jan });
-const event = (cost = 1000000, eventKey = "evt-1"): UsageEvent => ({ eventKey, userId: 1, occurredAt: jan, kind: "ai_input_tokens", quantity: cost, unitCostMicros: 1, unitQuantity: 1, costMicros: cost, providerRef: "req-1", source: { campaignId: 1, accountId: 1 } });
+const input = (operationId = "op-1", maxCostMicros = 1000000) => ({ userId: 1, operationId, maxCostMicros, provider: "ai" as const, model: "fixture-model", source: { campaignId: 1, accountId: 1 }, now: jan });
+const event = (cost = 1000000, eventKey = "evt-1"): UsageEvent => ({ eventKey, userId: 1, occurredAt: jan, kind: "ai_input_tokens", quantity: cost, unitCostMicros: 1000000, unitQuantity: 1000000, costMicros: cost, providerRef: "req-1", model: "fixture-model", rateId: 2, tokenCategory: "input", source: { campaignId: 1, accountId: 1 } });
 beforeEach(() => {
   process.env.BILLING_OWNER_USER_ID = "1";
   db = openDb(":memory:");
   db.exec("INSERT INTO users(id,email,name,password_hash) VALUES(1,'one@test.invalid','One','fake'),(2,'two@test.invalid','Two','fake'); INSERT INTO campaigns(id,name) VALUES(1,'Test'); INSERT INTO ig_accounts(id,handle,profile_dir) VALUES(1,'test','unused'); INSERT INTO billing_integration_ack VALUES(1,'fixture-only','tests','2026-01-01');");
+  db.exec("INSERT INTO billing_model_rates(id,model,input_micros_per_million,output_micros_per_million,verified,source,created_at) VALUES(2,'fixture-model',1000000,1000000,1,'test-only','2026-01-01T00:00:00.000Z');");
   saveCeiling(db, 1, 100000000, jan); saveCeiling(db, 2, 100000000, jan);
   claimResource(db, 1, "campaign", 1, jan); claimResource(db, 1, "account", 1, jan);
 });
@@ -72,6 +73,15 @@ describe("durable ledger and reservations", () => {
     expect(() => reserveUsage(db, { ...input(), provider: "apify" })).toThrow();
     reserveUsage(db, { ...input("apify-a"), provider: "apify", apifyMonthlyUsageMicros: 7000000 });
     expect(() => reserveUsage(db, { ...input("apify-b"), provider: "apify", apifyMonthlyUsageMicros: 7000000 })).toThrow();
+  });
+  it("rejects costs predating assignment and requires the model price captured at dispatch", () => {
+    expect(() => reserveUsage(db, { ...input(), now: "2025-12-31T00:00:00.000Z" })).toThrow();
+    reserveUsage(db, input());
+    expect(() => settleUsage(db, "op-1", [{ ...event(), model: "wrong-model" }], jan)).toThrow();
+    expect(() => settleUsage(db, "op-1", [{ ...event(), rateId: 1 }], jan)).toThrow();
+    db.prepare("INSERT INTO billing_model_rates(model,input_micros_per_million,output_micros_per_million,verified,source,created_at) VALUES('fixture-model',2000000,2000000,1,'new-test-rate',?)").run(feb);
+    settleUsage(db, "op-1", [event()], feb);
+    expect(budgetSnapshot(db, 1, jan).usageMicros).toBe(1000000);
   });
   it("protects ledger evidence, prices and finalized statements from edits/deletion", () => {
     reserveUsage(db, input()); settleUsage(db, "op-1", [event()], jan);

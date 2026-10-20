@@ -10,29 +10,30 @@ CREATE TABLE billing_assignments (
  PRIMARY KEY(resource_kind,resource_id)
 );
 CREATE TABLE billing_config (
- id INTEGER PRIMARY KEY AUTOINCREMENT, markup_percent INTEGER NOT NULL CHECK(markup_percent BETWEEN 0 AND 100),
- fee_bps INTEGER NOT NULL CHECK(fee_bps BETWEEN 0 AND 9999), fixed_fee_micros INTEGER NOT NULL CHECK(fixed_fee_micros>=0 AND fixed_fee_micros%10000=0),
- minimum_cents INTEGER NOT NULL CHECK(minimum_cents>=1), proxy_seed_micros INTEGER NOT NULL CHECK(proxy_seed_micros>=0),
- hosting_seed_micros INTEGER NOT NULL CHECK(hosting_seed_micros>=0), created_at TEXT NOT NULL
+ id INTEGER PRIMARY KEY AUTOINCREMENT, markup_percent INTEGER NOT NULL CHECK(typeof(markup_percent)='integer' AND (markup_percent BETWEEN 0 AND 100)),
+ fee_bps INTEGER NOT NULL CHECK(typeof(fee_bps)='integer' AND (fee_bps BETWEEN 0 AND 9999)), fixed_fee_micros INTEGER NOT NULL CHECK(typeof(fixed_fee_micros)='integer' AND (fixed_fee_micros>=0 AND fixed_fee_micros%10000=0)),
+ minimum_cents INTEGER NOT NULL CHECK(typeof(minimum_cents)='integer' AND (minimum_cents>=1)), proxy_seed_micros INTEGER NOT NULL CHECK(typeof(proxy_seed_micros)='integer' AND (proxy_seed_micros>=0)),
+ hosting_seed_micros INTEGER NOT NULL CHECK(typeof(hosting_seed_micros)='integer' AND (hosting_seed_micros>=0)), created_at TEXT NOT NULL
 );
 INSERT INTO billing_config VALUES(1,0,290,300000,50,10000000,600000,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
 CREATE TABLE billing_model_rates (
- id INTEGER PRIMARY KEY AUTOINCREMENT, model TEXT NOT NULL, input_micros_per_million INTEGER NOT NULL CHECK(input_micros_per_million>=0),
- output_micros_per_million INTEGER NOT NULL CHECK(output_micros_per_million>=0), cache_read_micros_per_million INTEGER CHECK(cache_read_micros_per_million>=0),
- cache_write_micros_per_million INTEGER CHECK(cache_write_micros_per_million>=0), verified INTEGER NOT NULL CHECK(verified IN (0,1)), source TEXT NOT NULL, created_at TEXT NOT NULL
+ id INTEGER PRIMARY KEY AUTOINCREMENT, model TEXT NOT NULL, input_micros_per_million INTEGER NOT NULL CHECK(typeof(input_micros_per_million)='integer' AND (input_micros_per_million>=0)),
+ output_micros_per_million INTEGER NOT NULL CHECK(typeof(output_micros_per_million)='integer' AND (output_micros_per_million>=0)), cache_read_micros_per_million INTEGER CHECK(cache_read_micros_per_million>=0),
+ cache_write_micros_per_million INTEGER CHECK(cache_write_micros_per_million>=0), verified INTEGER NOT NULL CHECK(typeof(verified)='integer' AND (verified IN (0,1))), source TEXT NOT NULL, created_at TEXT NOT NULL
 );
 INSERT INTO billing_model_rates(model,input_micros_per_million,output_micros_per_million,verified,source,created_at)
  VALUES('placeholder-update-provider-prices',3000000,15000000,0,'update from the provider''s price page',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
 CREATE TABLE billing_resource_costs (
  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id), account_id INTEGER,
  kind TEXT NOT NULL CHECK(kind IN ('proxy_share','hosting_share')), cadence TEXT NOT NULL CHECK(cadence IN ('month','day')),
- amount_micros INTEGER NOT NULL CHECK(amount_micros>=0), start_date TEXT NOT NULL, end_date TEXT,
+ amount_micros INTEGER NOT NULL CHECK(typeof(amount_micros)='integer' AND (amount_micros>=0)), start_date TEXT NOT NULL, end_date TEXT,
  reference TEXT NOT NULL CHECK(length(reference)>0), confirmed_by INTEGER NOT NULL REFERENCES users(id), created_at TEXT NOT NULL,
  CHECK((kind='proxy_share' AND account_id IS NOT NULL AND cadence='month') OR (kind='hosting_share' AND account_id IS NULL AND cadence='day'))
 );
 CREATE TABLE billing_reservations (
  operation_id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), provider TEXT NOT NULL CHECK(provider IN ('ai','apify')),
- max_cost_micros INTEGER NOT NULL CHECK(max_cost_micros>0), period_start TEXT NOT NULL, source_json TEXT NOT NULL,
+ model TEXT, rate_id INTEGER REFERENCES billing_model_rates(id),
+ max_cost_micros INTEGER NOT NULL CHECK(typeof(max_cost_micros)='integer' AND (max_cost_micros>0)), period_start TEXT NOT NULL, source_json TEXT NOT NULL,
  status TEXT NOT NULL DEFAULT 'held' CHECK(status IN ('held','settled','released')), created_at TEXT NOT NULL,
  actual_cost_micros INTEGER CHECK(actual_cost_micros>=0)
 );
@@ -40,9 +41,9 @@ CREATE INDEX billing_holds ON billing_reservations(user_id,status);
 CREATE TABLE billing_usage_events (
  id INTEGER PRIMARY KEY AUTOINCREMENT, event_key TEXT NOT NULL UNIQUE, user_id INTEGER NOT NULL REFERENCES users(id), occurred_at TEXT NOT NULL,
  kind TEXT NOT NULL CHECK(kind IN ('apify','ai_input_tokens','ai_output_tokens','proxy_share','hosting_share')),
- quantity INTEGER NOT NULL CHECK(quantity>=0), unit_cost_micros INTEGER NOT NULL CHECK(unit_cost_micros>=0), unit_quantity INTEGER NOT NULL CHECK(unit_quantity>0),
- cost_micros INTEGER NOT NULL CHECK(cost_micros>=0), provider_ref TEXT NOT NULL CHECK(length(provider_ref)>0), source_json TEXT NOT NULL,
- operation_id TEXT REFERENCES billing_reservations(operation_id), created_at TEXT NOT NULL
+ quantity INTEGER NOT NULL CHECK(typeof(quantity)='integer' AND (quantity>=0)), unit_cost_micros INTEGER NOT NULL CHECK(typeof(unit_cost_micros)='integer' AND (unit_cost_micros>=0)), unit_quantity INTEGER NOT NULL CHECK(typeof(unit_quantity)='integer' AND (unit_quantity>0)),
+ cost_micros INTEGER NOT NULL CHECK(typeof(cost_micros)='integer' AND (cost_micros>=0)), provider_ref TEXT NOT NULL CHECK(length(provider_ref)>0), source_json TEXT NOT NULL,
+ operation_id TEXT REFERENCES billing_reservations(operation_id), model TEXT, rate_id INTEGER REFERENCES billing_model_rates(id), token_category TEXT CHECK(token_category IN ('input','output','cache_read','cache_write')), created_at TEXT NOT NULL
 );
 CREATE INDEX billing_usage_user_date ON billing_usage_events(user_id,occurred_at);
 CREATE TABLE billing_adjustments (
@@ -51,7 +52,7 @@ CREATE TABLE billing_adjustments (
 );
 CREATE TABLE billing_statements (
  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id), period_start TEXT NOT NULL, period_end TEXT NOT NULL,
- breakdown_json TEXT NOT NULL, total_cents INTEGER NOT NULL CHECK(total_cents>=0), carry_micros INTEGER NOT NULL,
+ breakdown_json TEXT NOT NULL, total_cents INTEGER NOT NULL CHECK(typeof(total_cents)='integer' AND (total_cents>=0)), carry_micros INTEGER NOT NULL,
  previous_id INTEGER UNIQUE REFERENCES billing_statements(id), created_at TEXT NOT NULL, UNIQUE(user_id,period_start)
 );
 CREATE TABLE billing_statement_usage (statement_id INTEGER NOT NULL REFERENCES billing_statements(id), event_id INTEGER NOT NULL UNIQUE REFERENCES billing_usage_events(id), PRIMARY KEY(statement_id,event_id));
@@ -70,7 +71,7 @@ CREATE TABLE billing_payments (
 );
 CREATE TABLE billing_fee_reconciliations (
  id INTEGER PRIMARY KEY AUTOINCREMENT, payment_id INTEGER NOT NULL UNIQUE REFERENCES billing_payments(id),
- balance_transaction_id TEXT NOT NULL UNIQUE, actual_fee_micros INTEGER NOT NULL CHECK(actual_fee_micros>=0), created_at TEXT NOT NULL
+ balance_transaction_id TEXT NOT NULL UNIQUE, actual_fee_micros INTEGER NOT NULL CHECK(typeof(actual_fee_micros)='integer' AND (actual_fee_micros>=0)), created_at TEXT NOT NULL
 );
 CREATE TABLE billing_integration_ack (id INTEGER PRIMARY KEY CHECK(id=1), commit_sha TEXT NOT NULL, acknowledged_by TEXT NOT NULL, verified_at TEXT NOT NULL);
 `;
