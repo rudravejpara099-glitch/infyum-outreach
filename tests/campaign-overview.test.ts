@@ -10,7 +10,7 @@ beforeEach(() => { db = openDb(":memory:"); });
 afterEach(() => db.close());
 function campaign(name: string) {
   return createCampaign(db, { name, niches: [], audienceText: "", country: "United States", minFollowers: 2000,
-    maxFollowers: 150000, bookingLink: "https://example.com", approvalRequired: true, followupsEnabled: true }, [], "test");
+    maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "test");
 }
 function draft(c: ReturnType<typeof campaign>, handle: string) {
   const { lead } = addLead(db, { handle, campaignId: c.id }, "test");
@@ -51,8 +51,7 @@ it("keeps the oldest preview reachable when the approval queue exceeds one page"
 it("counts inbox conversations by stage without claiming they are unread", () => {
   const a = campaign("A"), b = campaign("B");
   addLead(db, { handle: "reply", campaignId: a.id, stage: "replied" }, "test");
-  addLead(db, { handle: "call", campaignId: a.id, stage: "call_offered" }, "test");
-  addLead(db, { handle: "booked", campaignId: a.id, stage: "booked" }, "test");
+  addLead(db, { handle: "sent", campaignId: a.id, stage: "dm_sent" }, "test");
   addLead(db, { handle: "other", campaignId: b.id, stage: "replied" }, "test");
-  expect(campaignOverview(db, a.id)).toMatchObject({ total: 3, conversations: 2 });
+  expect(campaignOverview(db, a.id)).toMatchObject({ total: 2, conversations: 1 });
 });

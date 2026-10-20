@@ -34,21 +34,6 @@ ${c.recentOpenings.map((o) => `- ${o}`).join("\n") || "- none"}
 Return exactly: {"parts":["...","...","..."]}`;
 }
 
-export function replyPrompt(opts: { handle: string; conversation: string; bookingLink: string; stage: string }): string {
-  return `@${opts.handle} replied. Write the next message from Rudra.
-Rules: answer what they actually said first, then one next step toward a short call. Two to four sentences. Warm and specific.
-Offer a call only when they show interest. When they do, include this booking link once: ${opts.bookingLink || "(no link set, offer a call in words)"}
-Never state prices, dates, guarantees or contract terms. If they ask for those, say a teammate will follow up and ask what they need.
-Partnerships: we only do white label and affiliate.
-If they asked to stop, write one short polite thanks and nothing else.
-Current stage: ${opts.stage}
-
-Conversation so far (oldest first):
-${opts.conversation}
-
-Return exactly: {"parts":["..."]}`;
-}
-
 export function followupPrompt(opts: { handle: string; previous: string; number: number; profileNotes: string }): string {
   return `@${opts.handle} did not reply to our first DMs. Write follow-up number ${opts.number} (max 2).
 It must add something new: a specific observation or one useful point about their funnel. Never "just checking in", no guilt, no pressure, do not repeat earlier wording. Two to three sentences, no link.

@@ -1,12 +1,11 @@
 // The pipeline. One list, one transition table. Everything else reads from here.
+// Scope (owner decision, 2026-10-20): the app only gets a client to send a first message. "replied" is the hand-off point.
 export const STAGES = [
   "found",
   "qualified",
   "warmed",
   "dm_sent",
   "replied",
-  "call_offered",
-  "booked",
   "closed",
   "skipped",
 ] as const;
@@ -19,9 +18,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
   warmed: "Warmed up",
   dm_sent: "DM sent",
   replied: "Replied",
-  call_offered: "Call offered",
-  booked: "Booked",
-  closed: "Closed",
+  closed: "Stopped",
   skipped: "Skipped",
 };
 
@@ -30,10 +27,8 @@ const NEXT: Record<Stage, readonly Stage[]> = {
   qualified: ["warmed", "skipped"],
   warmed: ["dm_sent", "skipped"],
   dm_sent: ["replied", "closed"],
-  replied: ["replied", "call_offered", "closed"],
-  call_offered: ["replied", "booked", "closed"],
-  booked: ["closed"],
-  closed: ["replied"], // a closed lead can come back if they write again
+  replied: ["closed"], // the app's job ends here: a person or the GHL agent takes over from the first reply
+  closed: ["replied"], // a stopped lead can come back if they write again
   skipped: ["found"], // retry after a rule change
 };
 

@@ -14,7 +14,7 @@ import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveSta
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
-import { draftFirstDm, draftFollowup, draftReply } from "@/lib/services/drafting";
+import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
 import { afterSent, handleIncoming } from "@/lib/services/outreach";
 import { findLeadsForCampaign } from "@/lib/services/findLeads";
 import type { ApifyClient } from "@/lib/leads/apify";
@@ -172,8 +172,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
       return;
 
     case "draft_reply":
-      if (lead && !hasOutgoing(db, lead.id, "reply", ["pending_approval", "approved"])) await draftReply(db, engine, lead.id);
-      return;
+      return; // retired: after a first reply a person or the GHL agent takes over. Old queued jobs of this kind are ignored.
 
     case "send": {
       const message = getMessage(db, Number(job.payload.messageId));

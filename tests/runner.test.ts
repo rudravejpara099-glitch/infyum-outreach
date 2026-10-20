@@ -36,7 +36,7 @@ const engine = { async complete({ prompt }: { prompt: string }) {
 function setup(approvalRequired: boolean) {
   const acct = createAccount(db, { handle: "me", profileDir: "/tmp/x", dailyCap: 35 }, "t");
   db.prepare("UPDATE ig_accounts SET ramp_start = '2026-01-01'").run();
-  const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, bookingLink: "https://cal.test/a", approvalRequired, followupsEnabled: true }, [acct.id], "t");
+  const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired, followupsEnabled: true }, [acct.id], "t");
   setCampaignStatus(db, camp.id, "active", "t");
   return { acct, camp };
 }
@@ -107,7 +107,7 @@ describe("worker pipeline", () => {
     expect(driver.sent).toHaveLength(0);
   });
 
-  it("reads replies, ignores auto-replies, and queues a drafted answer", async () => {
+  it("reads replies, ignores auto-replies, and hands off without drafting", async () => {
     const { camp } = setup(false);
     const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");
     await runUntilIdle(deps);
@@ -119,7 +119,7 @@ describe("worker pipeline", () => {
     clock = new Date("2026-10-20T12:00:00Z");
     await runUntilIdle(deps);
     expect(getLead(db, lead.id)!.stage).toBe("replied");
-    expect(listMessages(db, { leadId: lead.id }).some((m) => m.kind === "reply")).toBe(true);
+    expect(listMessages(db, { leadId: lead.id }).some((m) => m.kind === "reply")).toBe(false);
   });
 
   it("drafts a follow-up when it is due and nobody replied", async () => {
@@ -140,7 +140,7 @@ describe("parallel accounts", () => {
     const a1 = createAccount(db, { handle: "one", profileDir: "/tmp/1", dailyCap: 35 }, "t");
     const a2 = createAccount(db, { handle: "two", profileDir: "/tmp/2", dailyCap: 35 }, "t");
     db.prepare("UPDATE ig_accounts SET ramp_start = '2026-01-01'").run();
-    const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, bookingLink: "", approvalRequired: false, followupsEnabled: true }, [a1.id, a2.id], "t");
+    const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: false, followupsEnabled: true }, [a1.id, a2.id], "t");
     setCampaignStatus(db, camp.id, "active", "t");
     for (const h of ["a", "b", "c", "d"]) addLead(db, { handle: h, campaignId: camp.id }, "t");
 

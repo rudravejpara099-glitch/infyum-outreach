@@ -26,7 +26,6 @@ export type Campaign = {
   country: string;
   minFollowers: number;
   maxFollowers: number;
-  bookingLink: string;
   approvalRequired: boolean;
   followupsEnabled: boolean;
   status: "draft" | "active" | "paused" | "done";

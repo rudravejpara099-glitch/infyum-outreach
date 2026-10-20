@@ -37,7 +37,7 @@ describe("find leads for a campaign", () => {
   });
   it("adds new leads, skipping duplicates and do-not-contact handles", async () => {
     const db = openDb(":memory:");
-    const camp = createCampaign(db, { name: "c", niches: ["Credit repair"], audienceText: "", country: "United States", minFollowers: 1, maxFollowers: 9, bookingLink: "", approvalRequired: true, followupsEnabled: true }, [], "t");
+    const camp = createCampaign(db, { name: "c", niches: ["Credit repair"], audienceText: "", country: "United States", minFollowers: 1, maxFollowers: 9, approvalRequired: true, followupsEnabled: true }, [], "t");
     setSetting(db, "apify_monthly_cap_usd", "20");
     addLead(db, { handle: "existing" }, "t");
     addDnc(db, "blocked");
@@ -46,7 +46,7 @@ describe("find leads for a campaign", () => {
   });
   it("does nothing while the limit is unset", async () => {
     const db = openDb(":memory:");
-    const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 1, maxFollowers: 9, bookingLink: "", approvalRequired: true, followupsEnabled: true }, [], "t");
+    const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 1, maxFollowers: 9, approvalRequired: true, followupsEnabled: true }, [], "t");
     await expect(findLeadsForCampaign(db, client([{ username: "x" }]), camp.id)).rejects.toBeInstanceOf(ApifyOffError);
   });
 });
