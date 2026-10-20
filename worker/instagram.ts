@@ -14,7 +14,7 @@ export class PlaywrightInstagram implements InstagramDriver {
   private async context(account: IgAccount): Promise<BrowserContext> {
     const existing = this.contexts.get(account.id);
     if (existing) return existing;
-    const ctx = await chromium.launchPersistentContext(account.profileDir, { headless: false, viewport: { width: 1280, height: 900 }, locale: "en-US" });
+    const ctx = await chromium.launchPersistentContext(account.profileDir, { channel: "chrome", headless: false, ignoreDefaultArgs: ["--enable-automation"], chromiumSandbox: true, viewport: { width: 1280, height: 900 }, locale: "en-US" });
     ctx.on("close", () => this.contexts.delete(account.id));
     this.contexts.set(account.id, ctx);
     return ctx;
@@ -44,6 +44,7 @@ export class PlaywrightInstagram implements InstagramDriver {
     const ctx = await this.context(account);
     const page = ctx.pages()[0] ?? (await ctx.newPage());
     await page.goto("https://www.instagram.com/", { waitUntil: "domcontentloaded" });
+    await page.bringToFront();
     // The team signs in, then closes the window. Give them up to 15 minutes.
     await Promise.race([new Promise<void>((r) => ctx.once("close", () => r())), sleep(15 * 60_000)]);
     await ctx.close().catch(() => {});
