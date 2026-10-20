@@ -15,12 +15,20 @@ export function enqueue(db: Db, job: { type: string; leadId?: number | null; acc
   return Number(info.lastInsertRowid);
 }
 
-/** Takes the oldest due job. The transaction makes it safe even if two workers ever ran. */
-export function claimNext(db: Db, types?: string[]): Job | null {
+/** A lane is one Instagram account (or the shared lane for jobs that use no account). Jobs in a lane run one at a time. */
+export type Lane = { accountId: number | null };
+
+/** Takes the oldest due job, optionally only from one lane. The transaction makes it safe even if two workers ever ran. */
+export function claimNext(db: Db, types?: string[], lane?: Lane): Job | null {
   return db.transaction(() => {
-    const filter = types?.length ? `AND type IN (${types.map(() => "?").join(",")})` : "";
-    const r = db.prepare(`SELECT * FROM jobs WHERE status='queued' AND run_after <= datetime('now') ${filter} ORDER BY run_after, id LIMIT 1`)
-      .get(...(types ?? [])) as Record<string, unknown> | undefined;
+    const where = ["status='queued'", "run_after <= datetime('now')"];
+    const args: unknown[] = [];
+    if (types?.length) { where.push(`type IN (${types.map(() => "?").join(",")})`); args.push(...types); }
+    if (lane) {
+      if (lane.accountId === null) where.push("account_id IS NULL");
+      else { where.push("account_id = ?"); args.push(lane.accountId); }
+    }
+    const r = db.prepare(`SELECT * FROM jobs WHERE ${where.join(" AND ")} ORDER BY run_after, id LIMIT 1`).get(...args) as Record<string, unknown> | undefined;
     if (!r) return null;
     db.prepare("UPDATE jobs SET status='running', attempts = attempts + 1 WHERE id = ?").run(r.id);
     return map({ ...r, status: "running", attempts: (r.attempts as number) + 1 });

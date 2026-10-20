@@ -32,3 +32,13 @@ export function setAccountCap(db: Db, id: number, cap: number, actor: string): v
   db.prepare("UPDATE ig_accounts SET daily_cap = ? WHERE id = ?").run(cap, id);
   logActivity(db, actor, "account.cap", { accountId: id, detail: String(cap) });
 }
+
+/** Picks the account with the fewest leads still in progress, so work spreads evenly. Ties go to the lowest id. */
+export function leastLoadedAccount(db: Db, accountIds: number[]): number | null {
+  let best: { id: number; load: number } | null = null;
+  for (const id of [...accountIds].sort((a, b) => a - b)) {
+    const load = (db.prepare("SELECT COUNT(*) c FROM leads WHERE account_id = ? AND stage IN ('found','qualified','warmed','dm_sent')").get(id) as { c: number }).c;
+    if (!best || load < best.load) best = { id, load };
+  }
+  return best?.id ?? null;
+}

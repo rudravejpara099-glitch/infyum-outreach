@@ -5,7 +5,7 @@ import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead } from "@/lib/db/repos/leads";
 import { approveMessage, listMessages } from "@/lib/db/repos/messages";
 import { InstagramBlockedError, type InstagramDriver } from "@/worker/driver";
-import { runUntilIdle, type Deps } from "@/worker/runner";
+import { runLanesUntilIdle, runUntilIdle, type Deps } from "@/worker/runner";
 
 const LINK = "https://portfolio.infyum.com/sales-funnel";
 const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudra at Infyum, a small team in India. ${LINK}`, "Which link do most callers use?"] });
@@ -16,7 +16,7 @@ class FakeDriver implements InstagramDriver {
   facts = { isPublic: true, country: "United States", followers: 5000, linkedToInfyum: false };
   blockOnSend = false;
   async openLogin() {}
-  async readFacts() { return this.facts; }
+  async readFacts(_account?: unknown) { return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
   async warmUp() { return { likes: 10, comments: 10, followed: true }; }
   async sendMessages(_a: unknown, handle: string, parts: string[]) {
@@ -132,5 +132,50 @@ describe("worker pipeline", () => {
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(2);
     expect(getLead(db, lead.id)!.followupsSent).toBe(1);
+  });
+});
+
+describe("parallel accounts", () => {
+  it("runs different accounts at the same time but never one account twice at once", async () => {
+    const a1 = createAccount(db, { handle: "one", profileDir: "/tmp/1", dailyCap: 35 }, "t");
+    const a2 = createAccount(db, { handle: "two", profileDir: "/tmp/2", dailyCap: 35 }, "t");
+    db.prepare("UPDATE ig_accounts SET ramp_start = '2026-01-01'").run();
+    const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, bookingLink: "", approvalRequired: false, followupsEnabled: true }, [a1.id, a2.id], "t");
+    setCampaignStatus(db, camp.id, "active", "t");
+    for (const h of ["a", "b", "c", "d"]) addLead(db, { handle: h, campaignId: camp.id }, "t");
+
+    const active = new Map<number, number>();
+    let overlapSameAccount = false, now = 0, peak = 0;
+    class SlowDriver extends FakeDriver {
+      async readFacts(account: { id: number }) {
+        active.set(account.id, (active.get(account.id) ?? 0) + 1);
+        if ((active.get(account.id) ?? 0) > 1) overlapSameAccount = true;
+        now++; peak = Math.max(peak, now);
+        await new Promise((r) => setTimeout(r, 25));
+        now--; active.set(account.id, (active.get(account.id) ?? 1) - 1);
+        return this.facts;
+      }
+    }
+    let n = 0;
+    deps = { ...deps, driver: new SlowDriver(), engine: { async complete({ prompt }) {
+      if (prompt.includes("Write one short Instagram comment")) return "Nice 🙌";
+      n++;
+      return JSON.stringify({ parts: [`Opener ${n} about topic${n}x${n}y here`, `Rudra here from Infyum, builder number ${n} of funnels${n}q for sector${n}w firms. ${LINK}`, `Question ${n} about funnel${n}z?`] });
+    } } };
+    await runLanesUntilIdle(deps);
+
+    expect(overlapSameAccount).toBe(false);          // one account never does two things at once
+    expect(peak).toBe(2);                            // two accounts really overlap
+    const perAccount = db.prepare("SELECT account_id, COUNT(*) c FROM leads GROUP BY account_id").all() as { account_id: number; c: number }[];
+    expect(perAccount.map((r) => r.c)).toEqual([2, 2]); // work is spread evenly
+    expect(db.prepare("SELECT COUNT(*) c FROM leads WHERE stage='dm_sent'").get()).toEqual({ c: 4 });
+  });
+
+  it("keeps jobs that need no account in their own lane", async () => {
+    const { camp } = setup(false);
+    db.prepare("INSERT INTO jobs (type, payload) VALUES ('draft_reply', ?)").run(JSON.stringify({}));
+    addLead(db, { handle: "x", campaignId: camp.id }, "t");
+    const n = await runLanesUntilIdle(deps);
+    expect(n).toBeGreaterThan(0);
   });
 });
