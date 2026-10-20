@@ -1,5 +1,10 @@
 # Start here
 Read `HANDOFF.md` first: product rules, decisions, what is built, what is untested, and the next tasks.
+Then read `docs/DESIGN.md` before touching any screen.
+
+## Skills in this repo (read the SKILL.md when its trigger applies)
+- `docs/skills/grilling/SKILL.md` (+ `grill-me`): how to settle unclear decisions with the owner. Ask every question whose prerequisites are settled in ONE numbered round, give your recommended answer under each ("yes" must accept it), look up facts yourself instead of asking, wait for answers, repeat until nothing is assumed, summarise, and only build after the owner confirms. Use it before any new feature, any change to a locked decision, or when requirements are vague.
+- `docs/skills/hig-foundations/` and `docs/skills/hig-patterns/`: Apple Human Interface Guidelines as checklists for colour, typography, layout, accessibility, onboarding, loading, feedback, settings and destructive actions. Use them on every UI change, together with `docs/DESIGN.md`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
