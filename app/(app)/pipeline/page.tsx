@@ -53,7 +53,7 @@ export default async function Pipeline({ searchParams }: PageProps<"/pipeline">)
           );
         })}
       </div>
-      <details className="mt-6">
+      <details id="skipped" className="mt-6">
         <summary className="cursor-pointer text-sm font-medium">Skipped ({skipped.length}) and why</summary>
         <ul className="card mt-3 divide-y divide-line">
           {skipped.map((l) => (
