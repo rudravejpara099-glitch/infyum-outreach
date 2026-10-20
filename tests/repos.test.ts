@@ -12,7 +12,7 @@ import { listActivity } from "@/lib/db/repos/activity";
 let db: Db;
 const campaignInput = {
   name: "Credit repair US", niches: ["credit repair"], audienceText: "", country: "United States",
-  minFollowers: 2000, maxFollowers: 150000, bookingLink: "https://cal.example/x", approvalRequired: false, followupsEnabled: true,
+  minFollowers: 2000, maxFollowers: 150000, approvalRequired: false, followupsEnabled: true,
 };
 const seed = (approvalRequired = false) => {
   const acct = createAccount(db, { handle: "@Sender", profileDir: "/tmp/p" }, "t");
@@ -33,7 +33,7 @@ describe("leads", () => {
   });
   it("refuses illegal stage jumps and logs legal ones", () => {
     const { lead } = addLead(db, { handle: "x" }, "t");
-    expect(() => moveStage(db, lead.id, "booked", "t")).toThrow();
+    expect(() => moveStage(db, lead.id, "replied", "t")).toThrow();
     moveStage(db, lead.id, "qualified", "t");
     expect(getLead(db, lead.id)!.stage).toBe("qualified");
     expect(listActivity(db).some((a) => a.action === "lead.qualified")).toBe(true);
@@ -111,11 +111,11 @@ describe("incoming messages", () => {
     expect(handleIncoming(db, lead.id, "Hi, thanks for contacting us. We've received your message.").counted).toBe(false);
     expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
   });
-  it("a real reply moves the lead, stops follow-ups and queues a drafted answer", () => {
+  it("a real reply moves the lead, stops follow-ups and hands off without drafting", () => {
     const { lead } = toDmSent();
     expect(handleIncoming(db, lead.id, "Interesting, what do you do exactly?").counted).toBe(true);
     expect(getLead(db, lead.id)).toMatchObject({ stage: "replied", nextFollowupAt: null });
-    expect(claimNext(db)?.type).toBe("draft_reply");
+    expect(claimNext(db)).toBeNull();
   });
   it("do-not-contact closes the lead and blocks the handle", () => {
     const { lead } = toDmSent();

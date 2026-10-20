@@ -1,6 +1,6 @@
 import type { Db } from "@/lib/db/core";
 import type { AiEngine } from "@/lib/engine/types";
-import { firstDmPrompt, followupPrompt, PORTFOLIO_LINK, replyPrompt, SYSTEM } from "@/lib/engine/prompts";
+import { firstDmPrompt, followupPrompt, PORTFOLIO_LINK, SYSTEM } from "@/lib/engine/prompts";
 import { checkDraft, parseParts } from "@/lib/engine/validate";
 import { checkAgainstRecent } from "@/lib/domain/similarity";
 import { getCampaign } from "@/lib/db/repos/campaigns";
@@ -12,7 +12,7 @@ import type { Campaign, Message } from "@/lib/db/types";
 const ATTEMPTS = 3;
 
 /** Asks the AI, checks the answer against the hard rules and the similarity guard, retries with feedback. */
-async function draft(engine: AiEngine, db: Db, kind: "dm" | "reply" | "followup", prompt: string): Promise<string[]> {
+async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: string): Promise<string[]> {
   const link = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
   let feedback = "";
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
@@ -52,18 +52,6 @@ export async function draftFirstDm(db: Db, engine: AiEngine, leadId: number, pro
     portfolioLink: getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK,
   }));
   return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "dm", parts, campaign: campaign ?? fallbackCampaign }, actor);
-}
-
-export async function draftReply(db: Db, engine: AiEngine, leadId: number, actor = "worker"): Promise<Message> {
-  const { lead, campaign } = context(db, leadId);
-  const thread = listMessages(db, { leadId, limit: 12 }).reverse().filter((m) => m.status === "sent");
-  const conversation = thread.map((m) => `${m.direction === "out" ? "Rudra" : "@" + lead.handle}: ${m.parts.join(" ")}`).join("\n");
-  const lastIncoming = [...thread].reverse().find((m) => m.direction === "in");
-  const parts = await draft(engine, db, "reply", replyPrompt({ handle: lead.handle, conversation, bookingLink: campaign?.bookingLink ?? "", stage: lead.stage }));
-  return createOutgoing(db, {
-    leadId, accountId: lead.accountId, kind: "reply", parts, campaign: campaign ?? fallbackCampaign,
-    incomingText: lastIncoming?.parts.join(" "),
-  }, actor);
 }
 
 export async function draftFollowup(db: Db, engine: AiEngine, leadId: number, profileNotes = "", actor = "worker"): Promise<Message> {

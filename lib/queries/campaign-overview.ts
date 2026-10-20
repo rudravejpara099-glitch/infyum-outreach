@@ -12,5 +12,5 @@ export function campaignOverview(db: Db, campaignId: number) {
     WHERE l.campaign_id=? AND m.status='pending_approval' ORDER BY m.id LIMIT 2`)
     .all(campaignId) as { id: number; leadId: number; handle: string; kind: string; partCount: number }[];
   return { stages, total: Object.values(stages).reduce((sum, count) => sum + count, 0), pendingCount, pending,
-    conversations: (stages.replied ?? 0) + (stages.call_offered ?? 0) };
+    conversations: stages.replied ?? 0 };
 }

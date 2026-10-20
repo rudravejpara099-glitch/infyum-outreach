@@ -20,5 +20,5 @@ export const number = (n: number | null) => (n == null ? "–" : n.toLocaleStrin
 
 export const STAGE_BADGE: Record<Stage, string> = {
   found: "badge-muted", qualified: "badge-muted", warmed: "badge-accent", dm_sent: "badge-accent",
-  replied: "badge-ok", call_offered: "badge-ok", booked: "badge-ok", closed: "badge-muted", skipped: "badge-warn",
+  replied: "badge-ok", closed: "badge-muted", skipped: "badge-warn",
 };

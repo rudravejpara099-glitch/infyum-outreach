@@ -3,7 +3,7 @@ import { openDb, type Db } from "@/lib/db/core";
 import { createAccount } from "@/lib/db/repos/accounts";
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { addLead, assignLead, moveStage } from "@/lib/db/repos/leads";
-import { draftFirstDm, draftReply } from "@/lib/services/drafting";
+import { draftFirstDm } from "@/lib/services/drafting";
 import { checkDraft, parseParts } from "@/lib/engine/validate";
 import type { AiEngine } from "@/lib/engine/types";
 
@@ -18,7 +18,7 @@ let db: Db; let leadId: number;
 beforeEach(() => {
   db = openDb(":memory:");
   const acct = createAccount(db, { handle: "me", profileDir: "/tmp/x" }, "t");
-  const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 1, maxFollowers: 9, bookingLink: "https://cal.test/a", approvalRequired: false, followupsEnabled: true }, [acct.id], "t");
+  const camp = createCampaign(db, { name: "c", niches: [], audienceText: "", country: "United States", minFollowers: 1, maxFollowers: 9, approvalRequired: false, followupsEnabled: true }, [acct.id], "t");
   leadId = addLead(db, { handle: "target", campaignId: camp.id }, "t").lead.id;
   assignLead(db, leadId, camp.id, acct.id);
   moveStage(db, leadId, "qualified", "t"); moveStage(db, leadId, "warmed", "t");
@@ -50,10 +50,5 @@ describe("drafting", () => {
     const bad = fake(["{\"parts\":[\"only one\"]}"]);
     await expect(draftFirstDm(db, bad, leadId, "")).rejects.toThrow(/acceptable dm draft/);
     expect(bad.calls).toBe(3);
-  });
-  it("holds a reply that touches pricing for a human", async () => {
-    const e = fake([JSON.stringify({ parts: ["Pricing depends on scope, a teammate will follow up."] })]);
-    const m = await draftReply(db, e, leadId);
-    expect(m.status).toBe("pending_approval");
   });
 });

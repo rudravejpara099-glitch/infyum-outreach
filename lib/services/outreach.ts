@@ -2,7 +2,6 @@ import type { Db } from "@/lib/db/core";
 import { isAutoReply } from "@/lib/domain/autoreply";
 import { getCampaign } from "@/lib/db/repos/campaigns";
 import { addDnc } from "@/lib/db/repos/dnc";
-import { enqueue } from "@/lib/db/repos/jobs";
 import { getLead, moveStage, scheduleFollowup } from "@/lib/db/repos/leads";
 import { getMessage, markSent, recordIncoming } from "@/lib/db/repos/messages";
 import { logActivity } from "@/lib/db/repos/activity";
@@ -32,7 +31,7 @@ export function afterSent(db: Db, messageId: number, now = new Date()): void {
   }
 }
 
-/** Called by the worker when it reads a message from a lead. */
+/** Called by the worker when it reads a message from a lead. A real reply ends the app's job for that lead. */
 export function handleIncoming(db: Db, leadId: number, text: string): { counted: boolean } {
   recordIncoming(db, leadId, null, text);
   if (isAutoReply(text)) {
@@ -40,9 +39,10 @@ export function handleIncoming(db: Db, leadId: number, text: string): { counted:
     return { counted: false };
   }
   const lead = getLead(db, leadId)!;
-  if (lead.stage === "dm_sent" || lead.stage === "call_offered" || lead.stage === "closed") moveStage(db, leadId, "replied", "worker");
+  // The first real message is the goal. Mark the hand-off, stop follow-ups, and leave the rest to a person or the GHL agent.
+  if (lead.stage === "dm_sent" || lead.stage === "closed") moveStage(db, leadId, "replied", "worker");
   scheduleFollowup(db, leadId, null);
-  enqueue(db, { type: "draft_reply", leadId, accountId: lead.accountId });
+  logActivity(db, "worker", "lead.handoff", { leadId, accountId: lead.accountId, detail: text.slice(0, 200) });
   return { counted: true };
 }
 

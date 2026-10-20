@@ -1,6 +1,6 @@
 # Infyum Outreach
 
-Internal web app for Instagram outreach: choose an audience, find and check leads, warm them up, send three custom DMs, handle replies and follow-ups, until a call is booked.
+Internal web app for Instagram outreach: choose an audience, find and check leads, warm them up, send three custom DMs and follow up, until the lead sends a first reply. Our job ends there: a person or the GoHighLevel agent handles the conversation and the booking.
 
 ## Quick start for a teammate (about 10 minutes)
 

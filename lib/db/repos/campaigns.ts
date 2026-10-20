@@ -6,23 +6,23 @@ const map = (r: Record<string, unknown>): Campaign => ({
   id: r.id as number, name: r.name as string, niches: JSON.parse(r.niches as string) as string[],
   audienceText: r.audience_text as string, country: r.country as string,
   minFollowers: r.min_followers as number, maxFollowers: r.max_followers as number,
-  bookingLink: r.booking_link as string, approvalRequired: !!r.approval_required,
+  approvalRequired: !!r.approval_required,
   followupsEnabled: !!r.followups_enabled, status: r.status as Campaign["status"], createdAt: r.created_at as string,
 });
 
 export type CampaignInput = {
   name: string; niches: string[]; audienceText: string; country: string;
-  minFollowers: number; maxFollowers: number; bookingLink: string;
+  minFollowers: number; maxFollowers: number;
   approvalRequired: boolean; followupsEnabled: boolean;
 };
 
 export function createCampaign(db: Db, input: CampaignInput, accountIds: number[], actor: string): Campaign {
   const id = db.transaction(() => {
     const info = db.prepare(
-      `INSERT INTO campaigns (name, niches, audience_text, country, min_followers, max_followers, booking_link, approval_required, followups_enabled)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO campaigns (name, niches, audience_text, country, min_followers, max_followers, approval_required, followups_enabled)
+       VALUES (?,?,?,?,?,?,?,?)`,
     ).run(input.name, JSON.stringify(input.niches), input.audienceText, input.country, input.minFollowers,
-      input.maxFollowers, input.bookingLink, input.approvalRequired ? 1 : 0, input.followupsEnabled ? 1 : 0);
+      input.maxFollowers, input.approvalRequired ? 1 : 0, input.followupsEnabled ? 1 : 0);
     const cid = Number(info.lastInsertRowid);
     setCampaignAccounts(db, cid, accountIds);
     return cid;
@@ -35,9 +35,9 @@ export function updateCampaign(db: Db, id: number, input: CampaignInput, account
   db.transaction(() => {
     db.prepare(
       `UPDATE campaigns SET name=?, niches=?, audience_text=?, country=?, min_followers=?, max_followers=?,
-       booking_link=?, approval_required=?, followups_enabled=? WHERE id=?`,
+       approval_required=?, followups_enabled=? WHERE id=?`,
     ).run(input.name, JSON.stringify(input.niches), input.audienceText, input.country, input.minFollowers,
-      input.maxFollowers, input.bookingLink, input.approvalRequired ? 1 : 0, input.followupsEnabled ? 1 : 0, id);
+      input.maxFollowers, input.approvalRequired ? 1 : 0, input.followupsEnabled ? 1 : 0, id);
     setCampaignAccounts(db, id, accountIds);
   })();
   logActivity(db, actor, "campaign.updated", { detail: input.name });
