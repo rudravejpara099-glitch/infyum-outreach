@@ -1,0 +1,9 @@
+export type UsageKind = "apify" | "ai_input_tokens" | "ai_output_tokens" | "proxy_share" | "hosting_share";
+export type Source = { campaignId?: number; accountId?: number; leadId?: number; jobId?: number };
+export type UsageEvent = { eventKey: string; userId: number; occurredAt: string; kind: UsageKind; quantity: number; unitCostMicros: number; unitQuantity: number; costMicros: number; providerRef: string; source?: Source };
+export type Profile = { user_id: number; ceiling_micros: number; consented_at: string | null; created_at: string };
+export type BillingConfig = { id: number; markup_percent: number; fee_bps: number; fixed_fee_micros: number; minimum_cents: number; proxy_seed_micros: number; hosting_seed_micros: number; created_at: string };
+export type ModelRate = { id: number; model: string; input_micros_per_million: number; output_micros_per_million: number; cache_read_micros_per_million: number | null; cache_write_micros_per_million: number | null; verified: number; source: string; created_at: string };
+export type ResourceCost = { id: number; user_id: number; account_id: number | null; kind: "proxy_share" | "hosting_share"; cadence: "day" | "month"; amount_micros: number; start_date: string; end_date: string | null; reference: string; confirmed_by: number; created_at: string };
+export type StatementRow = { id: number; user_id: number; period_start: string; period_end: string; breakdown_json: string; total_cents: number; carry_micros: number; previous_id: number | null; created_at: string };
+export type Reservation = { operation_id: string; user_id: number; provider: "ai" | "apify"; max_cost_micros: number; period_start: string; source_json: string; status: "held" | "settled" | "released"; created_at: string; actual_cost_micros: number | null };
