@@ -15,6 +15,8 @@ import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
 import { draftFirstDm, draftFollowup, draftReply } from "@/lib/services/drafting";
 import { afterSent, handleIncoming } from "@/lib/services/outreach";
+import { findLeadsForCampaign } from "@/lib/services/findLeads";
+import type { ApifyClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
 export type Deps = {
@@ -22,6 +24,8 @@ export type Deps = {
   now: () => Date;
   /** A human-like pause between sends. Tests pass a no-op. */
   pace: () => Promise<void>;
+  /** Present only when APIFY_TOKEN is set. */
+  apify?: Pick<ApifyClient, "monthlyUsageUsd" | "runActor">;
 };
 
 const WARMUP_PIECES = 10;
@@ -100,6 +104,12 @@ async function process(deps: Deps, job: Job): Promise<void> {
   const lead = job.leadId ? getLead(db, job.leadId) : null;
 
   switch (job.type) {
+    case "find_leads": {
+      if (!deps.apify) throw new Error("APIFY_TOKEN is not set, so lead search cannot run");
+      await findLeadsForCampaign(db, deps.apify, Number(job.payload.campaignId));
+      return;
+    }
+
     case "open_login":
       if (account) await driver.openLogin(account);
       return;

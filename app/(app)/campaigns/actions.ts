@@ -8,6 +8,7 @@ import { parseCampaignForm } from "@/lib/campaign-form";
 import { createCampaign, getCampaign, setCampaignStatus, updateCampaign } from "@/lib/db/repos/campaigns";
 import { addLead } from "@/lib/db/repos/leads";
 import { isDnc } from "@/lib/db/repos/dnc";
+import { enqueue } from "@/lib/db/repos/jobs";
 
 export async function saveCampaign(form: FormData) {
   const user = await requireUser();
@@ -41,5 +42,12 @@ export async function addLeads(form: FormData) {
     if (!/^[a-zA-Z0-9._]+$/.test(handle) || isDnc(db, handle)) continue;
     addLead(db, { handle, campaignId, source: "pasted" }, user.email);
   }
+  revalidatePath(`/campaigns/${campaignId}`);
+}
+
+export async function findLeads(form: FormData) {
+  await requireUser();
+  const campaignId = Number(form.get("id"));
+  enqueue(getDb(), { type: "find_leads", payload: { campaignId } });
   revalidatePath(`/campaigns/${campaignId}`);
 }

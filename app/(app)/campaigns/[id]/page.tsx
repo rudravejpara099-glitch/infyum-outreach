@@ -9,7 +9,8 @@ import { STAGE_LABEL } from "@/lib/domain/stages";
 import { number, STAGE_BADGE } from "@/lib/format";
 import { CampaignForm } from "@/components/campaign-form";
 import { PageHeader } from "@/components/ui";
-import { addLeads, changeCampaignStatus } from "../actions";
+import { getSetting } from "@/lib/db/repos/settings";
+import { addLeads, changeCampaignStatus, findLeads } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   if (!campaign) notFound();
   const counts = countByStage(db, campaign.id);
   const leads = listLeads(db, { campaignId: campaign.id, limit: 12 });
+  const searchOn = getSetting(db, "apify_monthly_cap_usd") !== null && getSetting(db, "apify_monthly_cap_usd") !== "";
   const next = campaign.status === "active" ? { to: "paused", label: "Pause campaign" } : { to: "active", label: campaign.status === "draft" ? "Start campaign" : "Resume campaign" };
 
   return (
@@ -47,7 +49,11 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
               <textarea name="handles" rows={5} placeholder={"@handle1\n@handle2"} className="input" aria-label="Handles" />
               <button className="btn">Add to campaign</button>
             </form>
-            <p className="mt-2 text-xs text-muted">Finding leads automatically uses Apify, which is switched off until a monthly limit is set in Settings.</p>
+            <form action={findLeads} className="mt-4">
+              <input type="hidden" name="id" value={campaign.id} />
+              <button className="btn" disabled={!searchOn}>Find leads automatically</button>
+              <p className="mt-2 text-xs text-muted">{searchOn ? "Searches Apify for this campaign's niches. New leads appear below within a few minutes." : "Off. Set a monthly limit in Settings and start the worker with APIFY_TOKEN."}</p>
+            </form>
           </section>
           <section>
             <h2 className="mb-2 text-base font-semibold">Latest leads</h2>

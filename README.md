@@ -52,5 +52,5 @@ Rule for changes: edit the pure rule, run `npm test`, then look at the screen. T
 - Every action is logged (Activity page, CSV export)
 
 ## Not built yet
-- Automatic lead search through Apify (switched off until a monthly limit is set in Settings; the cap is stored, the search itself is not wired in)
+- Apify lead search is built and tested against canned data only. It has not run against the real Apify yet: check the first run's results and the actor's output fields (`lib/leads/apify.ts`). Needs `APIFY_TOKEN` in the worker's environment and a monthly limit in Settings.
 - Running on a live server (this version is for one computer)
