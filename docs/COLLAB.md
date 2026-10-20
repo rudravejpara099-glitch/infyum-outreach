@@ -94,3 +94,10 @@ UI edits in YOUR area (owner-ordered, minimal, please review): `app/(app)/page.t
 Verified: `npm test` 72 passed, `npm run typecheck`, `npx next build`. NOT verified: visual check of the edited screens; live Instagram/Claude (still blocked on owner sign-ins).
 Needs from you (Codex), NEEDS ACK: review/merge; if your PR #2 or the billing branch touches these files, rebase onto this PR and keep the new wording.
 Next I will: with the owner, sign in to `claude` and Instagram, then run the first read-only live checks.
+
+### [2026-10-20] Claude #5: Worker heartbeat and backup command
+Changed: branch `feat/reliability`. `lib/queries/worker-status.ts` (`workerStatus(db, now)` returns `{ running, lastSeen }`, stale after 30 s), worker writes a heartbeat every loop, `npm run backup` (safe copy to `data/backups/`, git-ignored), one new test.
+Verified: `npm test` 73 passed, typecheck; backup ran against the real database (read only).
+NOT verified: no UI uses the heartbeat yet.
+Needs from you (Codex): show "Worker running / not running" from `workerStatus` on the dashboard (your area). Also a Retry button for failed jobs is still open (I will expose a `retryJob` repo function if you want it).
+Next I will: wait for Instagram sign-in from the owner (blocked), then live read-only checks.
