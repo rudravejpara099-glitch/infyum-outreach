@@ -1,10 +1,11 @@
 import { chromium, type BrowserContext, type Page } from "playwright";
 import type { IgAccount } from "@/lib/db/types";
 import { InstagramBlockedError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
+import { humanDelayMs } from "@/lib/domain/pacing";
+import * as human from "./human";
 import { followersFromText, looksBlocked, looksLoggedOut, skipComment } from "./parse";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const between = (min: number, max: number) => sleep(min + Math.random() * (max - min));
 
 /** Real Instagram, driven through a visible browser window that keeps its own login per account. */
 export class PlaywrightInstagram implements InstagramDriver {
@@ -28,7 +29,7 @@ export class PlaywrightInstagram implements InstagramDriver {
   private async go(account: IgAccount, url: string): Promise<Page> {
     const page = await this.page(account);
     await page.goto(url, { waitUntil: "domcontentloaded" });
-    await between(1500, 3000);
+    await human.wait("read");
     await this.guard(page);
     return page;
   }
@@ -62,12 +63,12 @@ export class PlaywrightInstagram implements InstagramDriver {
 
   /** Options menu, About this account, "Account based in". null when Instagram does not share it. */
   private async country(page: Page): Promise<string | null> {
-    await page.locator('header [aria-label="Options"], header svg[aria-label="Options"]').first().click();
-    await between(600, 1200);
-    await page.getByText("About this account", { exact: true }).click();
-    await between(1500, 2500);
+    await human.click(page, page.locator('header [aria-label="Options"], header svg[aria-label="Options"]').first());
+    await human.wait("afterLike");
+    await human.click(page, page.getByText("About this account", { exact: true }));
+    await human.wait("read");
     const dialog = (await page.locator('[role="dialog"]').last().innerText()).replace(/ /g, " ");
-    await page.keyboard.press("Escape"); await between(300, 600); await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape"); await human.wait("afterLike"); await page.keyboard.press("Escape");
     const m = dialog.match(/Account based in\s*\n?\s*([^\n]+)/i);
     const value = m?.[1].trim() ?? null;
     return !value || /not shared/i.test(value) ? null : value;
@@ -76,12 +77,13 @@ export class PlaywrightInstagram implements InstagramDriver {
   /** Searches a followers or following list for a word. Lists without a search box count as "not found". */
   private async listHas(page: Page, handle: string, which: "followers" | "following", needle: string): Promise<boolean> {
     await page.goto(`https://www.instagram.com/${handle}/${which}/`, { waitUntil: "domcontentloaded" });
-    await between(1500, 2500);
+    await human.wait("read");
     await this.guard(page);
     const search = page.locator('[role="dialog"] input[placeholder*="Search" i]').first();
     if (!(await search.count())) { await page.goto(`https://www.instagram.com/${handle}/`); return false; }
-    await search.fill(needle);
-    await between(1500, 2500);
+    await human.click(page, search);
+    await human.type(page, needle);
+    await human.wait("read");
     const found = /infyum/i.test(await page.locator('[role="dialog"]').last().innerText());
     await page.goto(`https://www.instagram.com/${handle}/`, { waitUntil: "domcontentloaded" });
     return found;
@@ -100,29 +102,30 @@ export class PlaywrightInstagram implements InstagramDriver {
     const result: WarmUpResult = { likes: 0, comments: 0, followed: false };
     for (const url of links.slice(0, pieces)) {
       await page.goto(url, { waitUntil: "domcontentloaded" });
-      await between(2000, 4000);
+      await human.look(page);
       await this.guard(page);
       const caption = (await page.locator("main h1, article h1").first().innerText().catch(() => "")) || (await page.title());
       const like = page.locator('svg[aria-label="Like"]').first();
-      if (await like.count()) { await like.click(); result.likes++; await between(1200, 2500); }
+      if (await like.count()) { await human.click(page, like); result.likes++; await human.wait("afterLike"); }
       if (!skipComment(caption)) {
         const box = page.locator('textarea[aria-label*="comment" i], textarea[placeholder*="comment" i]').first();
         if (await box.count()) {
           const text = await makeComment(`@${handle}: ${caption.slice(0, 400)}`);
-          await box.click(); await page.keyboard.type(text, { delay: 60 + Math.random() * 60 });
-          await between(800, 1500); await page.keyboard.press("Enter");
-          await between(2000, 3500);
+          await human.wait("beforeComment");
+          await human.click(page, box); await human.type(page, text);
+          await human.wait("beforeSend"); await page.keyboard.press("Enter");
+          await human.wait("read");
           if (await page.getByText(text.slice(0, 20)).count()) result.comments++;
           else throw new InstagramBlockedError("Comment did not post. Instagram may be limiting this account.");
         }
       }
-      await between(3000, 8000);
+      await human.wait("betweenPieces");
     }
     // Follow is always last.
     await page.goto(`https://www.instagram.com/${handle}/`, { waitUntil: "domcontentloaded" });
-    await between(1500, 2500);
+    await human.wait("read");
     const follow = page.getByRole("button", { name: "Follow", exact: true }).first();
-    if (await follow.count()) { await follow.click(); await between(1500, 2500); }
+    if (await follow.count()) { await human.click(page, follow); await human.wait("read"); }
     result.followed = (await page.getByRole("button", { name: /^(Following|Requested)$/ }).count()) > 0;
     return result;
   }
@@ -131,15 +134,15 @@ export class PlaywrightInstagram implements InstagramDriver {
     const page = await this.go(account, `https://www.instagram.com/${handle}/`);
     const open = page.getByRole("button", { name: "Message", exact: true }).first();
     if (!(await open.count())) throw new Error(`@${handle} has no Message button`);
-    await open.click();
+    await human.click(page, open);
     const box = page.locator('[role="textbox"][aria-label^="Message"], div[contenteditable="true"][aria-label^="Message"]').first();
     await box.waitFor({ timeout: 20_000 }).catch(() => { throw new Error(`Chat with @${handle} did not open`); });
     for (const part of parts) {
-      await box.click();
-      await page.keyboard.type(part, { delay: 25 + Math.random() * 35 });
-      await sleep(1000);          // without this pause two messages can merge into one
+      await human.click(page, box);
+      await human.type(page, part);
+      await sleep(Math.max(1000, humanDelayMs("beforeSend", Math.random)));   // never under 1 second, or two messages can merge into one
       await page.keyboard.press("Enter");
-      await between(1800, 3000);
+      await human.wait("betweenParts");
       await this.guard(page);
       if (!(await page.getByText(part.slice(0, 30), { exact: false }).count())) throw new Error(`Message to @${handle} did not appear in the thread`);
     }
@@ -153,7 +156,7 @@ export class PlaywrightInstagram implements InstagramDriver {
     for (let i = 0; i < total; i++) {
       const preview = (await rows.nth(i).innerText()).split("\n");
       if (preview.some((l) => /^You:/i.test(l))) continue;            // last message is ours
-      await rows.nth(i).click(); await between(1500, 2500);
+      await human.click(page, rows.nth(i)); await human.wait("read");
       const handle = (await page.locator('a[href^="/"][role="link"]').evaluateAll((els) =>
         els.map((e) => (e as HTMLAnchorElement).getAttribute("href") ?? "").find((h) => /^\/[A-Za-z0-9._]+\/$/.test(h)) ?? "")).replace(/\//g, "");
       const text = (await page.locator('div[role="row"]').last().innerText().catch(() => "")).trim();

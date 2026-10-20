@@ -8,7 +8,8 @@ import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { activeJobExists, claimNext, completeJob, deferJob, enqueue, failJob, type Lane } from "@/lib/db/repos/jobs";
+import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failJob, type Lane } from "@/lib/db/repos/jobs";
+import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
@@ -24,6 +25,8 @@ export type Deps = {
   now: () => Date;
   /** A human-like pause between sends. Tests pass a no-op. */
   pace: () => Promise<void>;
+  /** Human pacing (working hours, sessions, rests, gaps). Switched on by the real worker; tests leave it off. */
+  humanPace?: { cfg?: Partial<PacingConfig>; rng?: Rng };
   /** Present only when APIFY_TOKEN is set. */
   apify?: Pick<ApifyClient, "monthlyUsageUsd" | "runActor">;
 };
@@ -79,6 +82,10 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
   if (!job) return false;
   try {
     await process(deps, job);
+    if (deps.humanPace && job.accountId && PACED.has(job.type) && queuedStatus(deps.db, job.id) !== "queued") {
+      const rng = deps.humanPace.rng ?? Math.random;
+      savePace(deps.db, job.accountId, afterJob(loadPace(deps.db, job.accountId), job.type, deps.now(), rng));
+    }
     // A job may defer itself; only mark done if it is still running.
     const row = deps.db.prepare("SELECT status FROM jobs WHERE id = ?").get(job.id) as { status: string };
     if (row.status === "running") completeJob(deps.db, job.id);
@@ -103,6 +110,18 @@ async function process(deps: Deps, job: Job): Promise<void> {
     return;
   }
   const lead = job.leadId ? getLead(db, job.leadId) : null;
+
+  // Human pace: only jobs that act on Instagram are paced. Drafting with the AI is not.
+  if (deps.humanPace && account && PACED.has(job.type)) {
+    const cfg = { ...DEFAULT_PACING, tz: getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz, ...deps.humanPace.cfg };
+    const g = gate(deps.now(), account.id, loadPace(db, account.id), cfg, deps.humanPace.rng ?? Math.random);
+    savePace(db, account.id, g.state);
+    if (!g.ok) {
+      deferJobUntil(db, job, g.until);
+      logActivity(db, "worker", `pace.${g.reason}`, { accountId: account.id, detail: `back at ${g.until.toISOString()}` });
+      return;
+    }
+  }
 
   switch (job.type) {
     case "find_leads": {
@@ -190,6 +209,17 @@ export async function runUntilIdle(deps: Deps, maxJobs = 200): Promise<number> {
   let n = 0;
   while (n < maxJobs && (await runOne(deps))) { n++; planWork(deps); }
   return n;
+}
+
+const PACED = new Set(["qualify", "warmup", "send", "check_inbox"]);
+const queuedStatus = (db: Db, id: number) => (db.prepare("SELECT status FROM jobs WHERE id = ?").get(id) as { status: string }).status;
+
+export function loadPace(db: Db, accountId: number): PaceState {
+  const raw = getSetting(db, `pace_${accountId}`);
+  return raw ? { ...EMPTY_STATE, ...(JSON.parse(raw) as Partial<PaceState>) } : { ...EMPTY_STATE };
+}
+function savePace(db: Db, accountId: number, state: PaceState): void {
+  setSetting(db, `pace_${accountId}`, JSON.stringify(state));
 }
 
 /** The lanes that exist right now: one per Instagram account, plus the shared lane for jobs without an account. */
