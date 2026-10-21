@@ -24,8 +24,9 @@ beforeEach(() => {
 afterEach(() => { db.close(); delete process.env.BILLING_OWNER_USER_ID; });
 describe("durable ledger and reservations", () => {
   it("appends a migration and seeds placeholders without billing old users", () => {
-    expect((db.prepare("SELECT count(*) n FROM schema_migrations").get() as { n: number }).n).toBe(2);
+    expect((db.prepare("SELECT count(*) n FROM schema_migrations").get() as { n: number }).n).toBe(3);
     expect((db.prepare("SELECT verified FROM billing_model_rates").get() as { verified: number }).verified).toBe(0);
+    expect(db.prepare("SELECT model,input_micros_per_million,output_micros_per_million,verified FROM billing_model_rates WHERE model='claude-sonnet-5-5'").get()).toEqual({ model: "claude-sonnet-5-5", input_micros_per_million: 2000000, output_micros_per_million: 10000000, verified: 1 });
     expect((db.prepare("SELECT count(*) n FROM billing_usage_events").get() as { n: number }).n).toBe(0);
   });
   it("reserves, settles atomically and accepts identical replay without double billing", () => {

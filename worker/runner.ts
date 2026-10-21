@@ -1,5 +1,6 @@
 import type { Db } from "@/lib/db/core";
 import type { AiEngine } from "@/lib/engine/types";
+import { AiUsageUncertainError } from "@/lib/engine/anthropic";
 import type { InstagramDriver } from "./driver";
 import { InstagramBlockedError, InstagramSendUncertainError } from "./driver";
 import { commentPrompt, SYSTEM } from "@/lib/engine/prompts";
@@ -18,6 +19,7 @@ import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
 import { afterSent, handleIncoming } from "@/lib/services/outreach";
 import { findLeadsForCampaign } from "@/lib/services/findLeads";
 import { openLoginWindowJob } from "@/lib/services/login-window-job";
+import { payerFor } from "@/lib/billing/attribution";
 import type { ApifyClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
@@ -92,7 +94,10 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
     if (row.status === "running") completeJob(deps.db, job.id);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (e instanceof InstagramSendUncertainError) {
+    if (e instanceof AiUsageUncertainError) {
+      failJobPermanently(deps.db, job.id, msg);
+      logActivity(deps.db, "worker", "job.ai_usage_uncertain", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: usage requires owner review` });
+    } else if (e instanceof InstagramSendUncertainError) {
       const messageId = Number(job.payload.messageId);
       const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(deps.db, messageId) : null;
       if (message?.status === "approved") markFailed(deps.db, messageId, msg);
@@ -172,8 +177,17 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
     case "warmup": {
       if (!lead || !account || lead.stage !== "qualified") return;
+      const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
+      const campaignPayer = campaign ? payerFor(db, "campaign", campaign.id) : null;
+      const accountPayer = payerFor(db, "account", account.id);
+      let commentCall = 0;
       const result = await driver.warmUp(account, lead.handle, WARMUP_PIECES, async (context) => {
-        const raw = await engine.complete({ system: SYSTEM, prompt: commentPrompt(context) });
+        commentCall += 1;
+        const metering = campaign && campaignPayer && campaignPayer === accountPayer ? {
+          db, userId: campaignPayer, operationId: `ai:${job.id}:warmup-comment:${commentCall}`,
+          source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
+        } : undefined;
+        const raw = await engine.complete({ system: SYSTEM, prompt: commentPrompt(context), metering });
         return raw.replace(/[—–]/g, ",").replace(/^["']|["']$/g, "").trim();
       });
       logActivity(db, "worker", "lead.warmed_up", { leadId: lead.id, accountId: account.id, detail: `${result.likes} likes, ${result.comments} comments, followed: ${result.followed}` });
@@ -185,12 +199,12 @@ async function process(deps: Deps, job: Job): Promise<void> {
       if (!lead || lead.stage !== "warmed" || !account) return;
       const notes = await driver.readProfileNotes(account, lead.handle);
       setNotes(db, lead.id, notes.slice(0, 4000));
-      await draftFirstDm(db, engine, lead.id, notes);
+      await draftFirstDm(db, engine, lead.id, notes, "worker", job.id);
       return;
     }
 
     case "draft_followup":
-      if (lead && lead.stage === "dm_sent") await draftFollowup(db, engine, lead.id, lead.notes);
+      if (lead && lead.stage === "dm_sent") await draftFollowup(db, engine, lead.id, lead.notes, "worker", job.id);
       return;
 
     case "draft_reply":

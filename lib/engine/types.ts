@@ -1,5 +1,15 @@
-// The only thing the rest of the app knows about the AI. To switch to paid API billing later,
-// write another class that implements this and change one line in lib/engine/index.ts.
+import type { Db } from "@/lib/db/core";
+import type { Source } from "@/lib/billing/types";
+
+export type MeteredAiCall = {
+  db: Db;
+  userId: number;
+  operationId: string;
+  source: Source;
+  maxOutputTokens: number;
+};
+
+// The shared AI contract. Live paid calls require the durable metering context.
 export interface AiEngine {
-  complete(input: { system: string; prompt: string; timeoutMs?: number }): Promise<string>;
+  complete(input: { system: string; prompt: string; timeoutMs?: number; metering?: MeteredAiCall }): Promise<string>;
 }

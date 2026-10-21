@@ -11,21 +11,10 @@ import { setSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { handleSchema, teammateSchema, validCap, validTimeZone } from "./validation";
-import { claudeLoginState } from "@/lib/ui/claude-status";
 
 function commitAtomically(db: ReturnType<typeof getDb>, write: () => void): boolean {
   try { db.transaction(write).immediate(); return true; }
   catch { return false; }
-}
-
-export async function checkClaudeConnection(_form: FormData): Promise<ActionResult> {
-  await requireUser();
-  void _form;
-  const state = await claudeLoginState();
-  if (state === "signed_in") return { message: "Claude is signed in on this computer. Message drafts can use it." };
-  if (state === "signed_out") return { error: "Claude is signed out. On this computer, open Terminal, run claude, and finish sign-in. Then check again." };
-  if (state === "unavailable") return { error: "Outreach cannot find Claude Code on this computer. Ask the app owner to install or connect it." };
-  return { error: "Outreach could not confirm Claude’s sign-in. Try again or check History for a draft error." };
 }
 
 export async function addTeammate(form: FormData): Promise<ActionResult> {

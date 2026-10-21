@@ -1,5 +1,5 @@
-import { ClaudeCliEngine } from "./claude-cli";
+import { AnthropicEngine } from "./anthropic";
 import type { AiEngine } from "./types";
 
 export type { AiEngine };
-export const defaultEngine = (): AiEngine => new ClaudeCliEngine({ model: process.env.AI_MODEL ?? "sonnet" });
+export const defaultEngine = (): AiEngine => new AnthropicEngine();

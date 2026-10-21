@@ -424,10 +424,9 @@ try {
   await page.getByText("Outreach is waiting", { exact: true }).waitFor();
 
   await page.goto(`${base}/settings`);
-  await page.getByRole("heading", { name: "Message writing", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Check Claude connection", exact: true }).click();
-  await page.locator('[role="status"], [role="alert"]').filter({ hasText: /Claude is signed in|Claude is signed out|cannot find Claude Code|could not confirm Claude/ }).waitFor();
-  await page.getByText("Outreach uses Claude signed in on this computer.", { exact: false }).waitFor();
+  await page.getByRole("heading", { name: "AI message writing", exact: true }).waitFor();
+  await page.getByText("Outreach uses a separately billed Anthropic API connection.", { exact: false }).waitFor();
+  await page.getByText(/Connection: (not connected on this computer|API key is set on this computer)\. Paid message writing stays paused until billing metering is reviewed\./).waitFor();
   await page.getByText("Connection details: not set up on this computer. Checking this does not run a search.", { exact: true }).waitFor();
   await page.getByRole("listitem").filter({ hasText: "@another.campaign" }).getByRole("button", { name: "Remove", exact: true }).click();
   await page.getByText("Nobody blocked.", { exact: true }).waitFor();

@@ -3,7 +3,7 @@
 You are taking over a half-finished internal web app. Everything below is decided. Do not re-litigate decisions, build on them. Keep the code simple and reliable: one language (TypeScript), small files, pure rules separated from I/O, tests on anything risky.
 
 ## What the product is
-Instagram outreach for INFYUM (a funnel and landing page team in India). A campaign picks an audience; the app finds leads, checks them, warms them up (likes, comments, follow), sends three custom DMs, sends follow-ups, and stops at the lead's first real reply (scope ruling, Oct 20: our only job is getting the first message back; a person or the GoHighLevel agent handles the rest, not connected yet). Internal use by the company team only for now. Public version later (needs paid Claude API billing, see "Decided").
+Instagram outreach for INFYUM (a funnel and landing page team in India). A campaign picks an audience; the app finds leads, checks them, warms them up (likes, comments, follow), sends three custom DMs, sends follow-ups, and stops at the lead's first real reply (scope ruling, Oct 20: our only job is getting the first message back; a person or the GoHighLevel agent handles the rest, not connected yet). Internal use by the company team only for now. Public version later (needs independently metered Anthropic API billing, see "Decided").
 
 Business rules the code must keep:
 - Lead qualifies only if: public account, based in the campaign country (from Instagram "About this account"), followers inside the campaign range (default 2,000 to 150,000), not connected to Infyum, never contacted, not on do-not-contact. Order of checks and wording of reasons: `lib/domain/qualify.ts`. Posting recency and engagement are deliberately ignored.
@@ -33,18 +33,18 @@ Built and tested:
 - Screens: login/setup, dashboard, campaigns (list/new/edit/add leads/find leads), pipeline board, lead page, approvals, replies (hand-off list), accounts, activity (+CSV export), settings
 - `scripts/import-csv.ts` imported the old spreadsheet (132 leads, 105 sent DMs) into `data/outreach.db`
 
-NOT verified (do these first, they need the owner's logins):
+NOT verified (these need the owner's account/provider setup):
 1. `worker/instagram.ts` (Playwright driver) was written from memory of Instagram's UI and has never run against the live site. Selectors, "About this account" parsing, the followers/following search boxes, comment box, Message button, DM textbox and inbox reading all need a live check. Test read-only steps first (readFacts, readProfileNotes) before anything that likes, comments, follows or sends. Never retry past an Instagram warning: it must stop the account.
-2. `lib/engine/claude-cli.ts` ran but the CLI answered "OAuth access token has been revoked". The owner must run `claude` once and sign in, then re-run a draft to confirm output parses (`lib/engine/validate.ts`).
+2. Paid AI drafting now uses the Anthropic API, not a personal Claude Code login. The provider key is not configured and no real paid request is authorized; fake-provider metering tests pass, but live usage is unverified.
 3. `lib/leads/apify.ts` is tested only with canned data. First real run: confirm the actor id (`apify~instagram-search-scraper` by default, overridable via setting `apify_actor`), its input fields (`search`, `searchType`, `resultsLimit`) and output field names (`username`, followers).
 
 ## Next tasks, in order
-1. Get the owner signed in to `claude`, connect one Instagram account in the app, live-test the driver read-only, fix selectors.
-2. Live-test warm-up with a single throwaway lead on a campaign with approval ON, then sending one approved DM.
-3. Run `check_inbox` live; fix handle detection from threads.
-4. Apify first real run with a tiny cap.
-5. Polish: empty and error states, keyboard focus, mobile widths. Run the `hig-foundations` and `hig-patterns` skills if available.
-6. Later: hosting on a server, multi-company accounts, payments (explicitly out of scope for v1).
+1. The owner signs in to one Instagram account through Accounts; verify the session and read-only profile/inbox steps, then correct any driver selectors. Do not run like, comment, follow or send actions without separate confirmation.
+2. Complete the paid AI API path: configure a separate Anthropic API key, independently review metering/restart safeguards, then run only a separately approved test request. Never use the personal Claude Code subscription.
+3. Test Apify with authoritative usage and the existing monthly cap only after separate spending approval. Finish the missing metered Apify worker hooks first.
+4. Test Stripe using test credentials and the fake local simulator; keep live payments off.
+5. Run the full worker flow with approval ON only after read-only and billing checks pass and the owner confirms the specific live test.
+6. Later: hosting on a server and multi-company accounts remain deferred.
 
 ## Working rules
 - Change a rule in `lib/domain/` first, run `npm test`, then look at the screen. Add a test for every rule you change.
@@ -345,3 +345,9 @@ Verified on this branch: `npm test` = 223 passing, `npm run typecheck`, isolated
 Read-only live workspace check: 1 active campaign and 4 drafts, all with approval on; 3 saved Instagram accounts; 23 outgoing drafts await approval; 105 messages already have sent status; no campaign or send jobs are queued/running. Worker heartbeat is stale. Two of three profile cookie databases were inspectable and had no current Instagram session cookie; the third had no inspectable cookie database. This check did not alter any account or message data. Apify and Stripe credentials are absent. Do not start the worker while the active campaign and unreviewed leads remain; that could begin campaign actions. No real Instagram login or Claude message generation is verified.
 
 Owner help needed: sign in to one account through the Accounts page and refresh to confirm its status. Real AI generation requires available AI access; Apify and Stripe live checks require credentials and separate spending approval. No password or token should be sent in chat.
+
+### Paid AI path without personal Claude login (Codex, 2026-10-22)
+
+Owner decision #40 authorizes Codex to finish the protected backend work without waiting for Claude. Removed the personal Claude CLI engine and sign-in check from Settings. Worker drafts, retries, follow-ups and warm-up comments now use the Anthropic Messages API path; each call requires an explicit campaign/account payer, a bounded reservation, and exact provider model/request/token usage to settle. A network timeout, unpriceable response, or unsettled usage holds the reservation and blocks further AI for that lead; it never automatically retries through another subscription. App setup now tells the user that the paid API is separate from Claude Code and reports only whether an API key is present, never its value. Added migration 3 for a verified Sonnet 5.5 price sourced from Anthropic’s current price page. Migration 1 and 2 were not edited.
+
+Verified: `npm test` = 225 passing; `npm run typecheck`; `npx next build --webpack`; targeted ESLint; `git diff --check`. Fake-response tests cover exact input/output/cache-read billing, provider failure holds, integration-review gating, and no dispatch without billing context. Disposable browser and billing smoke tests could not start local listeners in this run (`EPERM`); their prior passing results are recorded above. No live Anthropic request, payment, Apify run, Instagram action or real campaign worker ran. The production `billing_integration_ack` remains unset. The current app has no observed Anthropic API key, so real AI drafting remains disconnected. Independent review of metering and restart behavior is required before the marker can be set. Do not start the worker while the existing active campaign and approval queue are present.

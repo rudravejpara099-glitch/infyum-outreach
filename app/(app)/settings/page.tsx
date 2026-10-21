@@ -5,7 +5,7 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
-import { addTeammate, blockHandle, checkClaudeConnection, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
+import { addTeammate, blockHandle, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
 import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +24,9 @@ export default async function Settings() {
       <PageHeader title="Settings" />
       <div className="grid max-w-3xl gap-6">
         <section className="card p-5">
-          <h2 className="text-base font-semibold">Message writing</h2>
-          <p className="mb-3 mt-1 text-muted">Outreach uses Claude signed in on this computer. Check the connection here; sign-in happens in Claude Code and your password stays with you.</p>
-          <ActionForm action={checkClaudeConnection}>
-            <button className="btn w-fit">Check Claude connection</button>
-          </ActionForm>
+          <h2 className="text-base font-semibold">AI message writing</h2>
+          <p className="mb-2 mt-1 text-muted">Outreach uses a separately billed Anthropic API connection. It does not use anyone’s Claude Code subscription.</p>
+          <p className="text-sm text-muted">Connection: {process.env.ANTHROPIC_API_KEY ? "API key is set on this computer" : "not connected on this computer"}. Paid message writing stays paused until billing metering is reviewed.</p>
         </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Link in first messages</h2>

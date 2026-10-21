@@ -120,4 +120,12 @@ CREATE TABLE settings (
 `,
   },
   { id: 2, name: "billing_at_cost", sql: billingSchema + billingImmutability },
+  {
+    id: 3,
+    name: "anthropic_sonnet_55_verified_price",
+    sql: `
+INSERT INTO billing_model_rates(id,model,input_micros_per_million,output_micros_per_million,cache_read_micros_per_million,cache_write_micros_per_million,verified,source,created_at)
+VALUES(100,'claude-sonnet-5-5',2000000,10000000,100000,NULL,1,'https://platform.claude.com/docs/en/about-claude/pricing','2026-10-22T00:00:00.000Z');
+`,
+  },
 ];
