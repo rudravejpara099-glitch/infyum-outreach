@@ -471,3 +471,11 @@ NOT verified: the app's separate per-account Playwright profile remains unauthen
 Decisions made: preserve the decided isolated profile per Instagram account; do not copy or expose browser session credentials. Keep the worker stopped and all external paid calls off.
 Needs from owner: choose whether to sign in manually in the app's dedicated account window or explicitly change the app's locked browser-profile design to reuse the everyday Chrome profile. The former can still present Instagram's CAPTCHA; the latter needs a deliberate security/design decision.
 Next I will: continue no-spend local reliability checks; after the app profile is authenticated, run only the read-only driver checks.
+
+### [2026-10-22] Codex #53: Confirm app-side login state without reading credentials
+Changed: no product or account data changed. Queried only the status fields and authenticated boolean from the ten newest `open_login` jobs in the configured local database, using a read-only SQLite connection.
+Verified: all ten attempts recorded `authenticated=false`; this confirms the app's per-account browser profiles have not inherited the session from the owner's everyday Chrome profile. The local app listener is present on port 3100 and responds successfully when checked with local network permission.
+NOT verified: app-side authenticated Instagram profile/inbox reads, or the effect of changing the product's locked per-account browser-profile design.
+Decisions made: do not infer app connection from the owner's Chrome login. No cookie values were read or copied. Continue to keep the worker and spending off.
+Needs from owner: if the app itself should use the everyday Chrome session, explicitly authorize that security/design change; otherwise sign in through the app's isolated profile.
+Next I will: continue with no-spend checks that do not depend on sharing Chrome credentials or running outreach.
