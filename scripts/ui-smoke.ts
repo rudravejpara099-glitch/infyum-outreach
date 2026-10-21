@@ -71,6 +71,14 @@ try {
   const db = openDb(dbPath);
   db.prepare("DELETE FROM activity").run(); // Keep the disposable fixture genuinely empty for the history state check.
   await page.goto(`${base}/`);
+  await page.getByText("No activity yet", { exact: true }).waitFor();
+  await page.getByText("Campaign changes and outreach updates will appear here as they happen.", { exact: true }).waitFor();
+  for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Dashboard activity empty state must fit on screen");
+    await page.screenshot({ path: path.join(screenshots, `dashboard-activity-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+  }
   const pipelineResponse = await page.goto(`${base}/pipeline`);
   assert.equal(pipelineResponse?.status(), 200, "Pipeline should load successfully");
   await page.getByText("No leads yet", { exact: true }).waitFor();
@@ -133,6 +141,18 @@ try {
   await page.getByLabel("Instagram handles").fill("MAYA.COACHES, growthwithalex, studio.sarah, https://invalid.example.test");
   await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "3 duplicate" }).waitFor();
+  const quietLead = addLead(db, { handle: "quiet.fixture", campaignId: null }, "ui-fixture").lead;
+  db.prepare("DELETE FROM activity WHERE lead_id=?").run(quietLead.id);
+  await page.goto(`${base}/leads/${quietLead.id}`);
+  await page.getByText("No messages yet. Messages appear here after this lead has been contacted or replies.", { exact: true }).waitFor();
+  await page.getByText("Lead checks and changes will appear here as this person moves through the campaign.", { exact: true }).waitFor();
+  for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Lead empty conversation/history must fit on screen");
+    await page.screenshot({ path: path.join(screenshots, `lead-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+  }
+  await page.goto(campaignUrl);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
   await page.goto(`${base}/campaigns/${other.id}#add-leads`);

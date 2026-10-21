@@ -217,3 +217,7 @@ Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passe
 ### Isolated worker startup check (Codex, 2026-10-21)
 
 Started the worker against a new disposable SQLite database with no accounts, leads, or jobs and an empty Apify token. It wrote a fresh heartbeat, queued no work, and exited cleanly on SIGINT. No browser profile was opened and no Instagram, Claude, Apify, or payment action ran. This verifies idle startup and heartbeat only; it does not verify jobs or provider integration.
+
+### Dashboard and lead empty states (Codex, 2026-10-21)
+
+Dashboard recent activity and lead conversation/history now explain what will appear when empty. The UI smoke captures desktop/tablet/phone in both themes and passes with isolated data. Verification: all 178 tests, typecheck, Webpack production build and UI smoke pass. No send, provider call or payment occurred.

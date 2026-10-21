@@ -43,7 +43,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
         <section>
           <h2 className="mb-3 text-base font-semibold">Conversation</h2>
-          {messages.length === 0 ? <p className="text-muted">No messages yet.</p> : (
+          {messages.length === 0 ? <p className="text-muted">No messages yet. Messages appear here after this lead has been contacted or replies.</p> : (
             <div className="flex flex-col gap-3">
               {messages.map((m) => (
                 <div key={m.id} className={`max-w-xl rounded-2xl border px-4 py-3 ${m.direction === "out" ? "self-end border-transparent bg-accent-soft" : "self-start border-line bg-surface"}`}>
@@ -54,9 +54,9 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             </div>
           )}
           <h2 className="mb-3 mt-8 text-base font-semibold">History</h2>
-          <ul className="divide-y divide-line text-sm">
+          {activity.length === 0 ? <p className="text-sm text-muted">Lead checks and changes will appear here as this person moves through the campaign.</p> : <ul className="divide-y divide-line text-sm">
             {activity.map((a) => <li key={a.id} className="flex justify-between py-1.5"><span>{activityLabel(a.action)} · {actorLabel(a.actor)} <span className="text-muted">{a.detail}</span></span><span className="text-xs text-muted">{ago(a.ts)}</span></li>)}
-          </ul>
+          </ul>}
         </section>
 
         <aside className="flex flex-col gap-6">

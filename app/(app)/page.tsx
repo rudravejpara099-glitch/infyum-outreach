@@ -9,7 +9,7 @@ import { STAGES, type Stage } from "@/lib/domain/stages";
 import { ago, number, todayIso } from "@/lib/format";
 import { stageCopy } from "@/lib/ui/copy";
 import { activityLabel } from "@/lib/ui/copy";
-import { Empty, PageHeader, Stat } from "@/components/ui";
+import { PageHeader, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -110,7 +110,10 @@ export default async function Dashboard() {
 
       <section className="card mt-6 p-5">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-base font-semibold">Recent activity</h2><Link href="/activity" className="text-accent">All activity</Link></div>
-        {recent.length === 0 ? <Empty title="Nothing yet" /> : (
+        {recent.length === 0 ? <div className="py-6 text-center">
+          <p className="font-medium">No activity yet</p>
+          <p className="mt-1 text-sm text-muted">Campaign changes and outreach updates will appear here as they happen.</p>
+        </div> : (
           <ul className="divide-y divide-line">
             {recent.map((a) => (
               <li key={a.id} className="flex items-center justify-between py-2">

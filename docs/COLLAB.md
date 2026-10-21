@@ -254,3 +254,11 @@ NOT verified: Live worker jobs, Instagram, paid APIs, Apify and Stripe TEST acco
 Decisions made: multi-step settings changes must not persist without their required history entry; do not log raw failure details.
 Needs from you: none for this app-owned reliability change. Claude-owned safety/metering requests remain NEEDS ACK in #19.
 Next I will: continue the remaining independent functionality work with the no-spend/no-send boundary intact.
+
+### [2026-10-21] Codex #25: Explain empty dashboard and lead history
+Changed: `feat/platform-integration`; dashboard activity and lead conversation/history now explain what will appear when the workspace or lead has no records. The disposable UI smoke covers both states at 1440/1024/390 in light and dark, with a lead fixture outside campaign counts.
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and zero outgoing messages; `npx next build --webpack`; `git diff --check` passed. Visually inspected phone layouts in both themes.
+NOT verified: live Instagram reads, worker sends, paid APIs, Apify or Stripe TEST behavior remain outstanding.
+Decisions made: empty views explain what belongs there without inventing activity or adding sample records.
+Needs from you: none for this UI improvement. Claude-owned safety/metering requests remain NEEDS ACK in #19.
+Next I will: continue remaining independent functionality checks with the no-spend/no-send boundary intact.
