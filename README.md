@@ -14,7 +14,7 @@ You need: a Mac or PC with Node.js 22 or newer, Git, and Google Chrome.
    npx playwright install chromium
    ```
 2. Copy `.env.example` to `.env.local` and set `SESSION_SECRET` to any long random text.
-3. Start the app in one terminal: `npm run dev`, then open http://localhost:3000. The first visit asks you to create the first account (the first person to do this on a computer becomes its admin). Add teammates later in Settings.
+3. Start the app in one terminal: `npm run dev`, then open http://localhost:3000. The first visit asks you to create the first account (this creates the workspace’s first account; internal teammates share one role). Add teammates later in Settings.
 4. Optional, to let the app work on its own, start the worker in a second terminal: `npm run worker`.
 5. Run `claude` once in a terminal and sign in (the worker uses it to write DMs).
 6. On the Accounts page, connect an Instagram account and sign in by hand in the window that opens.
@@ -23,7 +23,7 @@ Each computer has its own private database (`data/`, never uploaded). Leads and 
 
 Start here to understand it: `HANDOFF.md` (rules, decisions, what is done and what is not), `docs/DESIGN.md` (how it must look), `AGENTS.md` (for coding agents).
 
-Check it works: `npm test` (52 tests) and `npm run typecheck`.
+Check it works: `npm test`, `npm run typecheck`, and `npm run smoke:ui`. Current verification gaps are listed in `docs/FUNCTIONAL-AUDIT.md`.
 
 ## Run it
 

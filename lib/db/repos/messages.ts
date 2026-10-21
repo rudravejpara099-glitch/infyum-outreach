@@ -77,8 +77,8 @@ export function rejectMessage(db: Db, id: number, actor: string): void {
   db.prepare("UPDATE messages SET status='rejected' WHERE id = ?").run(id);
   logActivity(db, actor, "message.rejected", { leadId: m.leadId, accountId: m.accountId });
 }
-export function markSent(db: Db, id: number): void {
-  db.prepare("UPDATE messages SET status='sent', sent_at=datetime('now') WHERE id = ?").run(id);
+export function markSent(db: Db, id: number, now = new Date()): void {
+  db.prepare("UPDATE messages SET status='sent', sent_at=? WHERE id = ?").run(now.toISOString().replace("T", " ").slice(0, 19), id);
 }
 export function markFailed(db: Db, id: number, reason: string): void {
   const m = getMessage(db, id);

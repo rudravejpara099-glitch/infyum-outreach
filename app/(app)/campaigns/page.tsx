@@ -15,7 +15,7 @@ export default async function CampaignsPage() {
   const campaigns = listCampaigns(db);
   return (
     <>
-      <PageHeader title="Campaigns" sub="One campaign is one audience, one message setup and one booking link."
+      <PageHeader title="Campaigns" sub="Each campaign has its own audience, message settings and sending accounts."
         actions={<Link href="/campaigns/new" className="btn btn-primary">New campaign</Link>} />
       {campaigns.length === 0 ? <Empty title="No campaigns yet">Create one to say who you want to reach.</Empty> : (
         <div className="card divide-y divide-line">

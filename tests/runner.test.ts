@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
 import { createAccount, getAccount } from "@/lib/db/repos/accounts";
 import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
@@ -45,6 +45,7 @@ beforeEach(() => {
   db = openDb(":memory:"); driver = new FakeDriver(); clock = new Date("2026-10-20T10:00:00Z");
   deps = { db, engine, driver, now: () => clock, pace: async () => {} };
 });
+afterEach(() => db.close());
 
 describe("worker pipeline", () => {
   it("takes a lead from found to dm_sent on its own when approval is off", async () => {
@@ -91,6 +92,10 @@ describe("worker pipeline", () => {
     } };
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(2);
+    expect(listMessages(db, { status: "sent" }).filter((message) => message.kind === "dm").map((message) => message.sentAt)).toEqual([
+      "2026-10-20 10:00:00",
+      "2026-10-20 10:00:00",
+    ]);
     expect(getAccount(db, acct.id)!.status).toBe("active");
     clock = new Date("2026-10-21T10:00:00Z");
     db.prepare("UPDATE jobs SET run_after = datetime('now','-1 minute') WHERE status='queued'").run();

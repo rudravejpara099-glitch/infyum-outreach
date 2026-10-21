@@ -1,0 +1,24 @@
+--- a/lib/db/repos/messages.ts
++++ b/lib/db/repos/messages.ts
+@@ -77,8 +77,8 @@
+   db.prepare("UPDATE messages SET status='rejected' WHERE id = ?").run(id);
+   logActivity(db, actor, "message.rejected", { leadId: m.leadId, accountId: m.accountId });
+ }
+-export function markSent(db: Db, id: number): void {
+-  db.prepare("UPDATE messages SET status='sent', sent_at=datetime('now') WHERE id = ?").run(id);
++export function markSent(db: Db, id: number, now = new Date()): void {
++  db.prepare("UPDATE messages SET status='sent', sent_at=? WHERE id = ?").run(now.toISOString().replace("T", " ").slice(0, 19), id);
+ }
+ export function markFailed(db: Db, id: number, reason: string): void {
+   const m = getMessage(db, id);
+--- a/lib/services/outreach.ts
++++ b/lib/services/outreach.ts
+@@ -16,7 +16,7 @@
+ export function afterSent(db: Db, messageId: number, now = new Date()): void {
+   const m = getMessage(db, messageId);
+   if (!m) throw new Error(`Message ${messageId} not found`);
+-  markSent(db, messageId);
++  markSent(db, messageId, now);
+   const lead = getLead(db, m.leadId)!;
+   const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
+   logActivity(db, "worker", `message.sent.${m.kind}`, { leadId: lead.id, accountId: m.accountId });
