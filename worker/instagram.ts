@@ -37,8 +37,8 @@ export class PlaywrightInstagram implements InstagramDriver {
   }
 
   private async guard(page: Page): Promise<void> {
-    if (looksLoggedOut(page.url())) throw new InstagramBlockedError("Not logged in. Use Open login window on the Accounts page.");
     const text = await page.locator("body").innerText().catch(() => "");
+    if (looksLoggedOut(page.url(), text)) throw new InstagramBlockedError("Not logged in. Use Open login window on the Accounts page.");
     if (looksBlocked(text, page.url())) throw new InstagramBlockedError("Instagram showed a warning or a human check. Review the account by hand.");
   }
 

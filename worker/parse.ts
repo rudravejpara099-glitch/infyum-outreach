@@ -24,8 +24,16 @@ export function looksBlocked(pageText: string, url: string): boolean {
   return /\/(challenge|accounts\/suspended)\//.test(url) || BLOCK_SIGNS.some((r) => r.test(pageText));
 }
 
-export function looksLoggedOut(url: string): boolean {
-  return /\/accounts\/login/.test(url);
+const LOGIN_PROMPTS = [
+  /log in to (?:see|view) (?:photos|posts|this profile|content)/i,
+  /sign up to (?:see|view) (?:photos|posts|this profile|content)/i,
+  /log in to continue/i,
+  /you need to log in to continue/i,
+];
+
+/** Detects the login modal Instagram can show over an otherwise public profile. */
+export function looksLoggedOut(url: string, pageText = ""): boolean {
+  return /\/accounts\/login/i.test(url) || LOGIN_PROMPTS.some((pattern) => pattern.test(pageText));
 }
 
 /** Session confirmation uses cookie presence only; callers must never retain or log cookie values. */

@@ -448,3 +448,10 @@ Verified: `npm test` = 229 passing; `npm run typecheck`; `npx next build --webpa
 NOT verified: actual Instagram session, live read-only profile/inbox, worker run, Anthropic generation, Apify, or Stripe TEST. Live dashboard shows a stale worker heartbeat (about five hours), one failed task, an active campaign with zero leads, and 23 drafts waiting for approval; Settings shows Anthropic and Apify are disconnected; billing is at $0 with the paid-work ceiling off.
 Needs from owner: complete the CAPTCHA and hand sign-in in the open Instagram window; don't send credentials in chat. Then Codex will verify only session presence and read-only Instagram steps. Keep the general worker and all spending off.
 Next I will: after owner sign-in, verify session and run only read-only Instagram profile/inbox checks; before then, fix only independently actionable local issues that do not touch protected/claimed backend areas or outreach actions.
+
+### [2026-10-22] Codex #50: Stop logged-out profile reads at Instagram's login modal
+Changed: in the authorized worker area, extended Instagram login detection to recognize specific login/signup gates over an otherwise public profile URL. The driver now stops before reading profile details when that text appears; generic page text containing only “Log in · Sign up” is not enough. Added helper and mocked-driver regression coverage.
+Verified: `npm test` = 230 passing; `npm run typecheck`; `npx next build --webpack`; targeted ESLint; `git diff --check`. No live Instagram page, worker job, social write, paid service, or payment ran.
+NOT verified: actual login-modal copy/layout on a signed-out live Instagram profile; hand sign-in and authenticated read-only profile/inbox remain pending.
+Needs from owner: complete CAPTCHA and hand sign-in in the open Instagram window, then say done; no credentials in chat. No spending.
+Next I will: after the hand sign-in, confirm only session presence and try read-only profile/inbox. Keep all outreach and paid calls off.

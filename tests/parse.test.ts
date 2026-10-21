@@ -31,5 +31,8 @@ describe("instagram text helpers", () => {
     expect(looksBlocked("fine", "https://www.instagram.com/challenge/123/")).toBe(true);
     expect(looksBlocked("Welcome back", "https://www.instagram.com/")).toBe(false);
     expect(looksLoggedOut("https://www.instagram.com/accounts/login/?next=/")).toBe(true);
+    expect(looksLoggedOut("https://www.instagram.com/public.profile/", "Log in to see photos and videos from friends")).toBe(true);
+    expect(looksLoggedOut("https://www.instagram.com/public.profile/", "Sign up to view posts from this profile")).toBe(true);
+    expect(looksLoggedOut("https://www.instagram.com/public.profile/", "Log in · Sign up · Instagram")).toBe(false);
   });
 });

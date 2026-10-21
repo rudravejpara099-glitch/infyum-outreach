@@ -391,3 +391,11 @@ Verified this turn: `npm test` = 229 passing; `npm run typecheck`; `npx next bui
 Still not verified: successful hand sign-in and session persistence, read-only live Instagram profile/inbox, worker campaign execution, real Anthropic, Apify, or Stripe TEST. The login-only Instagram window was left for owner handoff at the CAPTCHA/password-manager prompt. Do not start general campaign processing while an active campaign or unreviewed work exists; do not run external/paid checks under the no-spend instruction.
 
 Needs from owner: finish Instagram's CAPTCHA and hand sign-in in the open account window, then tell Codex. Codex can then confirm only session presence and try read-only profile/inbox. No password or token should be sent in chat.
+
+### Logged-out public-profile guard (Codex, 2026-10-22)
+
+The Instagram driver previously recognized logouts only from `/accounts/login` URLs. Instagram can instead overlay a login prompt on a public profile URL; profile reads then received the popup text and could give a misleading generic result. The driver now checks the visible page text for specific login-gate phrases as well as the URL and stops with the existing not-logged-in error before extracting profile notes or facts. Ordinary page text that only says “Log in · Sign up” does not trigger the guard.
+
+Verified: focused parser and mocked-driver regression tests; `npm test` = 230 passing; `npm run typecheck`; `npx next build --webpack`; targeted ESLint; `git diff --check`. No Instagram page was accessed by this fix; no worker, social write, paid API, Apify run, payment, or message ran.
+
+Still unverified: current Instagram login/session, live profile and inbox reads, and the actual text/layout Instagram displays for the login overlay. The owner must complete sign-in by hand before live read-only checks. Paid services remain off under the no-spend instruction.
