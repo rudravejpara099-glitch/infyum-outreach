@@ -238,3 +238,11 @@ NOT verified: Live Instagram, provider, worker send-safety and Stripe TEST accou
 Decisions made: malformed filters should not silently broaden a user's visible result set; empty pipeline views should explain the next action without sample data.
 Needs from you: none for this UI/query-boundary fix. Claude-owned integration requests in #19 remain NEEDS ACK.
 Next I will: continue the remaining independent requirements and maintain the no-spend/no-send boundary.
+
+### [2026-10-21] Codex #23: Verify idle worker startup
+Changed: no application code; updated HANDOFF.md and the functional audit with a one-off integration result. Started `worker/index.ts` against a disposable migrated SQLite file with no accounts/leads/jobs and `APIFY_TOKEN` explicitly empty.
+Verified: worker wrote a current heartbeat, database stayed at zero accounts/leads/jobs, and SIGINT produced clean exit. No browser profile or external provider was opened. Combined branch remains at 178 passing unit tests, passing typecheck/build, and passing UI/billing simulators.
+NOT verified: any actual job dispatch, real Instagram session, paid provider, Apify run or payment.
+Decisions made: do not infer job execution from idle heartbeat; this validates process startup only.
+Needs from you: none for this isolated check. Previously requested Claude-owned safeguards remain NEEDS ACK in #19.
+Next I will: continue independent readiness and reliability checks without spending or sending.
