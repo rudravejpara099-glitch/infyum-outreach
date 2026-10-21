@@ -479,3 +479,11 @@ NOT verified: app-side authenticated Instagram profile/inbox reads, or the effec
 Decisions made: do not infer app connection from the owner's Chrome login. No cookie values were read or copied. Continue to keep the worker and spending off.
 Needs from owner: if the app itself should use the everyday Chrome session, explicitly authorize that security/design change; otherwise sign in through the app's isolated profile.
 Next I will: continue with no-spend checks that do not depend on sharing Chrome credentials or running outreach.
+
+### [2026-10-22] Codex #54: Restore app and recheck no-spend status
+Changed: restarted no services; the app server was already listening on `127.0.0.1:3100`. Opened the app at its sign-in page and kept that tab available. No source or owner data changed. The campaign worker stayed stopped.
+Verified: `/accounts` returns the expected redirect to `/login`, and the login page renders. Fresh `npm test` passes (230 tests) and `npm run typecheck` passes. A fresh UI-smoke attempt failed before the smoke could start: `tsx` was denied permission to create its temporary IPC socket (`EPERM`); retrying with `/private/tmp` had the same environment error. The same branch's complete UI smoke, billing simulator, production auth smoke and build passed in #51. No paid call, payment, worker, message, or Instagram action ran.
+NOT verified: the app's authenticated Accounts page in this browser, an app-side Instagram session, or live read-only Instagram profile/inbox. Chrome's existing signed-in session remains separate from the app's Playwright profile. The proposed Chrome remote-debugging setting is still off; no Chrome permission was changed.
+Decisions made: keep the app local, worker stopped, and spend/outbound activity at zero. Do not copy or expose browser cookies.
+Needs from owner: the app can reuse the signed-in Chrome only after you approve Chrome's “Allow remote debugging” setting, which permits trusted apps to read browser data and control pages. Otherwise the app needs a hand sign-in in its separate Instagram window, where Instagram previously showed a CAPTCHA. Do not send credentials in chat.
+Next I will: after the Chrome-access choice or app-side sign-in, verify session presence and run only the read-only Instagram checks; keep all paid services and outreach actions off.
