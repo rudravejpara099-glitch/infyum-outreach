@@ -281,3 +281,9 @@ A fresh local `claude auth status --json` check reports `loggedIn=false`. This s
 ### Accounts sign-in outcome visibility (Codex, 2026-10-22)
 
 The Accounts page now shows the latest sign-in-window request per account as waiting, opening, opened, or failed, with the existing error translated into plain language. An opened window is explicitly not described as proof of an authenticated Instagram session. Added pure-copy tests; no protected backend files, account data, worker, provider, or Instagram actions were changed. Verified: 194 tests, typecheck, and `git diff --check` pass. Live Instagram sign-in remains unverified; the browser smoke was not run in this turn.
+
+### Short end-to-end check and live connection state (Codex, 2026-10-22)
+
+The local UI smoke now targets the new account sign-in status separately from the action-result banner; this keeps the test unambiguous. Disposable UI smoke passed through setup/login, campaign and account controls, approvals, settings, responsive layouts, and worker heartbeat states. Disposable billing simulator and production authentication smoke also passed. `npm test` (194), typecheck, Webpack production build, changed-file ESLint, and `git diff --check` passed. These checks use temporary databases and a fake payment provider; no money, external provider, worker, or Instagram action was used.
+
+Read-only status check of the owner's configured workspace found a stale worker heartbeat, Claude CLI `loggedIn=false`, no Apify token, three saved Instagram accounts with sign-in still unverified, one active campaign with zero leads, and 23 drafts pending approval (zero approved messages). The local Stripe test credentials are not configured. Starting the worker against the owner's database/profile was denied by this environment's filesystem/network permission boundary; the read-only live Instagram check therefore remains unverified. Do not call the app fully connected based on these local simulator results.
