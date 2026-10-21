@@ -73,7 +73,10 @@ try {
   const page = await context.newPage();
   const errors: string[] = [];
   let expectedServerRestart = false;
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", error => {
+    if (expectedServerRestart && error.message === "WebSocket is already in CLOSING or CLOSED state.") return;
+    errors.push(error.message);
+  });
   page.on("console", message => {
     const text = message.text();
     const expectedRestartFailure = expectedServerRestart && (
@@ -550,7 +553,7 @@ try {
   await page.getByRole("button", { name: "Open login window", exact: true }).click();
   await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login' AND account_id=?").get(account.id) as { n: number }).n, 1);
-  await page.getByText("Login request saved. The sign-in window will open when Outreach’s background service starts on this computer.", { exact: true }).waitFor();
+  await page.getByText("Sign-in request saved for the browser check.", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.reload();
   await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting to open" }).waitFor();
