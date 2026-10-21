@@ -373,3 +373,11 @@ The Accounts page's History showed the earlier failure `Your existing Chrome ses
 Verified: focused test, 229 unit tests, typecheck, isolated Webpack production build, full disposable UI smoke, and diff check pass. The full UI smoke uses temporary data; no worker or Instagram action runs there. No spend occurred.
 
 Still unverified: actual login-window launch and session persistence. Attempting the Accounts action from the current in-app browser did not visibly update its status or show a new Chromium window, so that interaction does not prove the changed launcher ran. The existing app server/browser state may be stale. Ask the owner to click Open login window in Accounts and sign in by hand if it appears; if it does not, capture the page's exact feedback and investigate the live server/action boundary. Do not start the general worker.
+
+### Login window launched; manual CAPTCHA handoff (Codex, 2026-10-22)
+
+Restarted the local Next dev server at `127.0.0.1:3100`, matching the browser origin. This restored visible app-action feedback. Clicking Open login window for the first saved account showed “Opening sign-in window” and “Instagram is opening in a separate window.” The separate Google Chrome for Testing window opened at `instagram.com/`, confirming the isolated Playwright Chromium launch works.
+
+Instagram is presenting a CAPTCHA. Chrome also shows a password-save prompt. The owner must complete the CAPTCHA and sign in by hand, and decide on the browser's password prompt. No credentials were typed or read by Codex, no CAPTCHA was solved, and the prompt was left untouched. No like, comment, follow, message, worker campaign, paid API, Apify or payment ran.
+
+Still unverified: authenticated session result, read-only profile and inbox steps, AI generation, Apify, Stripe TEST and campaign worker. After the owner finishes sign-in, refresh Accounts to confirm status; then run only the read-only Instagram checks. Keep the general worker stopped.

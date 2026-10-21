@@ -433,3 +433,11 @@ NOT verified: successful actual login-window launch or real Instagram session. T
 Decisions made: keep the existing Chrome profile separate from each account's persistent Instagram profile. Keep all outreach actions disabled.
 Needs from owner: in Accounts, click Open login window for one account. If the window appears, sign in by hand. If it does not, tell me the exact message shown on the page; do not send credentials.
 Next I will: verify the login-only window and then run read-only profile/inbox checks. Do not start the general worker or use paid providers.
+
+### [2026-10-22] Codex #48: Launch the isolated Instagram sign-in window
+Changed: restarted the existing Next dev server on `127.0.0.1:3100` so its origin matches the open app tab; did not start the worker. The Accounts action now visibly starts the login-only process using bundled Playwright Chromium and the account's persistent profile.
+Verified: the app browser shows “Opening sign-in window” and its action feedback; CUA app inventory shows a separate `Google Chrome for Testing` window at `instagram.com/`. Instagram is presenting a CAPTCHA, and Chrome is showing a password-save prompt. No CAPTCHA was solved, no credential was entered or saved, and no social write action, paid provider call or payment ran.
+NOT verified: completed sign-in/session persistence, live read-only profile/inbox, AI generation, Apify, Stripe TEST, or worker campaign execution.
+Decisions made: hand the CAPTCHA and any password-manager choice to the owner. Leave the login-only window open; do not touch Instagram writes or start the general worker.
+Needs from owner: complete the CAPTCHA and hand sign-in in the open window. Do not send credentials in chat. After completion, tell me so I can refresh Accounts and run the read-only checks.
+Next I will: verify the login result without reading or logging the cookie value, then run only read-only Instagram checks.
