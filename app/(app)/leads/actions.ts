@@ -4,10 +4,12 @@ import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { canMove, isStage } from "@/lib/domain/stages";
 import { getLead, moveStage, setNotes } from "@/lib/db/repos/leads";
-import { markDoNotContact } from "@/lib/services/outreach";
+import { afterSent, markDoNotContact } from "@/lib/services/outreach";
+import { getMessage, returnFailedSendForReview } from "@/lib/db/repos/messages";
+import { failedSendError, resolveFailedSendJob } from "@/lib/db/repos/jobs";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { getCampaign } from "@/lib/db/repos/campaigns";
+import { campaignAccountIds, getCampaign } from "@/lib/db/repos/campaigns";
 const validId = (id: number) => Number.isSafeInteger(id) && id > 0;
 function refresh(id: number) { revalidatePath(`/leads/${id}`); revalidatePath("/pipeline"); revalidatePath("/"); }
 
@@ -46,4 +48,38 @@ export async function doNotContact(form: FormData): Promise<ActionResult> {
   db.transaction(() => markDoNotContact(db, id, reason, user.email)).immediate();
   refresh(id); revalidatePath("/settings");
   return { message: "Outreach stopped. This handle is on Do not contact." };
+}
+
+/** Resolves a send whose outcome could not be confirmed. It never sends directly. */
+export async function resolveUncertainSend(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const id = Number(form.get("id")), decision = String(form.get("decision"));
+  if (!validId(id) || !["sent", "unsent"].includes(decision)) return { error: "Choose a valid message outcome." };
+  if (form.get(decision === "sent" ? "confirmedSent" : "confirmedUnsent") !== "on") return { error: "Confirm the Instagram conversation check first." };
+  const db = getDb();
+  const result: ActionResult = db.transaction(() => {
+    const message = getMessage(db, id), lead = message ? getLead(db, message.leadId) : null;
+    const campaign = lead?.campaignId ? getCampaign(db, lead.campaignId) : null;
+    const sendError = failedSendError(db, id), uncertain = /may have been sent/i.test(sendError ?? "");
+    if (!message || !lead || !campaign || message.status !== "failed" || !sendError) return { error: "This message no longer needs an outcome check. Refresh the page." };
+    if (decision === "sent" && !uncertain) return { error: "The app did not send this message. Return it for review instead." };
+    if (decision === "sent") {
+      afterSent(db, id, new Date(), user.email);
+      resolveFailedSendJob(db, id);
+      return { message: "Marked sent from your confirmation. The app will not send it again." };
+    }
+    if (campaign.status === "done") return { error: "This campaign is finished. The message cannot be queued again." };
+    if (message.accountId === null || !campaignAccountIds(db, campaign.id).includes(message.accountId)) return { error: "Choose the original sending account in campaign settings before returning this to review." };
+    if (isDnc(db, lead.handle)) return { error: "This handle is on Do not contact, so the message cannot be queued again." };
+    returnFailedSendForReview(db, id, user.email);
+    resolveFailedSendJob(db, id);
+    return { message: "Returned to message review. Read every part and approve it before it can be queued again." };
+  }).immediate();
+  if (!result.error) {
+    const message = getMessage(db, id)!;
+    revalidatePath(`/leads/${message.leadId}`); revalidatePath("/approvals"); revalidatePath("/"); revalidatePath("/activity");
+    const lead = getLead(db, message.leadId);
+    if (lead?.campaignId) revalidatePath(`/campaigns/${lead.campaignId}`);
+  }
+  return result;
 }

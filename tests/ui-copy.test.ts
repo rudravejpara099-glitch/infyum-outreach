@@ -16,7 +16,7 @@ describe("plain-language UI copy", () => {
     expect(messageKindLabel("reply")).toBe("Message");
     expect(messageStatusLabel("pending_approval")).toBe("Needs review");
     expect(messageStatusLabel("approved")).toBe("Queued");
-    expect(messageStatusLabel("failed")).toBe("Could not send");
+    expect(messageStatusLabel("failed")).toBe("Needs checking");
     expect(messageStatusLabel("future_status")).toBe("Status unavailable");
   });
 
@@ -49,6 +49,12 @@ describe("plain-language UI copy", () => {
     expect(jobTypeLabel("send")).toBe("Send a message");
     expect(jobTypeLabel("unknown_task")).toBe("Background task");
     expect(jobErrorLabel("open_login", "replaced by the owner signed-in Chrome")).toBe("Your existing Chrome session replaced the Instagram sign-in window.");
-    expect(jobErrorLabel("send", "Instagram was unavailable")).toBe("Instagram was unavailable");
+    expect(jobErrorLabel("send", "Instagram was unavailable")).toBe("The app could not send this message. Check the Instagram conversation before trying again.");
+    expect(jobErrorLabel("send", "A message may have been sent. Check the Instagram conversation before trying again.")).toContain("may have gone through");
+    expect(jobErrorLabel("send", "No message was sent. Instagram could not open the conversation after repeated attempts.")).toContain("No message was sent");
+  });
+  it("labels uncertain message outcomes as needing a human check", () => {
+    expect(messageStatusLabel("failed")).toBe("Needs checking");
+    expect(activityLabel("message.uncertain_returned_for_review")).toBe("Unsent message returned for review");
   });
 });

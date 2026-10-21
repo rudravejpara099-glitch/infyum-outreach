@@ -1,6 +1,6 @@
 import { chromium, type BrowserContext, type Page } from "playwright";
 import type { IgAccount } from "@/lib/db/types";
-import { InstagramBlockedError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
+import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { humanDelayMs } from "@/lib/domain/pacing";
 import * as human from "./human";
 import { followersFromText, looksBlocked, looksLoggedOut, skipComment } from "./parse";
@@ -138,14 +138,21 @@ export class PlaywrightInstagram implements InstagramDriver {
     await human.click(page, open);
     const box = page.locator('[role="textbox"][aria-label^="Message"], div[contenteditable="true"][aria-label^="Message"]').first();
     await box.waitFor({ timeout: 20_000 }).catch(() => { throw new Error(`Chat with @${handle} did not open`); });
-    for (const part of parts) {
-      await human.click(page, box);
-      await human.type(page, part);
-      await sleep(Math.max(1000, humanDelayMs("beforeSend", Math.random)));   // never under 1 second, or two messages can merge into one
-      await page.keyboard.press("Enter");
-      await human.wait("betweenParts");
-      await this.guard(page);
-      if (!(await page.getByText(part.slice(0, 30), { exact: false }).count())) throw new Error(`Message to @${handle} did not appear in the thread`);
+    let sendAttempted = false;
+    try {
+      for (const part of parts) {
+        await human.click(page, box);
+        await human.type(page, part);
+        await sleep(Math.max(1000, humanDelayMs("beforeSend", Math.random)));   // never under 1 second, or two messages can merge into one
+        sendAttempted = true;
+        await page.keyboard.press("Enter");
+        await human.wait("betweenParts");
+        await this.guard(page);
+        if (!(await page.getByText(part.slice(0, 30), { exact: false }).count())) throw new Error(`Message to @${handle} did not appear in the thread`);
+      }
+    } catch (error) {
+      if (!sendAttempted) throw error;
+      throw new InstagramSendUncertainError(error instanceof InstagramBlockedError);
     }
   }
 

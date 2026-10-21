@@ -299,3 +299,13 @@ The campaign page now offers a separate Finish campaign action with a confirmati
 Verified: `npm test` passes (196 tests), `npm run typecheck`, `npx next build --webpack`, targeted ESLint and `git diff --check`. The browser smoke test could not be completed: its disposable local server started but stopped responding, so I stopped the run and cleaned up the temporary server. No Instagram, Claude, Apify or Stripe call ran; no message was sent and no money was spent.
 
 Still unverified: the owner’s live Instagram sessions, real Claude drafting (would use the owner's Claude quota), real Apify usage, Stripe test checkout, live worker execution, and browser-level confirmation of the new Finish control. No credentials or account state were changed.
+
+### Message send recovery and campaign state guards (Codex, 2026-10-22)
+
+The Instagram driver now marks a multi-part send uncertain as soon as it attempts the first Enter action. The worker stops automatic retries for uncertain sends, records a failed task, and exposes the outcome on the lead page. The owner can confirm all parts were sent or confirm none were sent and return the message to individual approval; partially sent messages stay held for manual handling. A worker restart also holds a send job whose message was still approved, while recognizing a message already recorded sent. Known pre-send failures keep the bounded retries and then stop without creating fresh endless send jobs.
+
+Finished campaigns now reject new lead imports, lead searches and message approvals; lead searches require an active campaign. The worker rechecks campaign state and sender assignment on dispatch, and review rechecks the campaign state and assigned sender. The Finish control confirms its effect and warns that an in-flight send may complete.
+
+Verified: `npm test` passes (208 tests), `npm run typecheck`, `npx next build --webpack`, targeted ESLint and `git diff --check`. The disposable full browser smoke was attempted but stalled after its test server started and did not return responses; it was stopped and the server cleaned up. No Instagram, Claude, Apify or Stripe call ran; no message was sent and no money was spent.
+
+Still unverified: browser-level flow for the new controls, owner Instagram authentication, real Claude drafting, real Apify usage, Stripe TEST checkout, and the real worker. The local app remains the only target; no hosted deployment was attempted.

@@ -5,7 +5,7 @@ import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages } from "@/lib/db/repos/messages";
 import { enqueue } from "@/lib/db/repos/jobs";
-import { InstagramBlockedError, type InstagramDriver } from "@/worker/driver";
+import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 
 const LINK = "https://portfolio.infyum.com/sales-funnel";
@@ -16,13 +16,17 @@ class FakeDriver implements InstagramDriver {
   inbox: { handle: string; text: string }[] = [];
   facts = { isPublic: true, country: "United States", followers: 5000, linkedToInfyum: false };
   blockOnSend = false;
+  uncertainOnSend = false;
+  errorOnSend = false;
   async openLogin() {}
   async readFacts(account?: unknown) { void account; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
   async warmUp() { return { likes: 10, comments: 10, followed: true }; }
   async sendMessages(_a: unknown, handle: string, parts: string[]) {
     if (this.blockOnSend) throw new InstagramBlockedError("Action blocked");
+    if (this.errorOnSend) throw new Error("Chat did not open");
     this.sent.push({ handle, parts });
+    if (this.uncertainOnSend) throw new InstagramSendUncertainError();
   }
   async readInbox() { const out = this.inbox; this.inbox = []; return out; }
 }
@@ -86,6 +90,39 @@ describe("worker pipeline", () => {
     expect(getMessage(db, message.id)?.status).toBe("approved");
     expect(approvedQueue(db)).toHaveLength(0);
     expect((db.prepare("SELECT status FROM jobs WHERE type='send'").get() as { status: string }).status).toBe("done");
+  });
+
+  it("holds an uncertain multi-part send for human checking instead of retrying", async () => {
+    const { camp } = setup(false);
+    driver.uncertainOnSend = true;
+    addLead(db, { handle: "uncertain-send", campaignId: camp.id }, "t");
+
+    await runUntilIdle(deps);
+    await runUntilIdle(deps);
+
+    expect(driver.sent).toHaveLength(1);
+    expect(listMessages(db, { status: "failed" })[0]).toMatchObject({ status: "failed", kind: "dm" });
+    expect((db.prepare("SELECT status,last_error FROM jobs WHERE type='send'").get() as { status: string; last_error: string })).toMatchObject({ status: "failed", last_error: expect.stringContaining("Check the Instagram conversation") });
+  });
+
+  it("stops fresh send jobs after known pre-send retries are exhausted", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "open-failed-chat", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    driver.errorOnSend = true;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await runOne(deps);
+      db.prepare("UPDATE jobs SET run_after=datetime('now','-1 minute') WHERE type='send'").run();
+    }
+    planWork(deps);
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("failed");
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='send' AND status='queued'").get()).toEqual({ n: 0 });
   });
 
   it("skips a lead that fails the rules and records why", async () => {

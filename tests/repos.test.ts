@@ -145,6 +145,31 @@ describe("jobs", () => {
     expect(requeueStuck(db)).toBe(1);
     const j = claimNext(db)!; completeJob(db, j.id);
   });
+  it("does not retry a send after a crash when its outcome is unknown", () => {
+    const { acct, camp, lead } = seed(true);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["Hello"], campaign: camp }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    claimNext(db);
+
+    expect(requeueStuck(db)).toBe(1);
+
+    expect(listMessages(db, { leadId: lead.id })[0].status).toBe("failed");
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE type='send'").get()).toMatchObject({ status: "failed", last_error: expect.stringContaining("Check Instagram before trying again") });
+    expect(claimNext(db)).toBeNull();
+  });
+  it("marks a stuck send done if the message was already recorded sent", () => {
+    const { acct, camp, lead } = seed(true);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["Hello"], campaign: camp }, "t");
+    approveMessage(db, message.id, "t");
+    db.prepare("UPDATE messages SET status='sent' WHERE id=?").run(message.id);
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    claimNext(db);
+
+    expect(requeueStuck(db)).toBe(1);
+    expect(db.prepare("SELECT status FROM jobs WHERE type='send'").get()).toEqual({ status: "done" });
+    expect(listMessages(db, { leadId: lead.id })[0].status).toBe("sent");
+  });
 });
 
 describe("worker status", () => {

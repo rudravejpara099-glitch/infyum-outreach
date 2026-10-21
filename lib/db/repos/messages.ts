@@ -77,6 +77,13 @@ export function rejectMessage(db: Db, id: number, actor: string): void {
   db.prepare("UPDATE messages SET status='rejected' WHERE id = ?").run(id);
   logActivity(db, actor, "message.rejected", { leadId: m.leadId, accountId: m.accountId });
 }
+export function returnFailedSendForReview(db: Db, id: number, actor: string): void {
+  const m = getMessage(db, id);
+  if (!m || m.status !== "failed" || m.direction !== "out" || !["dm", "followup"].includes(m.kind)) throw new Error("This message cannot be returned for review");
+  const reasons = [...new Set([...m.approvalReasons, "Owner confirmed no message part was sent; individual review required"])];
+  db.prepare("UPDATE messages SET status='pending_approval', approval_reasons=? WHERE id=? AND status='failed'").run(JSON.stringify(reasons), id);
+  logActivity(db, actor, "message.uncertain_returned_for_review", { leadId: m.leadId, accountId: m.accountId });
+}
 export function markSent(db: Db, id: number, now = new Date()): void {
   db.prepare("UPDATE messages SET status='sent', sent_at=? WHERE id = ?").run(now.toISOString().replace("T", " ").slice(0, 19), id);
 }

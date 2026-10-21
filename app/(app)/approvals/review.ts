@@ -1,7 +1,7 @@
 import type { Db } from "@/lib/db/core";
 import { getMessage } from "@/lib/db/repos/messages";
 import { getLead } from "@/lib/db/repos/leads";
-import { getCampaign } from "@/lib/db/repos/campaigns";
+import { campaignAccountIds, getCampaign } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { MAX_FOLLOWUPS } from "@/lib/services/outreach";
 import { checkDraft, parseParts } from "@/lib/engine/validate";
@@ -17,6 +17,8 @@ export function reviewDraft(db: Db, id: number, values: FormDataEntryValue[], bu
   if (!lead || ["replied", "closed", "skipped"].includes(lead.stage) || isDnc(db, lead.handle)) return { error: "This lead has replied or outreach was stopped. This draft cannot be approved." };
   const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
   if (!campaign) return { error: "This draft has no campaign. Review the lead before approving." };
+  if (campaign.status === "done") return { error: "This campaign is finished. Its drafts cannot be approved or sent." };
+  if (message.accountId === null || !campaignAccountIds(db, campaign.id).includes(message.accountId)) return { error: "This draft’s sender is no longer assigned. Choose a sender in campaign settings before approving." };
   if (message.kind === "dm" && lead.stage !== "warmed") return { error: "First contact needs completed checks and warm-up, with no previous send. Refresh this lead before approving." };
   if (message.kind === "followup" && (lead.stage !== "dm_sent" || !campaign.followupsEnabled || lead.followupsSent >= MAX_FOLLOWUPS)) return { error: "This follow-up is no longer allowed. Check the lead’s stage and campaign follow-up settings." };
   let parts: string[];

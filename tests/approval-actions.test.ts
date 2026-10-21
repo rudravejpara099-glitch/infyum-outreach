@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { createCampaign } from "@/lib/db/repos/campaigns";
+import { createAccount } from "@/lib/db/repos/accounts";
+import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead } from "@/lib/db/repos/leads";
 import { createOutgoing, getMessage } from "@/lib/db/repos/messages";
 import { approve } from "@/app/(app)/approvals/actions";
@@ -8,13 +9,13 @@ const state = vi.hoisted(() => ({ db: null as Db | null }));
 vi.mock("@/lib/db", () => ({ getDb: () => state.db }));
 vi.mock("@/lib/auth/dal", () => ({ requireUser: vi.fn(async () => ({ email: "test@example.test" })) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-let db: Db, campaignId: number;
+let db: Db, campaignId: number, accountId: number;
 const parts = ["Your weekly workshop has a practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"];
-beforeEach(() => { db = openDb(":memory:"); state.db = db; campaignId = createCampaign(db, { name: "Approval", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "test").id; });
+beforeEach(() => { db = openDb(":memory:"); state.db = db; accountId = createAccount(db, { handle: "sender", profileDir: "/tmp/sender" }, "test").id; campaignId = createCampaign(db, { name: "Approval", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [accountId], "test").id; });
 afterEach(() => { db.close(); state.db = null; });
 function draft(stage: "found" | "qualified" | "warmed" | "dm_sent", kind: "dm" | "followup" = "dm") {
   const lead = addLead(db, { handle: stage, campaignId, stage }, "test").lead;
-  const message = createOutgoing(db, { leadId: lead.id, accountId: null, kind, parts: kind === "dm" ? parts : ["Your workshop also made me think about the next step. What would help?"], campaign: { approvalRequired: true } }, "test");
+  const message = createOutgoing(db, { leadId: lead.id, accountId, kind, parts: kind === "dm" ? parts : ["Your workshop also made me think about the next step. What would help?"], campaign: { approvalRequired: true } }, "test");
   const form = new FormData(); form.set("id", String(message.id)); message.parts.forEach(part => form.append("part", part));
   return { lead, message, form };
 }
@@ -28,6 +29,18 @@ it("refuses a first DM before checks and warm-up, and after it was already sent"
 it("allows a valid first DM for a warmed lead", async () => {
   const { message, form } = draft("warmed");
   expect((await approve(form)).error).toBeUndefined(); expect(getMessage(db, message.id)?.status).toBe("approved");
+});
+it("does not approve drafts from a finished campaign", async () => {
+  const { message, form } = draft("warmed");
+  setCampaignStatus(db, campaignId, "done", "test");
+  expect((await approve(form)).error).toMatch(/campaign is finished/i);
+  expect(getMessage(db, message.id)?.status).toBe("pending_approval");
+});
+it("does not approve drafts after their sender is removed from the campaign", async () => {
+  const { message, form } = draft("warmed");
+  db.prepare("DELETE FROM campaign_accounts WHERE campaign_id=? AND account_id=?").run(campaignId, accountId);
+  expect((await approve(form)).error).toMatch(/sender is no longer assigned/i);
+  expect(getMessage(db, message.id)?.status).toBe("pending_approval");
 });
 it("refuses follow-ups before contact, when disabled or after the maximum", async () => {
   const before = draft("warmed", "followup");
@@ -72,7 +85,7 @@ it("refuses two similar edited drafts in one selection atomically", async () => 
   const { approveSelected } = await import("@/app/(app)/approvals/actions");
   const first = draft("warmed");
   const lead = addLead(db, { handle: "second.warmed", campaignId, stage: "warmed" }, "test").lead;
-  const second = createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts, campaign: { approvalRequired: true } }, "test");
+  const second = createOutgoing(db, { leadId: lead.id, accountId, kind: "dm", parts, campaign: { approvalRequired: true } }, "test");
   const form = new FormData(); form.set("reviewed", "on");
   for (const message of [first.message, second]) { form.append("selected", String(message.id)); parts.forEach(part => form.append(`part-${message.id}`, part)); }
   expect((await approveSelected(form)).error).toMatch(/individual review/);

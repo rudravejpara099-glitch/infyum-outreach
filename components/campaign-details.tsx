@@ -14,6 +14,8 @@ import type { CampaignDay } from "@/lib/queries/campaign-history";
 export function CampaignDetails({ campaign, accounts, selected, counts, leads, searchOn, history, timeZone }: {
   campaign: Campaign; accounts: IgAccount[]; selected: number[]; counts: Record<string, number>; leads: Lead[]; searchOn: boolean; history: CampaignDay[]; timeZone: string;
 }) {
+  const searchEnabled = searchOn && campaign.status === "active";
+  const searchHint = campaign.status === "done" ? "This campaign is finished. Lead search is off." : campaign.status !== "active" ? "Start this campaign before searching for leads." : searchOn ? "Requires the worker and an Apify connection. Usage limits still apply." : "Search is off. Set a monthly cap in Settings first.";
   return <div className="campaign-disclosures">
     <DisclosureLinks />
     <details className="disclosure" id="progress">
@@ -22,7 +24,7 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
     </details>
     <details className="disclosure" id="add-leads">
       <summary><Icon name="plus" /><span>Add leads<small>Paste handles, import a spreadsheet or search</small></span><Icon name="chevron" /></summary>
-      <div className="disclosure-content add-leads-grid items-start">
+      {campaign.status === "done" ? <div className="disclosure-content"><p className="text-muted">This campaign is finished. You can review its leads and history, but cannot add more.</p></div> : <div className="disclosure-content add-leads-grid items-start">
         <ActionForm action={addLeads}>
           <input type="hidden" name="id" value={campaign.id} />
           <label className="label" htmlFor="handles">Instagram handles</label>
@@ -37,10 +39,10 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
           <input type="hidden" name="id" value={campaign.id} />
           <h3>Find leads automatically</h3>
           <p className="help-text">Search for the audience saved in this campaign.</p>
-          <button className="btn" disabled={!searchOn}>Queue lead search</button>
-          <p className="help-text">{searchOn ? "Requires the worker and an Apify connection. Usage limits still apply." : <>Search is off. Set a monthly cap in <Link href="/settings">Settings</Link> first.</>}</p>
+          <button className="btn" disabled={!searchEnabled}>Queue lead search</button>
+          <p className="help-text">{searchHint}</p>
         </ActionForm>
-      </div>
+      </div>}
     </details>
     <details className="disclosure" id="leads">
       <summary><Icon name="accounts" /><span>Latest leads<small>{leads.length ? "Open a profile to see its history" : "Your campaign’s leads will appear here"}</small></span><Icon name="chevron" /></summary>

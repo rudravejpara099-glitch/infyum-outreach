@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
 import { openDb } from "@/lib/db/core";
-import { createCampaign } from "@/lib/db/repos/campaigns";
+import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { createOutgoing } from "@/lib/db/repos/messages";
 import { addLead, listLeads } from "@/lib/db/repos/leads";
 import { addDnc, removeDnc } from "@/lib/db/repos/dnc";
@@ -197,6 +197,8 @@ try {
   await page.goto(campaignUrl);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+  const senderId = (db.prepare("SELECT id FROM ig_accounts WHERE handle='review.account'").get() as { id: number }).id;
+  setCampaignAccounts(db, other.id, [senderId]); setCampaignStatus(db, other.id, "active", "ui-fixture");
   await page.goto(`${base}/campaigns/${other.id}#add-leads`);
   await page.locator('#add-leads').evaluate((element: HTMLDetailsElement) => { element.open = true; });
   const upload = page.getByLabel("Or choose a CSV file", { exact: true });
@@ -618,6 +620,11 @@ try {
   assert(restarted, "Queue review server did not restart");
   expectedServerRestart = false;
   db.prepare("UPDATE settings SET value='1.05' WHERE key='apify_monthly_cap_usd'").run();
+  db.prepare("UPDATE ig_accounts SET status='active' WHERE id=?").run(account.id);
+  await page.goto(campaignUrl);
+  await page.getByRole("button", { name: "Resume campaign", exact: true }).click();
+  await page.getByRole("button", { name: "Pause campaign", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "active");
   await page.goto(campaignUrl);
   await page.locator("#add-leads summary").click();
   await page.getByRole("button", { name: "Queue lead search", exact: true }).click();

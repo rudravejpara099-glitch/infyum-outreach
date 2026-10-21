@@ -32,7 +32,7 @@ export function messageStatusLabel(status: string): string {
     pending_approval: "Needs review",
     approved: "Queued",
     sent: "Sent",
-    failed: "Could not send",
+  failed: "Needs checking",
     rejected: "Not approved",
   } as Record<string, string>)[status] ?? "Status unavailable";
 }
@@ -58,6 +58,7 @@ const activityCopy: Record<string, string> = {
   "message.approved_by_human": "Message approved by a team member",
   "message.rejected": "Message not approved",
   "message.failed": "Message couldn’t be sent",
+  "message.uncertain_returned_for_review": "Unsent message returned for review",
   "account.connected": "Instagram account added",
   "account.active": "Instagram account enabled",
   "account.paused": "Instagram account paused",
@@ -150,5 +151,8 @@ export function jobErrorLabel(type: string, error: string): string {
   if (type === "open_login" && /replaced by the owner signed-in Chrome/i.test(error)) {
     return "Your existing Chrome session replaced the Instagram sign-in window.";
   }
+  if (type === "send" && /may have been sent/i.test(error)) return "The message may have gone through. Check Instagram before trying again.";
+  if (type === "send" && /no message was sent/i.test(error)) return "No message was sent. Open the lead and return it to review when ready.";
+  if (type === "send") return "The app could not send this message. Check the Instagram conversation before trying again.";
   return error;
 }

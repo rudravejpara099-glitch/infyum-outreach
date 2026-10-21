@@ -1,14 +1,14 @@
 import type { Db } from "@/lib/db/core";
 import type { AiEngine } from "@/lib/engine/types";
 import type { InstagramDriver } from "./driver";
-import { InstagramBlockedError } from "./driver";
+import { InstagramBlockedError, InstagramSendUncertainError } from "./driver";
 import { commentPrompt, SYSTEM } from "@/lib/engine/prompts";
 import { qualify } from "@/lib/domain/qualify";
 import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failJob, type Lane } from "@/lib/db/repos/jobs";
+import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failJob, failJobPermanently, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
@@ -53,7 +53,7 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   for (const lead of dueFollowups(db, now().toISOString().replace("T", " ").slice(0, 19))) {
     const c = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
     if (c?.status !== "active" || !c.followupsEnabled || isDnc(db, lead.handle)) continue;
-    if (!activeJobExists(db, "draft_followup", lead.id) && !hasOutgoing(db, lead.id, "followup", ["pending_approval", "approved"])) {
+    if (!activeJobExists(db, "draft_followup", lead.id) && !hasOutgoing(db, lead.id, "followup", ["pending_approval", "approved", "failed"])) {
       enqueue(db, { type: "draft_followup", leadId: lead.id, accountId: lead.accountId });
     }
   }
@@ -72,7 +72,7 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   }
 }
 
-function hasOutgoing(db: Db, leadId: number, kind: string, statuses = ["draft", "pending_approval", "approved", "sent"]): boolean {
+function hasOutgoing(db: Db, leadId: number, kind: string, statuses = ["draft", "pending_approval", "approved", "sent", "failed"]): boolean {
   return listMessages(db, { leadId }).some((m) => m.direction === "out" && m.kind === kind && statuses.includes(m.status));
 }
 
@@ -91,11 +91,23 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
     if (row.status === "running") completeJob(deps.db, job.id);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (e instanceof InstagramBlockedError && job.accountId) {
+    if (e instanceof InstagramSendUncertainError) {
+      const messageId = Number(job.payload.messageId);
+      const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(deps.db, messageId) : null;
+      if (message?.status === "approved") markFailed(deps.db, messageId, msg);
+      if (e.blockedByInstagram && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
+      if (message?.status === "sent") completeJob(deps.db, job.id);
+      else failJobPermanently(deps.db, job.id, msg);
+    } else if (e instanceof InstagramBlockedError && job.accountId) {
       setAccountStatus(deps.db, job.accountId, "blocked", msg || "Instagram showed a warning", "worker");
       completeJob(deps.db, job.id);
     } else {
       failJob(deps.db, job, msg);
+      const failed = deps.db.prepare("SELECT status FROM jobs WHERE id=?").get(job.id) as { status: string };
+      if (job.type === "send" && failed.status === "failed") {
+        const messageId = Number(job.payload.messageId), message = getMessage(deps.db, messageId);
+        if (message?.status === "approved") markFailed(deps.db, messageId, "No message was sent. Instagram could not open the conversation after repeated attempts.");
+      }
       logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
     }
   }
@@ -195,7 +207,8 @@ async function process(deps: Deps, job: Job): Promise<void> {
       if (isDnc(db, lead.handle)) { markFailed(db, message.id, "Handle is on the do-not-contact list"); return; }
       await deps.pace();
       await driver.sendMessages(account, lead.handle, message.parts);
-      afterSent(db, message.id, deps.now());
+      try { db.transaction(() => afterSent(db, message.id, deps.now())).immediate(); }
+      catch { throw new InstagramSendUncertainError(); }
       return;
     }
 

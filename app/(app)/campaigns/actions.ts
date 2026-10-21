@@ -57,7 +57,9 @@ export async function changeCampaignStatus(form: FormData): Promise<ActionResult
 export async function addLeads(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const campaignId = Number(form.get("id")), db = getDb();
-  if (!validId(campaignId) || !getCampaign(db, campaignId)) return { error: "Campaign not found. Refresh the page." };
+  const campaign = validId(campaignId) ? getCampaign(db, campaignId) : null;
+  if (!campaign) return { error: "Campaign not found. Refresh the page." };
+  if (campaign.status === "done") return { error: "This campaign is finished. Create a new campaign to add leads." };
   const handles = parsePastedHandles(String(form.get("handles") ?? ""));
   const file = form.get("csv");
   if (file instanceof File && file.size > 0) {
@@ -85,7 +87,9 @@ export async function addLeads(form: FormData): Promise<ActionResult> {
 export async function findLeads(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const campaignId = Number(form.get("id")), db = getDb();
-  if (!validId(campaignId) || !getCampaign(db, campaignId)) return { error: "Campaign not found. Refresh the page." };
+  const campaign = validId(campaignId) ? getCampaign(db, campaignId) : null;
+  if (!campaign) return { error: "Campaign not found. Refresh the page." };
+  if (campaign.status !== "active") return { error: campaign.status === "done" ? "This campaign is finished. Lead search is off." : "Start this campaign before searching for leads." };
   try { assertCampaignCanStart(db, campaignId, user.id); }
   catch (error) { return { error: publicBillingError(error) }; }
   const cap = Number(getSetting(db, "apify_monthly_cap_usd") ?? "");
