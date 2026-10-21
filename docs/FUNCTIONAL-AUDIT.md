@@ -45,7 +45,7 @@ Board Codex #6 requests team-time-zone daily boundaries, safe retry helper and b
 
 ## Verification commands
 
-- Latest isolated integration pass: `npm test` = 188 passed; `npm run typecheck`; `npx next build --webpack` in a temporary output/config; full local Playwright UI and billing simulator smokes pass with disposable data and zero outgoing messages/provider calls; `git diff --check` passes.
+- Latest isolated integration pass: `npm test` = 188 passed; `npm run typecheck`; Webpack production build and production authentication smoke in temporary output/config/database; full local Playwright UI and billing simulator smokes pass with disposable data and zero outgoing messages/provider calls; `git diff --check` passes.
 
 No saved application data was modified by the current isolated browser/production checks. Presence-only private configuration checks and read-only database counts were used; no secret/password/card data was printed or copied. The existing preview/profile and single `open_login` worker session remain active from the previous local setup; the available browser inventory shows no Instagram login window, and there is no evidence the owner signed in. No outbound Instagram action ran. The full goal stays active; this table is not a claim that the whole app is finished.
 

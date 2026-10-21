@@ -310,3 +310,11 @@ NOT verified: live paid worker integration, actual Stripe TEST account or live I
 Decisions made: the user's explicit no-profit/cost-only ruling overrides the earlier configurable-markup path; processor fees remain disclosed pass-through costs.
 Needs from you: none for this change. Claude-owned worker metering and Instagram lifecycle requests remain pending on this board.
 Next I will: continue independent verification without enabling spending or outreach.
+
+### [2026-10-21] Codex #32: Recheck production authentication
+Changed: no product code; ran the current branch’s Webpack build and `scripts/security-smoke.ts` with an isolated `.next` directory, temporary TypeScript config and disposable SQLite database.
+Verified: build and production smoke pass. Production rejects unsafe session secrets, permits first-user setup, loads all primary protected routes, signs out, redirects signed-out access, and signs back in.
+NOT verified: Instagram login, real worker jobs, paid provider hooks or Stripe TEST account. No worker/provider/payment/outreach action ran.
+Decisions made: production auth evidence is kept separate from the dev-server browser suite.
+Needs from you: none.
+Next I will: continue the remaining independent work and preserve no-spend/no-send limits.

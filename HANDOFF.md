@@ -241,3 +241,5 @@ The requested `open_login` job for account row 1 has since completed after one a
 ### Cost-only billing enforcement (Codex, 2026-10-21)
 
 Removed the owner-configurable margin from billing settings and statements. Billing calculations, persisted schedule writes and reads force the retained migration column to zero; old nonzero schedule rows do not add a margin to new statements. User pages and CSV no longer show a margin line. Migration 2 remains unchanged. Unit regression and browser simulator cover normal and legacy nonzero settings. Latest suite: 188 passing tests, typecheck, billing browser simulator and disposable Webpack build passed. This does not verify the worker’s paid usage hooks or an actual Stripe TEST account.
+
+The latest isolated production smoke also passed against a temporary build/database: unsafe session secrets were refused, setup created a user, all primary protected routes loaded, sign-out redirected correctly, and sign-in succeeded. It did not start a worker or call Instagram, a provider or a payment processor.
