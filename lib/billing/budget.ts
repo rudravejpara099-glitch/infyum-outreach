@@ -19,7 +19,7 @@ export function budgetSnapshot(db: Db, userId: number, now = new Date().toISOStr
   const commitmentsMicros = committedMicros(db, userId, now);
   const adjustmentMicros = Math.max(0, total(db, "SELECT coalesce(sum(cost_micros),0) n FROM billing_adjustments WHERE user_id=? AND id NOT IN(SELECT adjustment_id FROM billing_statement_adjustments)", userId));
   const baseMicros = sum([usageMicros, heldMicros, commitmentsMicros]);
-  const projected = statement({ events: [{ kind: "usage", costMicros: baseMicros }], adjustmentMicros, markupPercent: cfg.markup_percent, feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: 1 });
+  const projected = statement({ events: [{ kind: "usage", costMicros: baseMicros }], adjustmentMicros, feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: 1 });
   const projectedMicros = Math.max(baseMicros, projected.totalCents * 10000);
   return { usageMicros, heldMicros, commitmentsMicros, adjustmentMicros, projectedMicros, ceilingMicros: p?.ceiling_micros ?? 0, consent: !!p?.consented_at };
 }
@@ -49,7 +49,7 @@ export function reserveUsage(db: Db, input: { userId: number; operationId: strin
     syncBilling(db, input.userId, now);
     const hold = billingHold(db, input.userId, now); if (hold) throw new BillingError(hold);
     const cfg = billingConfig(db, now), current = budgetSnapshot(db, input.userId, now);
-    const projected = statement({ events: [{ kind: "usage", costMicros: sum([current.usageMicros, current.heldMicros, current.commitmentsMicros, input.maxCostMicros]) }], adjustmentMicros: current.adjustmentMicros, markupPercent: cfg.markup_percent, feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: 1 });
+    const projected = statement({ events: [{ kind: "usage", costMicros: sum([current.usageMicros, current.heldMicros, current.commitmentsMicros, input.maxCostMicros]) }], adjustmentMicros: current.adjustmentMicros, feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: 1 });
     if (!canReserve({ ...current, projectedMicros: projected.totalCents * 10000 })) throw new BillingError("This task would reach the 90% spending cutoff");
     if (input.provider === "apify") {
       const setting = db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string } | undefined;

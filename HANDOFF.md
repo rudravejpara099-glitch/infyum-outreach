@@ -133,7 +133,7 @@ Next available work remains original E, explicitly listed in docs/FUNCTIONAL-AUD
 
 ### Public deployment proposals only (Codex, 2026-10-21)
 
-Multi-company isolation, broader roles, hosted workers, deployment/retention operations, account recovery and live payment enablement still require owner decisions and review. The approved billing work is TEST-only in PR #7, with no plans/tiers/subscription price, margin default zero and no personal-subscription resale. No new host/service or live charge is authorized here. Taxes and terms of service need a qualified person’s review before taking real money. The internal app still shares one workspace/role; the first app user is not an inferred billing owner. GoHighLevel integration and post-first-reply conversations/booking are not implemented by this scope.
+Multi-company isolation, broader roles, hosted workers, deployment/retention operations, account recovery and live payment enablement still require owner decisions and review. The approved billing work is TEST-only in PR #7, with no plans/tiers/subscription price, no service margin, and no personal-subscription resale. No new host/service or live charge is authorized here. Taxes and terms of service need a qualified person’s review before taking real money. The internal app still shares one workspace/role; the first app user is not an inferred billing owner. GoHighLevel integration and post-first-reply conversations/booking are not implemented by this scope.
 
 ### Spreadsheet import (Codex, 2026-10-21)
 
@@ -237,3 +237,7 @@ Fixed the account row hint so it reports “The worker is handling this request�
 The full application remains incomplete. The live login window is not visible in the available browser inventory, and no sign-in is confirmed. No Instagram write action or paid provider/payment action ran.
 
 The requested `open_login` job for account row 1 has since completed after one attempt, but read-only profile inspection found no Instagram `sessionid` cookie in any of the three saved profiles. The job completing is not evidence that sign-in worked. No additional login task was queued. The worker remains alive and idle; campaigns are drafts and no outreach jobs are queued or running. See board entry #30 for the protected `open_login` lifecycle request; no worker/driver code was changed.
+
+### Cost-only billing enforcement (Codex, 2026-10-21)
+
+Removed the owner-configurable margin from billing settings and statements. Billing calculations, persisted schedule writes and reads force the retained migration column to zero; old nonzero schedule rows do not add a margin to new statements. User pages and CSV no longer show a margin line. Migration 2 remains unchanged. Unit regression and browser simulator cover normal and legacy nonzero settings. Latest suite: 188 passing tests, typecheck, billing browser simulator and disposable Webpack build passed. This does not verify the worker’s paid usage hooks or an actual Stripe TEST account.

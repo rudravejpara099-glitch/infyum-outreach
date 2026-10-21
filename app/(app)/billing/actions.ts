@@ -46,8 +46,7 @@ export async function changeBillingConfig(form: FormData): Promise<BillingResult
   const user = await requireUser();
   try {
     assertOwner(user.id);
-    const percent = text(form, "markup"); if (!/^\d+$/.test(percent)) throw new BillingError("Enter a whole markup percentage");
-    saveBillingConfig(getDb(), user.id, { markupPercent: Number(percent), feeBps: Number(text(form, "feeBps")), fixedFeeMicros: parseUsd(text(form, "fixedFee")) }); refreshed();
+    saveBillingConfig(getDb(), user.id, { feeBps: Number(text(form, "feeBps")), fixedFeeMicros: parseUsd(text(form, "fixedFee")) }); refreshed();
     return { message: "Saved for next calendar month. Existing statements and this month’s terms stay unchanged." };
   } catch (error) { return failure(error); }
 }

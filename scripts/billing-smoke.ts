@@ -99,6 +99,12 @@ async function main() {
         await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
         for (const route of ["/billing", "/billing/admin", `/billing/statements/${statement.id}`]) {
           await page.goto(base + route); await page.locator("h1").waitFor();
+          if (route === "/billing") await page.getByText("Only actual costs are passed through. There is no service margin.", { exact: true }).waitFor();
+          if (route === "/billing/admin") {
+            assert.equal(await page.getByLabel("markup_percent").count(), 0, "Owner settings must not expose a markup control");
+            assert.equal(await page.getByText(/service margin/i).count(), 0, "Owner settings must not describe a service margin");
+          }
+          if (route.startsWith("/billing/statements/")) assert.equal(await page.getByText(/service margin/i).count(), 0, "Statements must not add a service margin");
           assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Overflow ${route} ${width} ${mode}`);
           await page.screenshot({ path: path.join(screenshots, `${route.slice(1).replaceAll("/", "-")}-${mode}-${width}.png`), fullPage: true, caret: "initial" });
         }

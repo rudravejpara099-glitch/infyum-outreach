@@ -3,7 +3,10 @@ import type { Db } from "@/lib/db/core";
 import type { BillingConfig, ModelRate, Profile } from "./types";
 import { integer } from "./money";
 import { isOwner } from "./rules";
-export function billingConfig(db: Db, now = new Date().toISOString()): BillingConfig { return (db.prepare("SELECT * FROM billing_config WHERE created_at<=? ORDER BY created_at DESC,id DESC LIMIT 1").get(now) ?? db.prepare("SELECT * FROM billing_config ORDER BY id LIMIT 1").get()) as BillingConfig; }
+export function billingConfig(db: Db, now = new Date().toISOString()): BillingConfig {
+  const row = (db.prepare("SELECT * FROM billing_config WHERE created_at<=? ORDER BY created_at DESC,id DESC LIMIT 1").get(now) ?? db.prepare("SELECT * FROM billing_config ORDER BY id LIMIT 1").get()) as BillingConfig;
+  return { ...row, markup_percent: 0 };
+}
 export function profile(db: Db, userId: number): Profile | null { return db.prepare("SELECT * FROM billing_profiles WHERE user_id=?").get(userId) as Profile | undefined ?? null; }
 export function saveCeiling(db: Db, userId: number, amount: number, now = new Date().toISOString()): void {
   integer(amount); if (amount > 1000000000000) throw new BillingError("Monthly ceiling must be at most $1,000,000");

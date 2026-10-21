@@ -18,15 +18,24 @@ beforeEach(() => {
 });
 afterEach(() => { db.close(); delete process.env.BILLING_OWNER_USER_ID; });
 describe("owner, payer and price controls", () => {
-  it("allows only the explicit owner to change markup/model prices", () => {
-    expect(() => saveBillingConfig(db, 2, { markupPercent: 10, feeBps: 290, fixedFeeMicros: 300000 }, jan)).toThrow("owner");
+  it("allows only the explicit owner to change processor/model prices", () => {
+    expect(() => saveBillingConfig(db, 2, { feeBps: 290, fixedFeeMicros: 300000 }, jan)).toThrow("owner");
     expect(() => saveModelRate(db, 2, { model: "test-model", inputMicros: 3, outputMicros: 15, cacheReadMicros: null, cacheWriteMicros: null, source: "https://provider.test/prices", confirmed: true }, jan)).toThrow();
   });
-  it("versioned terms start next month and do not retroactively mark up old usage", () => {
-    saveBillingConfig(db, 1, { markupPercent: 10, feeBps: 290, fixedFeeMicros: 300000 }, jan);
+  it("rejects negative processor fees at the action boundary", () => {
+    expect(() => saveBillingConfig(db, 1, { feeBps: -1, fixedFeeMicros: 300000 }, jan)).toThrow("valid processor rate");
+    expect(() => saveBillingConfig(db, 1, { feeBps: 290, fixedFeeMicros: -300000 }, jan)).toThrow("valid processor rate");
+  });
+  it("only versions processor fees and never applies a legacy margin", () => {
+    saveBillingConfig(db, 1, { feeBps: 290, fixedFeeMicros: 300000 }, jan);
+    expect((db.prepare("SELECT markup_percent FROM billing_config WHERE created_at=?").get("2026-02-01T00:00:00.000Z") as { markup_percent: number }).markup_percent).toBe(0);
     expect(billingConfig(db, jan).markup_percent).toBe(0);
-    expect(billingConfig(db, "2026-02-01T00:00:00.000Z").markup_percent).toBe(10);
-    expect(breakdown(finalizeStatement(db, 1, "2026-01-01", "2026-03-01T00:00:00Z")).markupPercent).toBe(0);
+    expect(billingConfig(db, "2026-02-01T00:00:00.000Z").markup_percent).toBe(0);
+    db.exec("INSERT INTO billing_config(markup_percent,fee_bps,fixed_fee_micros,minimum_cents,proxy_seed_micros,hosting_seed_micros,created_at) VALUES(10,290,300000,50,0,0,'2026-02-15T00:00:00.000Z')");
+    expect(billingConfig(db, "2026-02-16T00:00:00.000Z").markup_percent).toBe(0);
+    db.prepare("INSERT INTO billing_usage_events(event_key,user_id,occurred_at,kind,quantity,unit_cost_micros,unit_quantity,cost_micros,provider_ref,source_json,created_at) VALUES('cost-only',1,'2026-02-16T00:00:00Z','apify',1,10000000,1,10000000,'run','{}','2026-02-16T00:00:00Z')").run();
+    const statement = finalizeStatement(db, 1, "2026-02-01", "2026-03-01T00:00:00Z");
+    expect(breakdown(statement)).toMatchObject({ markupMicros: 0, markupPercent: 0, subtotalMicros: 10000000 });
   });
   it("refuses placeholder prices and unknown cached-token rates", () => {
     expect(() => verifiedModelRate(db, "placeholder-update-provider-prices")).toThrow();

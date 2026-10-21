@@ -38,7 +38,7 @@ export function addResourceCost(db: Db, ownerId: number, input: { userId: number
     const held = (db.prepare("SELECT coalesce(sum(max_cost_micros),0) n FROM billing_reservations WHERE user_id=? AND status='held'").get(input.userId) as { n: number }).n;
     const last = isoDay(new Date(Date.parse(period.end + "T00:00:00Z") - 86400000).toISOString());
     const future = sum(daysBetween(isoDay(now), last).flatMap(day => costsForDay(db, input.userId, day).filter(cost => !db.prepare("SELECT id FROM billing_usage_events WHERE event_key=?").get(`fixed:${cost.id}:${day}`)).map(cost => dayCost(cost, day))));
-    const projected = statement({ events: [{ kind: "usage", costMicros: sum([existing, held, future]) }], markupPercent: cfg.markup_percent, feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: 1 });
+    const projected = statement({ events: [{ kind: "usage", costMicros: sum([existing, held, future]) }], feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: 1 });
     if (!canReserve({ consent: true, ceilingMicros: profile(db, input.userId)!.ceiling_micros, projectedMicros: projected.totalCents * 10000 })) throw new BillingError("This expense would reach the payer’s spending cutoff. Obtain a higher ceiling or reduce the expense first.");
   }).immediate();
 }

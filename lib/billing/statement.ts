@@ -8,15 +8,14 @@ export function processorFeeMicros(totalCents: number, bps: number, fixedMicros:
 }
 export function statement(input: {
   events: { kind: string; costMicros: number }[]; carryMicros?: number; adjustmentMicros?: number;
-  markupPercent?: number; feeBps?: number; fixedFeeMicros?: number; minimumCents?: number;
+  feeBps?: number; fixedFeeMicros?: number; minimumCents?: number;
 }) {
-  const { events, markupPercent = 0, feeBps = 290, fixedFeeMicros = 300000, minimumCents = 50 } = input;
-  integer(markupPercent); integer(minimumCents);
-  if (markupPercent > 100) throw new BillingError("Markup must be from 0 to 100 percent");
+  const { events, feeBps = 290, fixedFeeMicros = 300000, minimumCents = 50 } = input;
+  integer(minimumCents);
   processorFeeMicros(0, feeBps, fixedFeeMicros);
   const subtotalMicros = sum(events.map(e => integer(e.costMicros)));
-  const markupMicros = roundedRatio(BigInt(subtotalMicros) * BigInt(markupPercent), 100n);
-  const balanceMicros = sum([subtotalMicros, markupMicros, input.carryMicros ?? 0, input.adjustmentMicros ?? 0]);
+  const markupMicros = 0;
+  const balanceMicros = sum([subtotalMicros, input.carryMicros ?? 0, input.adjustmentMicros ?? 0]);
   let totalCents = 0, feeMicros = 0, carryMicros = balanceMicros;
   if (balanceMicros > 0) {
     const n = BigInt(sum([balanceMicros, fixedFeeMicros])) * 10000n;
@@ -34,6 +33,6 @@ export function statement(input: {
   for (const e of events) totals.set(e.kind, [...(totals.get(e.kind) ?? []), e.costMicros]);
   return { items: [...totals].map(([kind, costs]) => ({ kind, label: LABELS[kind] ?? "Usage", costMicros: sum(costs) })),
     subtotalMicros, markupMicros, adjustmentMicros: input.adjustmentMicros ?? 0, previousCarryMicros: input.carryMicros ?? 0,
-    balanceMicros, feeMicros, totalCents, carryMicros, markupPercent, feeBps, fixedFeeMicros };
+    balanceMicros, feeMicros, totalCents, carryMicros, markupPercent: 0, feeBps, fixedFeeMicros };
 }
 export type Statement = ReturnType<typeof statement>;

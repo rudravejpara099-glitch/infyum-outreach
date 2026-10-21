@@ -11,7 +11,7 @@ export function usageForPeriod(db: Db, userId: number, start: string, end: strin
 }
 export function billingOverview(db: Db, userId: number, now = new Date().toISOString()) {
   const period = periodFor(now), cfg = billingConfig(db, now), events = usageForPeriod(db, userId, period.start, period.end);
-  const current = statement({ events: events.map(e => ({ kind: e.kind, costMicros: e.cost_micros })), markupPercent: cfg.markup_percent, feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: cfg.minimum_cents });
+  const current = statement({ events: events.map(e => ({ kind: e.kind, costMicros: e.cost_micros })), feeBps: cfg.fee_bps, fixedFeeMicros: cfg.fixed_fee_micros, minimumCents: cfg.minimum_cents });
   const day = isoDay(now), todayMicros = sum(events.filter(e => e.occurred_at.startsWith(day)).map(e => e.cost_micros));
   const snapshot = budgetSnapshot(db, userId, now), statements = listStatements(db, userId);
   const variable = sum(events.filter(e => ["apify", "ai_input_tokens", "ai_output_tokens"].includes(e.kind)).map(e => e.cost_micros));

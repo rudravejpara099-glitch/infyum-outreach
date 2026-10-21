@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth/dal";
 import { getDb } from "@/lib/db";
 import { billingOverview } from "@/lib/billing/queries";
-import { profile, billingConfig, integrationReady } from "@/lib/billing/config";
+import { profile, integrationReady } from "@/lib/billing/config";
 import { syncBilling } from "@/lib/billing/sync";
 import { usd } from "@/lib/billing/money";
 import { isOwner } from "@/lib/billing/rules";
@@ -13,17 +13,17 @@ import { changeSpendingLimit, claimBillingResource, refreshBilling } from "./act
 export const dynamic = "force-dynamic";
 export default async function BillingPage() {
   const user = await requireUser(); const db = getDb(); syncBilling(db, user.id);
-  const data = billingOverview(db, user.id), p = profile(db, user.id), cfg = billingConfig(db), ready = integrationReady(db);
+  const data = billingOverview(db, user.id), p = profile(db, user.id), ready = integrationReady(db);
   const apify = (db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string } | undefined)?.value;
   const resources = db.prepare("SELECT 'campaign' kind,c.id,c.name label,b.user_id payer FROM campaigns c LEFT JOIN billing_assignments b ON b.resource_kind='campaign' AND b.resource_id=c.id UNION ALL SELECT 'account',a.id,'@'||a.handle,b.user_id FROM ig_accounts a LEFT JOIN billing_assignments b ON b.resource_kind='account' AND b.resource_id=a.id").all() as { kind: "campaign" | "account"; id: number; label: string; payer: number | null }[];
   const percent = data.snapshot.ceilingMicros ? Math.min(100, Number(BigInt(data.snapshot.projectedMicros) * 100n / BigInt(data.snapshot.ceilingMicros))) : 0;
   return <div className="billing-page">
     <PageHeader title="Usage and billing" sub="Your costs, clearly accounted for. USD · calendar months in UTC." actions={<><a href={`/billing/export?month=${data.period.start.slice(0, 7)}`} className="btn">Download usage</a>{isOwner(user.id, process.env.BILLING_OWNER_USER_ID) && <Link href="/billing/admin" className="btn">Billing administration</Link>}</>} />
-    <section className="billing-notice"><span className="badge badge-warn">Test mode</span><div><strong>{cfg.markup_percent ? "Your usage costs and service margin are shown separately." : "We charge exactly what it costs us."}</strong><p>No real payment is taken. Planning estimates are never added to your usage.</p></div></section>
+    <section className="billing-notice"><span className="badge badge-warn">Test mode</span><div><strong>Only actual costs are passed through. There is no service margin.</strong><p>No real payment is taken. Planning estimates are never added to your usage.</p></div></section>
     <div className="billing-stats"><Stat label="Recorded this month" value={usd(data.current.subtotalMicros)} hint="Actual recorded costs before payment fees" /><Stat label="Today" value={usd(data.todayMicros)} hint="Recorded costs in UTC" /><Stat label="Month-end projection" value={data.projectionMicros === null ? "—" : usd(data.projectionMicros)} hint="Based on recorded usage, before payment fees; not a bill" /><Stat label="Unpaid statements" value={usd(data.unpaidMicros)} hint="Finalized statements only" /></div>
     <div className="billing-columns">
       <section className="card p-5"><h2>This month so far</h2><p className="mt-1 text-sm text-muted">{data.period.start} to {data.period.end} · costs appear after confirmed usage.</p>
-        <dl className="billing-breakdown">{[{ label: "AI writing", value: data.current.items.filter(i => i.kind.startsWith("ai_")).reduce((n, i) => n + i.costMicros, 0) }, { label: "Lead search", value: data.current.items.find(i => i.kind === "apify")?.costMicros ?? 0 }, { label: "Instagram network", value: data.current.items.find(i => i.kind === "proxy_share")?.costMicros ?? 0 }, { label: "Hosting", value: data.current.items.find(i => i.kind === "hosting_share")?.costMicros ?? 0 }, ...(data.current.markupMicros ? [{ label: "Service margin", value: data.current.markupMicros }] : []), { label: "Payment fee · estimate", value: data.current.feeMicros }].map(item => <div key={item.label}><dt>{item.label}</dt><dd title={usd(item.value, 6)}>{usd(item.value)}</dd></div>)}</dl>
+        <dl className="billing-breakdown">{[{ label: "AI writing", value: data.current.items.filter(i => i.kind.startsWith("ai_")).reduce((n, i) => n + i.costMicros, 0) }, { label: "Lead search", value: data.current.items.find(i => i.kind === "apify")?.costMicros ?? 0 }, { label: "Instagram network", value: data.current.items.find(i => i.kind === "proxy_share")?.costMicros ?? 0 }, { label: "Hosting", value: data.current.items.find(i => i.kind === "hosting_share")?.costMicros ?? 0 }, { label: "Payment fee · estimate", value: data.current.feeMicros }].map(item => <div key={item.label}><dt>{item.label}</dt><dd title={usd(item.value, 6)}>{usd(item.value)}</dd></div>)}</dl>
         {!data.events.length && <p className="billing-empty">No recorded usage yet. Set your limit and assign resources to begin once the metered worker is connected.</p>}
         <p className="text-xs text-muted">Actual payment fees are reconciled on the next statement. Tiny balances carry forward; no minimum usage charge is added.</p>
         {data.pendingFees > 0 && <p className="mt-3 text-sm text-warn">{data.pendingFees} payment fee reconciliation{data.pendingFees === 1 ? " is" : "s are"} waiting for provider data.</p>}

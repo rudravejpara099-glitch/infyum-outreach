@@ -27,18 +27,18 @@ describe("integer at-cost billing rules", () => {
   it("has no markup, payment fee or charge for zero usage", () => {
     expect(statement({ events: [] })).toMatchObject({ subtotalMicros: 0, markupMicros: 0, feeMicros: 0, totalCents: 0, carryMicros: 0 });
   });
-  it("passes through costs and grosses up the processor fee without double-marking it up", () => {
-    const s = statement({ events: [event(10000000)], markupPercent: 0 });
+  it("passes through costs and grosses up the processor fee without a margin", () => {
+    const s = statement({ events: [event(10000000)] });
     expect(s.markupMicros).toBe(0);
     expect(s.totalCents * 10000 - s.feeMicros + s.carryMicros).toBe(10000000);
     expect(s.feeMicros).toBe(processorFeeMicros(s.totalCents, 290, 300000));
     const previous = (s.totalCents - 1) * 10000 - processorFeeMicros(s.totalCents - 1, 290, 300000);
     expect(previous).toBeLessThan(10000000);
   });
-  it("supports an explicitly disclosed 10 percent markup and preserves signed credits", () => {
-    const s = statement({ events: [event(10000000)], markupPercent: 10, adjustmentMicros: -200000, carryMicros: -123 });
-    expect(s.markupMicros).toBe(1000000);
-    expect(s.totalCents * 10000 - s.feeMicros + s.carryMicros).toBe(10799877);
+  it("preserves signed credits without adding a margin", () => {
+    const s = statement({ events: [event(10000000)], adjustmentMicros: -200000, carryMicros: -123 });
+    expect(s.markupMicros).toBe(0);
+    expect(s.totalCents * 10000 - s.feeMicros + s.carryMicros).toBe(9799877);
     expect(statement({ events: [], carryMicros: -50000 })).toMatchObject({ totalCents: 0, feeMicros: 0, carryMicros: -50000 });
   });
   it("carries small balances rather than charging a minimum or adding a fee", () => {
@@ -46,17 +46,17 @@ describe("integer at-cost billing rules", () => {
     expect(s).toMatchObject({ totalCents: 0, feeMicros: 0, carryMicros: 1000 });
     expect(statement({ events: [event(1000000)], carryMicros: s.carryMicros }).subtotalMicros).toBe(1000000);
   });
-  it("never silently accepts invalid fee, markup or money values", () => {
+  it("never silently accepts invalid fee or money values", () => {
     for (const feeBps of [-1, 10000, 10001]) expect(() => statement({ events: [], feeBps })).toThrow();
     expect(() => statement({ events: [event(-1)] })).toThrow();
-    expect(() => statement({ events: [], markupPercent: -1 })).toThrow();
     expect(() => statement({ events: [event(Number.MAX_SAFE_INTEGER), event(1)] })).toThrow();
   });
-  it("covers combinations of usage, credits, markups and fee schedules without lost cents", () => {
+  it("covers costs, credits and fee schedules without adding a margin or losing cents", () => {
     for (const cost of [1, 9999, 500000, 1000000, 10000001, 123456789]) {
-      for (const markupPercent of [0, 10]) for (const feeBps of [0, 290, 500]) {
-        const s = statement({ events: [event(cost)], markupPercent, feeBps, fixedFeeMicros: 300000 });
-        expect(s.totalCents * 10000 - s.feeMicros + s.carryMicros).toBe(cost + s.markupMicros);
+      for (const feeBps of [0, 290, 500]) {
+        const s = statement({ events: [event(cost)], feeBps, fixedFeeMicros: 300000 });
+        expect(s.markupMicros).toBe(0);
+        expect(s.totalCents * 10000 - s.feeMicros + s.carryMicros).toBe(cost);
         if (s.totalCents) expect(s.carryMicros).toBeLessThanOrEqual(0);
       }
     }

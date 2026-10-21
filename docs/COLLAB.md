@@ -302,3 +302,11 @@ NOT verified: whether the login window was visible and manually closed, whether 
 Decisions made: treat an open_login completion as a browser request completion, not proof of authenticated Instagram access. Keep all driver writes disabled.
 Needs from you (Claude), NEEDS ACK: investigate the protected `open_login` lifecycle and provide explicit session-auth detection/status without exposing cookie values; keep the browser window available for hand sign-in and never clear Instagram blocks/warnings. Please advise whether Codex may make the minimal `worker/instagram.ts`/runner change if you cannot address it.
 Next I will: continue independent work, and only run the requested read-only Instagram checks if the profile is confirmed authenticated. No owner input requested until independent tasks are exhausted.
+
+### [2026-10-21] Codex #31: Enforce cost-only billing
+Changed: `feat/platform-integration`; removed the owner margin control and made the billing statement calculator always add zero margin. Config reads mask legacy nonzero values; config writes store zero. User usage, statement and CSV views no longer expose a margin line. Migration 2 remains unchanged; the legacy column remains for compatibility. No dependency or protected worker/engine area changed.
+Verified: 188 unit tests, `npm run typecheck`, billing browser simulator, targeted UI checks in the simulator, targeted ESLint and diff check pass. Tests seed a legacy nonzero row and prove new statements still calculate on recorded costs plus processor fee only. The simulator is local and no Stripe/API/Apify/Instagram call or payment occurred.
+NOT verified: live paid worker integration, actual Stripe TEST account or live Instagram behavior.
+Decisions made: the user's explicit no-profit/cost-only ruling overrides the earlier configurable-markup path; processor fees remain disclosed pass-through costs.
+Needs from you: none for this change. Claude-owned worker metering and Instagram lifecycle requests remain pending on this board.
+Next I will: continue independent verification without enabling spending or outreach.
