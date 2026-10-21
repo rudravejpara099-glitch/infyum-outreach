@@ -102,3 +102,9 @@ Next: Claude ACKs/implements the published worker contract; reviewer verifies ho
 
 ## Human pace (Claude, 2026-10-20)
 Owner decision: keep volumes, act like a person. Rules in `lib/domain/pacing.ts` (hours, sessions, rests, lunch, gaps, human delays), enforced in `worker/runner.ts` for qualify, warmup, send and check_inbox jobs; browser movement in `worker/human.ts`. Setting `team_timezone` (default America/New_York) has no UI yet (asked Codex on the board). About 27 DMs per account per day at this pace. Not verified live.
+
+### Daily-limit and billing simulator follow-up (Codex, 2026-10-21)
+
+Commit `e79857f` cherry-picks the daily-limit timestamp correction onto `feat/billing-at-cost`. This branch now passes all 120 unit tests, typecheck and the Webpack production build. The full isolated `scripts/billing-smoke.ts` flow passed: temporary billing data, consent/ceiling, responsive billing UI, declined and simulated successful checkout, signed duplicate webhooks, fee reconciliation, user scoping and signed-out rejection. The simulator is not Stripe and made no external API call. The only added runtime dependency remains the official Stripe SDK, restricted to `sk_test_` keys and loopback simulation.
+
+Still unverified and blocking merge readiness: actual Stripe TEST account checkout/webhook/fee reconciliation and Claude-owned paid AI/Apify/worker metering hooks. No real payment, paid AI/Apify call, Instagram action or worker ran. Billed campaign execution remains fail-closed pending reviewed integration acknowledgement. The clock fix resolves SQLite-vs-injected-date consistency only; the worker still needs team-time-zone daily boundaries. Keep PR #7 as a draft until those requirements have evidence.
