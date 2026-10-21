@@ -206,4 +206,4 @@ Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passe
 
 The Pipeline now offers the right next step when there are no leads in the workspace or selected campaign, labels empty stages clearly, and explains when no leads were skipped. A malformed or unknown campaign filter returns 404 instead of silently switching to all campaigns. This is a UI/query-boundary fix; campaign and lead rules are unchanged.
 
-Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and no outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. The UI smoke captured and inspected the empty board at 1440/1024/390 in both themes.
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and no outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. The UI smoke captured and inspected the empty board at 1440/1024/390 in both themes and verifies both malformed and unknown campaign IDs. Its intentional local-server restart ignores only the expected HMR connection refusal during that restart.

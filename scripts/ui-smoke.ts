@@ -38,8 +38,12 @@ try {
   context.setDefaultTimeout(30000);
   const page = await context.newPage();
   const errors: string[] = [];
+  let expectedServerRestart = false;
   page.on("pageerror", error => errors.push(error.message));
-  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  page.on("console", message => {
+    const restartingHmr = expectedServerRestart && message.location().url.includes("/_next/webpack-hmr") && message.text().includes("ERR_CONNECTION_REFUSED");
+    if (message.type() === "error" && !restartingHmr) errors.push(message.text());
+  });
   const password = randomBytes(24).toString("hex"); // Never persisted or printed.
   await page.goto(`${base}/setup`);
   await page.getByLabel("Your name").fill("UI Review");
@@ -79,6 +83,8 @@ try {
     await page.screenshot({ path: path.join(screenshots, `pipeline-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   await page.goto(`${base}/pipeline?campaign=not-a-number`);
+  await page.getByRole("heading", { name: "404", exact: true }).waitFor();
+  await page.goto(`${base}/pipeline?campaign=999999`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
   await page.goto(`${base}/`);
   await page.getByRole("link", { name: "Overview", exact: true }).waitFor();
@@ -494,6 +500,7 @@ try {
   assert(activityCsv.includes("\"' =SUM(1,2)\""));
   // A second local-only phase uses a fake configured key to test queueing. No worker exists.
   if (server.exitCode === null) {
+    expectedServerRestart = true;
     const stopped = new Promise<void>(resolve => server.once("exit", () => resolve()));
     server.kill("SIGTERM"); await stopped;
   }
@@ -505,6 +512,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   assert(restarted, "Queue review server did not restart");
+  expectedServerRestart = false;
   db.prepare("UPDATE settings SET value='1.05' WHERE key='apify_monthly_cap_usd'").run();
   await page.goto(campaignUrl);
   await page.locator("#add-leads summary").click();
