@@ -1,6 +1,6 @@
 # Full functionality audit — 2026-10-21
 
-The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. The existing authenticated preview is running on port 3100. On 2026-10-21, its Overview reported a live worker, 202 workspace leads, 23 pending approvals, and one failed background task. Activity identifies the failure as `open_login replaced by the owner signed-in Chrome`. Accounts shows three saved accounts and correctly warns that saving one does not verify login. No login window was opened, no draft was approved or sent, and no app data was changed during the latest inspection.
+The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. The existing authenticated preview is running on port 3100. On 2026-10-21, its Overview reported a live worker, 202 workspace leads, 23 pending approvals, and one failed background task. Activity identifies the failure as `open_login replaced by the owner signed-in Chrome`. Accounts shows three saved accounts and correctly warns that saving one does not verify login. Campaigns lists three draft campaigns. Billing shows Test mode, $0 recorded, paid work off, and the shared Apify limit unset. No login window was opened, no draft was approved or sent, and no app data was changed during the latest inspection.
 
 ## Current evidence
 
@@ -38,7 +38,7 @@ The owner requests the whole app working, without intermediate questions. Comple
 | Pipeline empty and invalid-filter states | Workspace and campaign empty views provide next actions; empty stages/skipped list are explicit; malformed or unknown campaign filters return 404 | Disposable browser flow verifies empty workspace and campaign, zero skipped, malformed query, and light/dark 1440/1024/390 layouts |
 | Production compilation | `npx next build --webpack` passed in a validated disposable build directory while the local preview remained running | Verified with Webpack; Turbopack path not verified in this sandbox |
 | Smoke isolation | UI and billing smoke each use temporary build output and a throwaway TypeScript config; source `tsconfig.json` stays unchanged | Both browser suites pass while the existing preview remains active |
-| Current live preview | Read-only browser check on Overview, Accounts and History | Preview is responsive; worker status reports running; 23 drafts await approval; one `open_login` failure reports replacement by the owner's signed-in Chrome. Current Instagram authentication remains unknown and the failure needs Claude review |
+| Current live preview | Read-only browser check on Overview, Accounts, History, Campaigns and Usage/Billing | Preview is responsive; worker status reports running; 23 drafts await approval; three campaigns remain drafts; paid work is off, $0 is recorded, and Apify limit is unset. One `open_login` failure reports replacement by the owner's signed-in Chrome. Current Instagram authentication remains unknown and the failure needs Claude review |
 
 ## Backend requests already posted
 
