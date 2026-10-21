@@ -77,8 +77,15 @@ export function rejectMessage(db: Db, id: number, actor: string): void {
   db.prepare("UPDATE messages SET status='rejected' WHERE id = ?").run(id);
   logActivity(db, actor, "message.rejected", { leadId: m.leadId, accountId: m.accountId });
 }
-export function markSent(db: Db, id: number): void {
-  db.prepare("UPDATE messages SET status='sent', sent_at=datetime('now') WHERE id = ?").run(id);
+export function returnFailedSendForReview(db: Db, id: number, actor: string): void {
+  const m = getMessage(db, id);
+  if (!m || m.status !== "failed" || m.direction !== "out" || !["dm", "followup"].includes(m.kind)) throw new Error("This message cannot be returned for review");
+  const reasons = [...new Set([...m.approvalReasons, "Owner confirmed no message part was sent; individual review required"])];
+  db.prepare("UPDATE messages SET status='pending_approval', approval_reasons=? WHERE id=? AND status='failed'").run(JSON.stringify(reasons), id);
+  logActivity(db, actor, "message.uncertain_returned_for_review", { leadId: m.leadId, accountId: m.accountId });
+}
+export function markSent(db: Db, id: number, now = new Date()): void {
+  db.prepare("UPDATE messages SET status='sent', sent_at=? WHERE id = ?").run(now.toISOString().replace("T", " ").slice(0, 19), id);
 }
 export function markFailed(db: Db, id: number, reason: string): void {
   const m = getMessage(db, id);
@@ -93,5 +100,9 @@ export function sentTodayForAccount(db: Db, accountId: number, dateIso: string):
   ).get(accountId, dateIso) as { c: number }).c;
 }
 export function approvedQueue(db: Db): Message[] {
-  return (db.prepare("SELECT * FROM messages WHERE direction='out' AND status='approved' ORDER BY id").all() as Record<string, unknown>[]).map(map);
+  return (db.prepare(`SELECT m.* FROM messages m
+    JOIN leads l ON l.id=m.lead_id
+    JOIN campaigns c ON c.id=l.campaign_id AND c.status='active'
+    JOIN campaign_accounts ca ON ca.campaign_id=c.id AND ca.account_id=m.account_id
+    WHERE m.direction='out' AND m.status='approved' ORDER BY m.id`).all() as Record<string, unknown>[]).map(map);
 }

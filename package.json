@@ -12,9 +12,11 @@
     "worker": "tsx worker/index.ts",
     "backup": "tsx scripts/backup.ts",
     "import": "tsx scripts/import-csv.ts",
-    "smoke:ui": "tsx scripts/ui-smoke.ts"
+    "smoke:ui": "tsx scripts/ui-smoke.ts",
+    "smoke:billing": "tsx scripts/billing-smoke.ts"
   },
   "dependencies": {
+    "@next/env": "16.4.2",
     "better-sqlite3": "^13.0.3",
     "jose": "^6.2.12",
     "next": "16.4.2",
@@ -22,6 +24,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
+    "stripe": "^23.0.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -28,6 +28,12 @@ export function looksLoggedOut(url: string): boolean {
   return /\/accounts\/login/.test(url);
 }
 
+/** Session confirmation uses cookie presence only; callers must never retain or log cookie values. */
+export function hasInstagramSession(cookies: { name: string; value: string }[], url: string): boolean {
+  if (/\/challenge\//i.test(url) || /\/accounts\/login/i.test(url)) return false;
+  return cookies.some((cookie) => cookie.name === "sessionid" && cookie.value.length > 0);
+}
+
 /** First number that sits next to the word "followers" in header text. */
 export function followersFromText(text: string): number | null {
   const m = text.replace(/ /g, " ").match(/([\d.,]+\s*[kKmM]?)\s+followers/);

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
 import { addLead, getLead, moveStage, dueFollowups, countByStage } from "@/lib/db/repos/leads";
 import { createCampaign } from "@/lib/db/repos/campaigns";
@@ -22,6 +22,7 @@ const seed = (approvalRequired = false) => {
 };
 
 beforeEach(() => { db = openDb(":memory:"); });
+afterEach(() => db.close());
 
 describe("leads", () => {
   it("dedupes by handle, ignoring @ and case", () => {
@@ -85,7 +86,7 @@ describe("sending flow", () => {
     const l = getLead(db, lead.id)!;
     expect(l.stage).toBe("dm_sent");
     expect(l.nextFollowupAt).toBe("2026-10-22 10:00:00");
-    expect(sentTodayForAccount(db, acct.id, new Date().toISOString().slice(0, 10))).toBe(1);
+    expect(sentTodayForAccount(db, acct.id, "2026-10-20")).toBe(1);
     expect(dueFollowups(db, "2026-10-22 10:00:01")).toHaveLength(1);
   });
   it("stops follow-ups after two", () => {
@@ -143,6 +144,31 @@ describe("jobs", () => {
     enqueue(db, { type: "x" }); claimNext(db);
     expect(requeueStuck(db)).toBe(1);
     const j = claimNext(db)!; completeJob(db, j.id);
+  });
+  it("does not retry a send after a crash when its outcome is unknown", () => {
+    const { acct, camp, lead } = seed(true);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["Hello"], campaign: camp }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    claimNext(db);
+
+    expect(requeueStuck(db)).toBe(1);
+
+    expect(listMessages(db, { leadId: lead.id })[0].status).toBe("failed");
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE type='send'").get()).toMatchObject({ status: "failed", last_error: expect.stringContaining("Check Instagram before trying again") });
+    expect(claimNext(db)).toBeNull();
+  });
+  it("marks a stuck send done if the message was already recorded sent", () => {
+    const { acct, camp, lead } = seed(true);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["Hello"], campaign: camp }, "t");
+    approveMessage(db, message.id, "t");
+    db.prepare("UPDATE messages SET status='sent' WHERE id=?").run(message.id);
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    claimNext(db);
+
+    expect(requeueStuck(db)).toBe(1);
+    expect(db.prepare("SELECT status FROM jobs WHERE type='send'").get()).toEqual({ status: "done" });
+    expect(listMessages(db, { leadId: lead.id })[0].status).toBe("sent");
   });
 });
 

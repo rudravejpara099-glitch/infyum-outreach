@@ -1,5 +1,6 @@
 import type { Db } from "../core";
 import type { Job } from "../types";
+import { getMessage, markFailed } from "./messages";
 
 const MAX_ATTEMPTS = 3;
 
@@ -46,12 +47,44 @@ export function failJob(db: Db, job: Job, error: string): void {
       .run(error, `+${job.attempts * 10} minutes`, job.id);
   }
 }
+/** Stops automatic retries when a send may already have reached Instagram. */
+export function failJobPermanently(db: Db, id: number, error: string): void {
+  db.prepare("UPDATE jobs SET status='failed', last_error=? WHERE id=?").run(error, id);
+}
 export function listJobs(db: Db, limit = 100): Job[] {
   return (db.prepare("SELECT * FROM jobs ORDER BY id DESC LIMIT ?").all(limit) as Record<string, unknown>[]).map(map);
 }
+export function failedSendError(db: Db, messageId: number): string | null {
+  const row = db.prepare(`SELECT last_error FROM jobs WHERE type='send' AND status='failed'
+    AND json_extract(payload,'$.messageId')=? ORDER BY id DESC LIMIT 1`).get(messageId) as { last_error: string } | undefined;
+  return row?.last_error ?? null;
+}
+export function resolveFailedSendJob(db: Db, messageId: number): void {
+  db.prepare(`UPDATE jobs SET status='done',last_error='' WHERE type='send' AND status='failed'
+    AND json_extract(payload,'$.messageId')=?`).run(messageId);
+}
 /** A worker that crashed mid-job leaves it 'running'. On start, put those back in the queue. */
 export function requeueStuck(db: Db): number {
-  return db.prepare("UPDATE jobs SET status='queued' WHERE status='running'").run().changes;
+  return db.transaction(() => {
+    const stuck = db.prepare("SELECT id,type,payload FROM jobs WHERE status='running'").all() as { id: number; type: string; payload: string }[];
+    const requeue = db.prepare("UPDATE jobs SET status='queued' WHERE id=?");
+    for (const job of stuck) {
+      if (job.type !== "send") { requeue.run(job.id); continue; }
+      let messageId = 0;
+      try { messageId = Number((JSON.parse(job.payload) as { messageId?: unknown }).messageId); } catch { /* malformed send payloads are still held for review */ }
+      const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(db, messageId) : undefined;
+      if (message?.status === "approved") {
+        const reason = "A message may have been sent before the background service stopped. Check Instagram before trying again.";
+        markFailed(db, messageId, reason);
+        failJobPermanently(db, job.id, reason);
+      } else if (message?.status === "sent" || message?.status === "failed" || message?.status === "rejected") {
+        db.prepare("UPDATE jobs SET status='done' WHERE id=?").run(job.id);
+      } else {
+        failJobPermanently(db, job.id, "The background service stopped during a message send. Check this task before trying again.");
+      }
+    }
+    return stuck.length;
+  })();
 }
 
 /** True when the same kind of job for the same lead (and account, when given) is already waiting or running. */

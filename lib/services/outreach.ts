@@ -13,16 +13,16 @@ export const MAX_FOLLOWUPS = 2;
 const addDays = (days: number, from = new Date()) => new Date(from.getTime() + days * 86_400_000).toISOString().replace("T", " ").slice(0, 19);
 
 /** Called by the worker right after Instagram confirms a message was sent. */
-export function afterSent(db: Db, messageId: number, now = new Date()): void {
+export function afterSent(db: Db, messageId: number, now = new Date(), actor = "worker"): void {
   const m = getMessage(db, messageId);
   if (!m) throw new Error(`Message ${messageId} not found`);
-  markSent(db, messageId);
+  markSent(db, messageId, now);
   const lead = getLead(db, m.leadId)!;
   const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
-  logActivity(db, "worker", `message.sent.${m.kind}`, { leadId: lead.id, accountId: m.accountId });
+  logActivity(db, actor, `message.sent.${m.kind}`, { leadId: lead.id, accountId: m.accountId });
 
   if (m.kind === "dm") {
-    moveStage(db, lead.id, "dm_sent", "worker");
+    moveStage(db, lead.id, "dm_sent", actor);
     if (campaign?.followupsEnabled) scheduleFollowup(db, lead.id, addDays(FIRST_FOLLOWUP_DAYS, now), 0);
   } else if (m.kind === "followup") {
     const sent = lead.followupsSent + 1;
