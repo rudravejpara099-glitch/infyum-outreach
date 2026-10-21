@@ -32,15 +32,32 @@ const port = 3190;
 const base = `http://127.0.0.1:${port}`;
 mkdirSync(screenshots, { recursive: true });
 const sessionSecret = randomBytes(48).toString("hex");
-const startServer = (apifyToken = "") => spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
-  env: { ...process.env, OUTREACH_SMOKE_DIST_DIR: distDir, OUTREACH_SMOKE_TSCONFIG: tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret }, stdio: "ignore",
-});
+let serverStderr = "";
+const startServer = (apifyToken = "") => {
+  serverStderr = "";
+  const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
+    env: { ...process.env, OUTREACH_SMOKE_DIST_DIR: distDir, OUTREACH_SMOKE_TSCONFIG: tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+  child.stderr?.on("data", (chunk: Buffer) => {
+    serverStderr = `${serverStderr}${chunk.toString("utf8")}`.slice(-4000);
+  });
+  return child;
+};
+const serverStartError = (name: string) => {
+  const diagnostic = serverStderr
+    .replaceAll(sessionSecret, "[redacted]")
+    .replaceAll(temp, "[temporary smoke directory]")
+    .replaceAll("fixture-apify-token-never-used", "[redacted]")
+    .trim();
+  return new Error(`${name}${diagnostic ? `:\n${diagnostic}` : ""}`);
+};
 let server = startServer();
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {
   let ready = false;
   for (let attempt = 0; attempt < 90; attempt++) {
-    if (server.exitCode !== null) throw new Error("Review server exited before starting");
+    if (server.exitCode !== null) throw serverStartError("Review server exited before starting");
     try { if ((await fetch(`${base}/setup`)).ok) { ready = true; break; } } catch { /* server is starting */ }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
@@ -580,7 +597,7 @@ try {
   server = startServer("fixture-apify-token-never-used");
   let restarted = false;
   for (let attempt = 0; attempt < 90; attempt++) {
-    if (server.exitCode !== null) throw new Error("Queue review server exited");
+    if (server.exitCode !== null) throw serverStartError("Queue review server exited");
     try { if ((await fetch(`${base}/login`)).ok) { restarted = true; break; } } catch {}
     await new Promise(resolve => setTimeout(resolve, 500));
   }
