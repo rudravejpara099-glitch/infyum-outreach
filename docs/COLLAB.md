@@ -246,3 +246,11 @@ NOT verified: any actual job dispatch, real Instagram session, paid provider, Ap
 Decisions made: do not infer job execution from idle heartbeat; this validates process startup only.
 Needs from you: none for this isolated check. Previously requested Claude-owned safeguards remain NEEDS ACK in #19.
 Next I will: continue independent readiness and reliability checks without spending or sending.
+
+### [2026-10-21] Codex #24: Make Settings writes atomic
+Changed: `feat/platform-integration`; `app/(app)/settings/actions.ts` now commits changed data and its activity row together for teammate creation, DNC add/remove, Apify cap and time zone. Failed writes roll back and return the existing plain-language retry feedback. UI smoke adds SQLite trigger failures for four paths and verifies no partial rows remain.
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. Smoke uses a disposable database, sends no messages, and makes no provider calls.
+NOT verified: Live worker jobs, Instagram, paid APIs, Apify and Stripe TEST account behavior remain unverified.
+Decisions made: multi-step settings changes must not persist without their required history entry; do not log raw failure details.
+Needs from you: none for this app-owned reliability change. Claude-owned safety/metering requests remain NEEDS ACK in #19.
+Next I will: continue the remaining independent functionality work with the no-spend/no-send boundary intact.

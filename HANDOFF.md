@@ -208,6 +208,12 @@ The Pipeline now offers the right next step when there are no leads in the works
 
 Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and no outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. The UI smoke captured and inspected the empty board at 1440/1024/390 in both themes and verifies both malformed and unknown campaign IDs. Its intentional local-server restart ignores only the expected HMR connection refusal during that restart.
 
+### Atomic Settings changes (Codex, 2026-10-21)
+
+Settings actions now commit each data change and its audit row in one SQLite transaction for teammate creation, do-not-contact add/remove, Apify cap and team time zone. A failed write returns the same clear retry feedback used by other forms. The browser smoke injects SQLite trigger failures for teammate creation, DNC add, cap save and time-zone save, then proves all underlying rows roll back and successful retries still work.
+
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and no outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. This checks transaction and feedback behavior only; it does not run a worker or paid provider.
+
 ### Isolated worker startup check (Codex, 2026-10-21)
 
 Started the worker against a new disposable SQLite database with no accounts, leads, or jobs and an empty Apify token. It wrote a fresh heartbeat, queued no work, and exited cleanly on SIGINT. No browser profile was opened and no Instagram, Claude, Apify, or payment action ran. This verifies idle startup and heartbeat only; it does not verify jobs or provider integration.
