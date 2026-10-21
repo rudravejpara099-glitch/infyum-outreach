@@ -14,7 +14,7 @@ import type { ActionResult } from "@/lib/ui/action-result";
 import { accountIdSchema, capSchema, connectSchema } from "./validation";
 
 function startLoginWindow(accountId: number, jobId: number): boolean {
-  if (process.env.OUTREACH_SMOKE_DIST_DIR) return true;
+  if (process.env.OUTREACH_SMOKE_MODE === "1") return true;
   try {
     const command = loginWindowCommand(accountId, jobId);
     const child = spawn(command.command, command.args, {
@@ -58,14 +58,14 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   if (!parsed.success) return { error: parsed.error.issues[0].message, field: String(parsed.error.issues[0].path[0]) };
   const handle = normHandle(parsed.data.handle), db = getDb();
   if (db.prepare("SELECT id FROM ig_accounts WHERE handle=?").get(handle)) return { error: "This account is already saved. Use its Open login window button below.", field: "handle" };
-  const backgroundRunning = Boolean(process.env.OUTREACH_SMOKE_DIST_DIR) || workerStatus(db, new Date()).running;
+  const backgroundRunning = process.env.OUTREACH_SMOKE_MODE === "1" || workerStatus(db, new Date()).running;
   let accountId = 0, request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
   db.transaction(() => {
     const account = createAccount(db, { handle, profileDir: path.join(config.profilesDir, handle), dailyCap: parsed.data.dailyCap }, user.email);
     accountId = account.id;
     request = requestLogin(db, account.id, backgroundRunning);
   }).immediate();
-  const smoke = Boolean(process.env.OUTREACH_SMOKE_DIST_DIR);
+  const smoke = process.env.OUTREACH_SMOKE_MODE === "1";
   const started = !request.launch || startLoginWindow(accountId, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
@@ -78,7 +78,7 @@ export async function reopenLogin(form: FormData): Promise<ActionResult> {
   const account = parsed.success ? getAccount(getDb(), parsed.data) : null;
   if (!account) return { error: "Account not found. Refresh this page." };
   const db = getDb();
-  const backgroundRunning = Boolean(process.env.OUTREACH_SMOKE_DIST_DIR) || workerStatus(db, new Date()).running;
+  const backgroundRunning = process.env.OUTREACH_SMOKE_MODE === "1" || workerStatus(db, new Date()).running;
   let request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
   db.transaction(() => {
     request = requestLogin(db, account.id, backgroundRunning);
@@ -88,7 +88,7 @@ export async function reopenLogin(form: FormData): Promise<ActionResult> {
   revalidatePath("/accounts");
   if (!started) return { error: "The sign-in window could not open. Try again shortly." };
   if (request.alreadyOpening) return { message: "The sign-in window is already opening. Finish there before requesting another." };
-  return { message: process.env.OUTREACH_SMOKE_DIST_DIR ? "Sign-in request saved for the browser check." : "Instagram is opening in a separate window. Sign in there, then refresh this page to see the connection status." };
+  return { message: process.env.OUTREACH_SMOKE_MODE === "1" ? "Sign-in request saved for the browser check." : "Instagram is opening in a separate window. Sign in there, then refresh this page to see the connection status." };
 }
 export async function changeStatus(form: FormData): Promise<ActionResult> {
   const user = await requireUser();

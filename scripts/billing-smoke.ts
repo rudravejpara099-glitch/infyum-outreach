@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
@@ -19,6 +19,7 @@ import { addResourceCost } from "@/lib/billing/resources";
 import { syncBilling } from "@/lib/billing/sync";
 import { setSetting } from "@/lib/db/repos/settings";
 import { billingTestProvider } from "./billing-test-provider";
+import { buildIsolatedNextApp, cleanupIsolatedNextApp, type IsolatedNextBuild } from "./isolated-next-build";
 async function stopServer(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
   const exited = new Promise<void>(resolve => child.once("exit", () => resolve()));
@@ -30,21 +31,40 @@ async function stopServer(child: ChildProcess) {
 async function main() {
   const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-billing-")), dbPath = path.join(temp, "billing.db");
   const screenshots = path.resolve("data/billing-smoke"); mkdirSync(screenshots, { recursive: true });
-  const distDir = `.next-smoke-billing-${randomBytes(4).toString("hex")}`;
-  const tsconfigPath = `.tsconfig-smoke-billing-${randomBytes(4).toString("hex")}.json`;
-  writeFileSync(tsconfigPath, JSON.stringify({ extends: "./tsconfig.json" }));
   const base = "http://127.0.0.1:3191", secret = `whsec_${randomBytes(24).toString("hex")}`;
   const provider = await billingTestProvider(base, secret);
   const sessionSecret = randomBytes(48).toString("hex");
-  const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", "3191"], {
-    env: { ...process.env, OUTREACH_SMOKE_DIST_DIR: distDir, OUTREACH_SMOKE_TSCONFIG: tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, BILLING_OWNER_USER_ID: "1", STRIPE_SECRET_KEY: "sk_test_fixture", STRIPE_WEBHOOK_SECRET: secret, BILLING_TEST_API_BASE: provider.origin, APP_URL: base, APIFY_TOKEN: "fixture-only" }, stdio: "ignore",
-  });
+  let build: IsolatedNextBuild | undefined;
+  let serverOutput = "";
+  let server: ChildProcess | undefined;
+  const startServer = (isolatedBuild: IsolatedNextBuild) => {
+    serverOutput = "";
+    const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3191"], {
+      env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", OUTREACH_SMOKE_DIST_DIR: isolatedBuild.distDir, OUTREACH_SMOKE_TSCONFIG: isolatedBuild.tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, BILLING_OWNER_USER_ID: "1", STRIPE_SECRET_KEY: "sk_test_fixture", STRIPE_WEBHOOK_SECRET: secret, BILLING_TEST_API_BASE: provider.origin, APP_URL: base, APIFY_TOKEN: "fixture-only" }, stdio: ["ignore", "pipe", "pipe"],
+    });
+    const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4000); };
+    child.stdout?.on("data", capture); child.stderr?.on("data", capture);
+    return child;
+  };
+  const serverStartError = () => new Error(`Billing review server did not start${serverOutput ? `:\n${serverOutput.replaceAll(sessionSecret, "[redacted]").replaceAll(secret, "[redacted]").replaceAll("fixture-only", "[redacted]").replaceAll(temp, "[temporary smoke directory]").trim()}` : ""}`);
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   let db: ReturnType<typeof openDb> | undefined;
   try {
+    build = buildIsolatedNextApp("billing", [sessionSecret, secret, "fixture-only", "sk_test_fixture"]);
+    server = startServer(build);
     let ready = false;
-    for (let i = 0; i < 100; i++) { if (server.exitCode !== null) throw new Error("Billing review server exited"); try { if ((await fetch(`${base}/setup`)).ok) { ready = true; break; } } catch {} await new Promise(r => setTimeout(r, 500)); }
-    assert(ready); browser = await chromium.launch();
+    const startupDeadline = Date.now() + 45_000;
+    while (!ready && Date.now() < startupDeadline) {
+      if (!server || server.exitCode !== null) throw serverStartError();
+      const controller = new AbortController();
+      const requestTimeout = setTimeout(() => controller.abort(), 1_000);
+      try { if ((await fetch(`${base}/setup`, { signal: controller.signal })).ok) ready = true; } catch { /* server is starting */ }
+      finally { clearTimeout(requestTimeout); }
+      if (ready) break;
+      await new Promise(r => setTimeout(r, 500));
+    }
+    if (!ready) throw serverStartError();
+    browser = await chromium.launch();
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     const page = await context.newPage(), errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
@@ -145,7 +165,7 @@ async function main() {
     assert.deepEqual(errors, []);
     console.log("Billing simulator smoke passed: isolated data, six responsive/theme sizes, owner UI, consent/limit save, hosted redirect, declined and paid sessions, signed duplicate webhooks, exact payment and fee reconciliation, CSV, other-user admin/statement/export rejection, and signed-out protection. LOCAL SIMULATOR ONLY; actual Stripe TEST account not verified.");
   } finally {
-    db?.close(); await browser?.close(); await stopServer(server); await provider.close(); rmSync(path.resolve(distDir), { recursive: true, force: true }); rmSync(path.resolve(tsconfigPath), { force: true }); rmSync(temp, { recursive: true, force: true }); delete process.env.BILLING_OWNER_USER_ID;
+    db?.close(); await browser?.close(); if (server) await stopServer(server); await provider.close(); if (build) cleanupIsolatedNextApp(build); rmSync(temp, { recursive: true, force: true }); delete process.env.BILLING_OWNER_USER_ID;
   }
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -425,3 +425,21 @@ The owner explicitly approved using the signed-in Chrome profile and allowed Chr
 This confirms that the owner's Chrome session works. It does **not** connect the app's current per-account Playwright profile: that remains a separate browser context, and raw Playwright CDP was rejected by Chrome. Chrome's documented `--autoConnect` route is through the Chrome DevTools MCP bridge and requires a consent dialog for each new debugging session. That bridge is an agent debugging interface, not an existing app integration. Do not claim the app is connected until its driver can use an approved integration and passes read-only app-side checks.
 
 No code, account data, worker activity, paid call, payment, or Instagram write changed. Keep the campaign worker stopped and paid work off. Next: assess a supported local app integration for the approved Chrome connection without copying session credentials; until then, the app-side Instagram session is unverified.
+
+### Chrome DevTools bridge proof and app integration gap (Codex, 2026-10-22)
+
+The owner authorized the existing signed-in Chrome profile. The official Chrome DevTools MCP 1.11.0 bridge successfully connected after Chrome's per-session Allow prompt. Its read-only tools confirmed the Instagram profile page is authenticated and the Instagram Messages route is loaded; only URL/title/readiness and an authenticated boolean were returned for the inbox/profile check. The MCP process was stopped and the temporary package was removed from project dependencies after the experiment.
+
+This proves an approved bridge can reach the owner's Chrome. It does not make the current app use that bridge: the app still launches its own Playwright profile, and the Chrome MCP server is a separate process that currently has no app adapter. Direct Playwright CDP remains rejected by Chrome. A real connection needs an app-owned adapter plus account identity matching and serialized browser access; it must not inspect unrelated Chrome tabs or expose session data. Do not start the campaign worker or perform social writes while implementing/testing this.
+
+The attempt to open Instagram's Options menu for the app's "About this account" country read was rejected by automatic review because its element target was in a truncated accessibility snapshot. No alternate UI path was used. That specific live selector check remains unverified. No money or Instagram write occurred.
+
+### Local production browser checks and Chrome connection boundary (Codex, 2026-10-22)
+
+The smoke scripts now use isolated temporary Next build directories and production-start servers rather than a dev server that exhausted file watchers. This prevents smoke runs from overwriting the app's ordinary `.next` output. The UI contrast smoke calculation now accepts CSS `#rgb` and `#rrggbb` values and waits for approval-page content after navigation. The billing smoke test uses its fake payment provider only on loopback under explicit `OUTREACH_SMOKE_MODE=1`; normal production continues to reject local payment endpoints.
+
+Verified fresh: `npm test` (230 tests), `npm run typecheck`, UI smoke, local fake billing smoke, and production authentication/protected-route smoke. All browser runs use disposable data. No worker, real payment provider, AI, Apify, or Instagram write ran; no spend occurred.
+
+Instagram is authenticated in the user's approved Chrome profile `Rudra099`, verified through read-only profile UI. The local app does not connect to that browser: it currently uses isolated Playwright profiles, and Chrome's official DevTools MCP bridge is only available to the agent, not an app-owned adapter. No localhost DevTools endpoint is exposed, and no cookies/passwords/session data were copied. App-side Instagram connection and read-only profile/inbox via the app remain unverified. The live Options/About selector attempt was rejected by automatic review from a truncated accessibility snapshot; no alternate click path was used.
+
+Next engineering task: design and implement an account-scoped adapter that can use the approved Chrome session without exposing session credentials or accessing unrelated tabs, then verify profile and inbox reads only. Keep the worker stopped and all paid/outbound actions disabled until the owner explicitly confirms any live outreach test.

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
@@ -11,6 +11,7 @@ import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db
 import { createOutgoing } from "@/lib/db/repos/messages";
 import { addLead, listLeads } from "@/lib/db/repos/leads";
 import { addDnc, removeDnc } from "@/lib/db/repos/dnc";
+import { buildIsolatedNextApp, cleanupIsolatedNextApp, type IsolatedNextBuild } from "./isolated-next-build";
 
 async function stopServer(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
@@ -26,47 +27,57 @@ async function screenshot(page: Page, options: Parameters<Page["screenshot"]>[0]
   await page.screenshot(options);
 }
 
+async function tryLoad(url: string): Promise<Response | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1_000);
+  try { return await fetch(url, { signal: controller.signal }); }
+  catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
 async function main() {
 const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-ui-"));
 const dbPath = path.join(temp, "review.db");
 const screenshots = path.resolve(process.env.UI_SCREENSHOT_DIR ?? "data/ui-smoke");
-const distDir = `.next-smoke-ui-${randomBytes(4).toString("hex")}`;
-const tsconfigPath = `.tsconfig-smoke-ui-${randomBytes(4).toString("hex")}.json`;
-writeFileSync(tsconfigPath, JSON.stringify({ extends: "./tsconfig.json" }));
 const port = 3190;
 const base = `http://127.0.0.1:${port}`;
 mkdirSync(screenshots, { recursive: true });
 const sessionSecret = randomBytes(48).toString("hex");
-let serverStderr = "";
-const startServer = (apifyToken = "") => {
-  serverStderr = "";
-  const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
-    env: { ...process.env, OUTREACH_SMOKE_DIST_DIR: distDir, OUTREACH_SMOKE_TSCONFIG: tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
-    stdio: ["ignore", "ignore", "pipe"],
+let serverOutput = "";
+const startServer = (build: IsolatedNextBuild, apifyToken = "") => {
+  serverOutput = "";
+  const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], {
+    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
+    stdio: ["ignore", "pipe", "pipe"],
   });
-  child.stderr?.on("data", (chunk: Buffer) => {
-    serverStderr = `${serverStderr}${chunk.toString("utf8")}`.slice(-4000);
-  });
+  const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4000); };
+  child.stdout?.on("data", capture);
+  child.stderr?.on("data", capture);
   return child;
 };
 const serverStartError = (name: string) => {
-  const diagnostic = serverStderr
+  const diagnostic = serverOutput
     .replaceAll(sessionSecret, "[redacted]")
     .replaceAll(temp, "[temporary smoke directory]")
     .replaceAll("fixture-apify-token-never-used", "[redacted]")
     .trim();
   return new Error(`${name}${diagnostic ? `:\n${diagnostic}` : ""}`);
 };
-let server = startServer();
+let build: IsolatedNextBuild | undefined;
+let server: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {
+  build = buildIsolatedNextApp("ui", [sessionSecret]);
+  server = startServer(build);
   let ready = false;
-  for (let attempt = 0; attempt < 90; attempt++) {
-    if (server.exitCode !== null) throw serverStartError("Review server exited before starting");
-    try { if ((await fetch(`${base}/setup`)).ok) { ready = true; break; } } catch { /* server is starting */ }
+  const startupDeadline = Date.now() + 45_000;
+  while (!ready && Date.now() < startupDeadline) {
+    if (!server || server.exitCode !== null) throw serverStartError("Review server exited before starting");
+    if ((await tryLoad(`${base}/setup`))?.ok) ready = true;
+    if (ready) break;
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  assert(ready, "Review server did not start");
+  if (!ready) throw serverStartError("Review server did not start");
   browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
   context.setDefaultTimeout(30000);
@@ -294,14 +305,16 @@ try {
         return ["--ink", "--surface", "--muted", "--accent", "--on-accent", "--button-top"].map(name => css.getPropertyValue(name).trim());
       });
       const luminance = (hex: string) => {
-        const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+        const rawColor = hex.replace(/^#/, "");
+        const color = rawColor.length === 3 ? [...rawColor].map(channel => channel + channel).join("") : rawColor;
+        const rgb = [0, 2, 4].map(i => parseInt(color.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
         return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
       };
       const contrast = [[0, 1], [2, 1], [3, 1], [4, 5]].map(([a, b]) => {
         const x = luminance(palette[a]), y = luminance(palette[b]);
         return (Math.max(x, y) + .05) / (Math.min(x, y) + .05);
       });
-      assert(contrast.every(ratio => ratio >= 4.5), `Text token contrast must meet 4.5:1 in ${mode}`);
+      assert(contrast.every(ratio => ratio >= 4.5), `Text token contrast must meet 4.5:1 in ${mode}: ${JSON.stringify({ palette, contrast })}`);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Campaign overflow: ${mode} ${width}`);
       await screenshot(page, { path: path.join(screenshots, `campaign-${mode}-${width}.png`), fullPage: true, caret: "initial" });
     }
@@ -322,7 +335,8 @@ try {
   assert(await page.locator("#settings").getAttribute("open") !== null);
   await page.goto(campaignUrl);
   await page.getByRole("link", { name: "Review drafts", exact: true }).click();
-  await page.waitForURL(`${base}/approvals?campaign=${id}`);
+  await page.waitForURL(new RegExp(`${base}/approvals\\?campaign=${id}$`));
+  await page.locator("article").first().waitFor();
   assert.equal(await page.locator("article").count(), 3);
   assert.equal(await page.getByText("@another.campaign", { exact: true }).count(), 0);
   const firstDraft = page.locator("article").first();
@@ -625,13 +639,14 @@ try {
   // A second local-only phase uses a fake configured key to test queueing. No worker exists.
   if (server.exitCode === null) {
     expectedServerRestart = true;
+    if (!server) throw new Error("Review server stopped before queue check");
     await stopServer(server);
   }
-  server = startServer("fixture-apify-token-never-used");
+  server = startServer(build!, "fixture-apify-token-never-used");
   let restarted = false;
   for (let attempt = 0; attempt < 90; attempt++) {
-    if (server.exitCode !== null) throw serverStartError("Queue review server exited");
-    try { if ((await fetch(`${base}/login`)).ok) { restarted = true; break; } } catch {}
+    if (!server || server.exitCode !== null) throw serverStartError("Queue review server exited");
+    if ((await tryLoad(`${base}/login`))?.ok) { restarted = true; break; }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   assert(restarted, "Queue review server did not restart");
@@ -687,9 +702,8 @@ try {
   console.log(`Screenshots: ${screenshots}`);
 } finally {
   await browser?.close();
-  await stopServer(server);
-  rmSync(path.resolve(distDir), { recursive: true, force: true });
-  rmSync(path.resolve(tsconfigPath), { force: true });
+  if (server) await stopServer(server);
+  if (build) cleanupIsolatedNextApp(build);
   rmSync(temp, { recursive: true, force: true });
 }
 

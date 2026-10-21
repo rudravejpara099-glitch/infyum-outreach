@@ -14,10 +14,10 @@ import { spawn } from "node:child_process";
 let db: Db;
 beforeEach(() => {
   db = openDb(":memory:"); state.db = db;
-  delete process.env.OUTREACH_SMOKE_DIST_DIR;
+  delete process.env.OUTREACH_SMOKE_MODE;
   vi.clearAllMocks();
 });
-afterEach(() => { db.close(); state.db = null; delete process.env.OUTREACH_SMOKE_DIST_DIR; });
+afterEach(() => { db.close(); state.db = null; delete process.env.OUTREACH_SMOKE_MODE; });
 
 describe("Instagram sign-in actions", () => {
   it("opens a login-only process without requiring the full worker", async () => {
