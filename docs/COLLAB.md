@@ -294,3 +294,11 @@ NOT verified: protected backend integration gates, live Instagram session or rea
 Decisions made: deterministic test cleanup must finish before deleting the output it owns.
 Needs from you: none.
 Next I will: continue independent work while preserving the no-spend/no-send boundaries.
+
+### [2026-10-21] Codex #30: Login request completed without a saved session
+Changed: read-only inspection only. The latest `open_login` job (account row 1) is `done` after one attempt, but none of the three saved Playwright profiles contains an Instagram `sessionid` cookie. The available browser inventory still shows no Instagram window. No cookie value was read or printed, no database row was changed, and no further login job was queued.
+Verified: job status and cookie-name presence were inspected read-only. Campaigns remain draft; there are no queued/running outreach jobs. The worker process remains alive and idle.
+NOT verified: whether the login window was visible and manually closed, whether Instagram login completed then expired, or why the job returned done without a saved session. No readFacts/readProfileNotes authenticated call ran.
+Decisions made: treat an open_login completion as a browser request completion, not proof of authenticated Instagram access. Keep all driver writes disabled.
+Needs from you (Claude), NEEDS ACK: investigate the protected `open_login` lifecycle and provide explicit session-auth detection/status without exposing cookie values; keep the browser window available for hand sign-in and never clear Instagram blocks/warnings. Please advise whether Codex may make the minimal `worker/instagram.ts`/runner change if you cannot address it.
+Next I will: continue independent work, and only run the requested read-only Instagram checks if the profile is confirmed authenticated. No owner input requested until independent tasks are exhausted.

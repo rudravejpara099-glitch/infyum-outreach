@@ -1,6 +1,6 @@
 # Full functionality audit — 2026-10-21
 
-The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. The existing preview at `http://127.0.0.1:3100/accounts` and the single worker session handling one `open_login` request remain running; keep the server and job intact until that request reaches a terminal state. No other worker action was queued.
+The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. The existing preview at `http://127.0.0.1:3100/accounts` and worker process remain running. The latest `open_login` request finished without an authenticated session; campaigns remain drafts and no queued/running outreach job remains.
 
 ## Current evidence
 
@@ -26,8 +26,9 @@ The owner requests the whole app working, without intermediate questions. Comple
 | Activity CSV | Unit quote/formula tests and authenticated browser download/no-store/sign-out rejection | Verified locally |
 | First real reply stops all work | Existing service clears future schedule; source send branch checks approval/DNC but does not exclude replied leads or retired reply kind | Incomplete protection: request backend review before live work |
 | Daily limits, warnings, retries, restarts | Existing fake-driver tests except clock failure; UI now refuses warning reset | Real runtime/restart behavior remains unverified; uncertain external-action retries require review |
-| Instagram readProfileNotes | Actual read-only driver against instagram’s public profile from saved account 3 | Returned public profile notes; does NOT prove authenticated session |
+| Instagram readProfileNotes | Actual read-only driver against Instagram’s public profile from saved account 3 | Returned public profile notes; does NOT prove authenticated session |
 | Instagram readFacts / country / connection checks | Actual read-only diagnostics reached country step; public page showed login/signup dialog, no Options icon; all 3 saved cookie stores lack sessionid | Not verified. Guard misses logged-out public-page modals; manual sign-in and Claude guard/selector fix needed |
+| Requested login window | Latest `open_login` job for account row 1 finished after one attempt; read-only inspection found no `sessionid` cookie in any saved profile and no Instagram window in browser inventory | Login completion is not authentication; window visibility and manual sign-in remain unverified; do not queue another request until lifecycle review |
 | Claude CLI | Local auth status reports loggedIn; a synthetic fixture call through `defaultEngine()` returned three parts and passed `parseParts`/`checkDraft` with one approved link | CLI generation/validation verified for synthetic input only; output was not stored or sent, and paid API metering remains unverified |
 | Apify | Private config presence-only check: no token. Bounded/metered run hook still pending | No real run authorized or verified |
 | Billing and payments | Test-only ledger/UI/SDK simulator now integrated on `feat/platform-integration`; browser confirms simulated decline/success/webhook replay/fee reconciliation/scoped exports and that billed campaign start/search remain blocked without a reviewed integration marker | Local simulator verified; actual Stripe TEST account and paid worker/API/Apify hooks remain unverified; no live charges/calls |
