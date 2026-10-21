@@ -42,11 +42,18 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
       <div><div className="campaign-title"><h1>{campaign.name}</h1><span className={`status-label ${campaign.status === "active" ? "text-ok" : "text-muted"}`}><i />{CAMPAIGN_STATUS_LABEL[campaign.status]}</span></div>
         <p>{campaign.country} <span aria-hidden="true">·</span> {campaign.minFollowers.toLocaleString("en-US")}–{campaign.maxFollowers.toLocaleString("en-US")} followers</p>
       </div>
-      {campaign.status !== "done" && <ActionForm action={changeCampaignStatus}>
-        <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value={next.to} />
-        <button className="btn">{campaign.status === "active" && <Icon name="pause" size={16} />}{next.label}</button>
-      </ActionForm>}
+      {campaign.status !== "done" && <div className="flex flex-wrap gap-2">
+        <ActionForm action={changeCampaignStatus}>
+          <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value={next.to} />
+          <button className="btn">{campaign.status === "active" && <Icon name="pause" size={16} />}{next.label}</button>
+        </ActionForm>
+        <ActionForm action={changeCampaignStatus} confirmMessage="Finish this campaign? No new work will run. A message already being sent may still complete; saved drafts will remain in the campaign. This can’t be undone.">
+          <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value="done" />
+          <button className="btn">Finish campaign</button>
+        </ActionForm>
+      </div>}
     </header>
+    {campaign.status === "done" && <p className="card mb-4 p-4 text-sm text-muted">This campaign is finished. No new lead searches or messages will run. Any message already being sent may complete.</p>}
     {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Outreach is waiting. Campaign work will not start until its background service is running on this computer.</p>}
     <section className="audience-summary" aria-labelledby="audience-title">
       <div><h2 id="audience-title">Who you’re reaching</h2><p>{campaign.audienceText || campaign.niches.join(", ") || "Describe your audience in campaign settings."}</p></div>

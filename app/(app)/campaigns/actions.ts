@@ -40,7 +40,9 @@ export async function saveCampaign(form: FormData): Promise<ActionResult> {
 export async function changeCampaignStatus(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const rawId = Number(form.get("id")), parsed = z.enum(["active", "paused", "done"]).safeParse(form.get("status")), db = getDb();
-  if (!validId(rawId) || !getCampaign(db, rawId) || !parsed.success) return { error: "Campaign or status not found. Refresh the page." };
+  const campaign = validId(rawId) ? getCampaign(db, rawId) : null;
+  if (!campaign || !parsed.success) return { error: "Campaign or status not found. Refresh the page." };
+  if (campaign.status === "done") return { error: "This campaign is finished and can’t be restarted." };
   if (parsed.data === "active") {
     if (!campaignAccountIds(db, rawId).length) return { error: "Choose a sending account in campaign settings before starting." };
     try { assertCampaignCanStart(db, rawId, user.id); }

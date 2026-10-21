@@ -631,6 +631,13 @@ try {
   await page.getByRole("status").filter({ hasText: "Lead search saved" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='find_leads'").get() as { n: number }).n, 2);
 
+  await page.goto(campaignUrl);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Finish campaign", exact: true }).click();
+  await page.getByText("Finished", { exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "done");
+  await page.getByRole("button", { name: "Finish campaign", exact: true }).waitFor({ state: "detached" });
+
   await page.goto(`${base}/approvals?campaign=invalid`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
   await page.goto(`${base}/settings`);

@@ -3,7 +3,8 @@ import { openDb, type Db } from "@/lib/db/core";
 import { createAccount, getAccount } from "@/lib/db/repos/accounts";
 import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
-import { approveMessage, listMessages } from "@/lib/db/repos/messages";
+import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages } from "@/lib/db/repos/messages";
+import { enqueue } from "@/lib/db/repos/jobs";
 import { InstagramBlockedError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 
@@ -16,7 +17,7 @@ class FakeDriver implements InstagramDriver {
   facts = { isPublic: true, country: "United States", followers: 5000, linkedToInfyum: false };
   blockOnSend = false;
   async openLogin() {}
-  async readFacts(_account?: unknown) { return this.facts; }
+  async readFacts(account?: unknown) { void account; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
   async warmUp() { return { likes: 10, comments: 10, followed: true }; }
   async sendMessages(_a: unknown, handle: string, parts: string[]) {
@@ -68,6 +69,23 @@ describe("worker pipeline", () => {
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(1);
     expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
+  });
+
+  it("does not dispatch an already queued approved message after its campaign is finished", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "finish-before-send", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    setCampaignStatus(db, camp.id, "done", "t");
+
+    await runOne(deps);
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("approved");
+    expect(approvedQueue(db)).toHaveLength(0);
+    expect((db.prepare("SELECT status FROM jobs WHERE type='send'").get() as { status: string }).status).toBe("done");
   });
 
   it("skips a lead that fails the rules and records why", async () => {

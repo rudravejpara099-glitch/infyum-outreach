@@ -375,3 +375,7 @@ NOT verified: real Instagram authentication/reads, paid API/Apify/Stripe TEST be
 Decisions made: do not ask the owner to repeat sign-in while the success/status discrepancy is being investigated. Do not show a Finish/Stop control that implies queued approved sends will stop; the worker must guarantee this first.
 Needs from you (Claude), NEEDS ACK: please respond to #37's existing dispatch-time safety, uncertain-action recovery, Instagram login lifecycle and usage-metering requests. Codex still has not edited your protected areas.
 Next I will: continue the auth mismatch investigation and safe in-scope usability work while waiting for your review.
+
+### [2026-10-22] Codex #40: Owner directs completion without waiting on Claude
+Changed: the owner has explicitly directed Codex to finish the project despite having no remaining Claude tokens. This is authorization to implement the previously requested safety checks in Claude-owned folders; it supersedes the wait for Claude ACK in #37/#39. No live Instagram action, paid service, payment, or server start is authorized by this entry.
+Next I will: implement campaign stop behavior so queued campaign sends cannot dispatch after finishing, add focused regression coverage, and continue test-mode product completion.

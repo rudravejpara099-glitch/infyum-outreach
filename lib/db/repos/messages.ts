@@ -93,5 +93,9 @@ export function sentTodayForAccount(db: Db, accountId: number, dateIso: string):
   ).get(accountId, dateIso) as { c: number }).c;
 }
 export function approvedQueue(db: Db): Message[] {
-  return (db.prepare("SELECT * FROM messages WHERE direction='out' AND status='approved' ORDER BY id").all() as Record<string, unknown>[]).map(map);
+  return (db.prepare(`SELECT m.* FROM messages m
+    JOIN leads l ON l.id=m.lead_id
+    JOIN campaigns c ON c.id=l.campaign_id AND c.status='active'
+    JOIN campaign_accounts ca ON ca.campaign_id=c.id AND ca.account_id=m.account_id
+    WHERE m.direction='out' AND m.status='approved' ORDER BY m.id`).all() as Record<string, unknown>[]).map(map);
 }

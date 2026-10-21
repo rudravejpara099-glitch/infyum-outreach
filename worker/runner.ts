@@ -110,6 +110,13 @@ async function process(deps: Deps, job: Job): Promise<void> {
     return;
   }
   const lead = job.leadId ? getLead(db, job.leadId) : null;
+  if (lead?.campaignId) {
+    const campaign = getCampaign(db, lead.campaignId);
+    if (!campaign || campaign.status !== "active") return;
+    if (job.accountId && !campaignAccountIds(db, campaign.id).includes(job.accountId)) return;
+  } else if (lead && job.type !== "draft_reply") {
+    return;
+  }
 
   // Human pace: only jobs that act on Instagram are paced. Drafting with the AI is not.
   if (deps.humanPace && account && PACED.has(job.type)) {
@@ -125,6 +132,8 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
   switch (job.type) {
     case "find_leads": {
+      const campaign = getCampaign(db, Number(job.payload.campaignId));
+      if (!campaign || campaign.status !== "active") return;
       if (!deps.apify) throw new Error("APIFY_TOKEN is not set, so lead search cannot run");
       await findLeadsForCampaign(db, deps.apify, Number(job.payload.campaignId));
       return;
@@ -176,7 +185,9 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
     case "send": {
       const message = getMessage(db, Number(job.payload.messageId));
-      if (!message || message.status !== "approved" || !lead || !account) return;
+      if (!message || message.status !== "approved" || !lead || !account || message.leadId !== lead.id || message.accountId !== account.id) return;
+      const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
+      if (!campaign || campaign.status !== "active" || !campaignAccountIds(db, campaign.id).includes(account.id)) return;
       if (message.kind !== "reply") {
         const left = remainingToday(account, todayOf(deps.now()), sentTodayForAccount(db, account.id, todayOf(deps.now())));
         if (left <= 0) { deferJob(db, job, 120); logActivity(db, "worker", "send.limit_reached", { accountId: account.id }); return; }

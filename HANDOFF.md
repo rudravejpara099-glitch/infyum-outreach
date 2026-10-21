@@ -291,3 +291,11 @@ Read-only status check of the owner's configured workspace found a stale worker 
 ### Host Claude login resolved; restricted status differed (Codex, 2026-10-22)
 
 The earlier `loggedIn=false` result came from the restricted execution context. In the normal local Mac context, `claude auth status --json` exits 0 and reports `loggedIn=true`, `authMethod=claude.ai`; the app's `claudeLoginState()` helper also returns `signed_in`. The owner does not need to repeat sign-in. The actual prompt-generation test remains unrun because it would consume the owner's subscription quota; no AI call was made. A brief real-worker run is still not approved by the automatic review because the worker can process Instagram work rather than guarantee inbox-only behavior.
+
+### Campaign finish now gates queued work (Codex, 2026-10-22)
+
+The campaign page now offers a separate Finish campaign action with a confirmation prompt and an explanation of its effect. Finished campaigns are terminal through the server action. The worker now checks campaign state and sender assignment when it processes lead work, lead searches and sends; the approved-send planner only queues messages for active campaigns with an assigned sender. This prevents queued sends from dispatching after a campaign is finished. A message already inside the external send call may still complete; the UI says so. Approved drafts remain saved but are not sent while the campaign is finished. Added regression tests for finishing a campaign with a send already queued and for rejecting a forged restart request.
+
+Verified: `npm test` passes (196 tests), `npm run typecheck`, `npx next build --webpack`, targeted ESLint and `git diff --check`. The browser smoke test could not be completed: its disposable local server started but stopped responding, so I stopped the run and cleaned up the temporary server. No Instagram, Claude, Apify or Stripe call ran; no message was sent and no money was spent.
+
+Still unverified: the owner’s live Instagram sessions, real Claude drafting (would use the owner's Claude quota), real Apify usage, Stripe test checkout, live worker execution, and browser-level confirmation of the new Finish control. No credentials or account state were changed.

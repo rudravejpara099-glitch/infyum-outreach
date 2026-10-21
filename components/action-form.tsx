@@ -4,8 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import type { ActionResult } from "@/lib/ui/action-result";
 
 /** Retains non-secret input on validation failures and announces the server result. */
-export function ActionForm({ action, children, className = "grid gap-3", id, onResult }: {
-  action: (data: FormData) => Promise<ActionResult>; children: ReactNode; className?: string; id?: string; onResult?: (result: ActionResult) => void;
+export function ActionForm({ action, children, className = "grid gap-3", id, onResult, confirmMessage }: {
+  action: (data: FormData) => Promise<ActionResult>; children: ReactNode; className?: string; id?: string; onResult?: (result: ActionResult) => void; confirmMessage?: string;
 }) {
   const router = useRouter(), pathname = usePathname();
   const [result, setResult] = useState<ActionResult>({});
@@ -17,7 +17,8 @@ export function ActionForm({ action, children, className = "grid gap-3", id, onR
     if (field instanceof HTMLElement) field.focus(); else feedback.current?.focus();
   }, [pending, result]);
   function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const data = new FormData(event.currentTarget); setResult({});
+    event.preventDefault(); if (confirmMessage && !window.confirm(confirmMessage)) return;
+    const data = new FormData(event.currentTarget); setResult({});
     start(async () => {
       try { const response = await action(data); onResult?.(response); setResult(response); if (response.url?.startsWith("/") && !response.url.startsWith("//") && response.url !== pathname) router.push(response.url); }
       catch { const error = { error: "Couldn’t save this change. Try again shortly." }; onResult?.(error); setResult(error); }
