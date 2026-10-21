@@ -18,7 +18,7 @@ class FakeDriver implements InstagramDriver {
   blockOnSend = false;
   uncertainOnSend = false;
   errorOnSend = false;
-  async openLogin() {}
+  async openLogin() { return true; }
   async readFacts(account?: unknown) { void account; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
   async warmUp() { return { likes: 10, comments: 10, followed: true }; }

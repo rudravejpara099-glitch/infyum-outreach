@@ -387,3 +387,11 @@ NOT verified: a real Accounts-button launch, successful owner sign-in/session pe
 Decisions made: approval remains ON; no like/comment/follow/send was authorized. Never start the all-purpose worker for this check because it can plan campaign activity. Keep the branch in draft until the account sign-in and explicitly approved integration checks are complete.
 Needs from owner: finish the hand sign-in in the open Instagram window, then close it so session presence can be verified without exposing its value. Do not send credentials in chat.
 Next I will: verify the saved account session after the owner closes the window, then continue only with non-spending, read-only checks.
+
+### [2026-10-22] Codex #42: Confirm Instagram sign-in outcome
+Changed: branch `fix/first-run-operability`. The login-only browser flow now checks session-cookie presence without retaining or logging its value, records authenticated true/false in the existing job payload, and shows the result on Accounts. Both the detached account-login process and normal worker login jobs use the same service. Dashboard and Accounts waiting text now make clear that sign-in does not need the campaign worker.
+Verified: `npm test` = 223 passed; `npm run typecheck`; `npx next build --webpack`; targeted ESLint; `git diff --check`. Tests cover session cookie presence, login/challenge rejection, job outcomes and status copy. No real Instagram session, campaign worker, outgoing message, social action, paid API, or payment ran.
+NOT verified: real sign-in completion, live Instagram login flow, Claude generation (owner quota exhausted), Apify, Stripe TEST, and live campaign processing. Earlier saved-profile checks found no session cookie.
+Decisions made: opening a window alone never means “connected.” Only a present `sessionid` cookie away from login/challenge pages confirms the login check. The cookie value is never saved in app data or logs. Owner sign-in is still required.
+Needs from you: none. When ready, connect/sign in on Accounts and refresh to see the result; no credential needs to be shared in chat.
+Next I will: continue test-mode reliability work and keep external sends and spending disabled.

@@ -70,7 +70,7 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: "The account was saved, but its sign-in window could not open. Try again from the account below." };
-  return { message: smoke ? "Account saved. The browser check uses a queued sign-in request." : "Instagram is opening in a separate window. Sign in there by hand, then close the window." };
+  return { message: smoke ? "Account saved. The browser check uses a queued sign-in request." : "Instagram is opening in a separate window. Sign in there, then refresh this page to see the connection status." };
 }
 export async function reopenLogin(form: FormData): Promise<ActionResult> {
   await requireUser();
@@ -88,7 +88,7 @@ export async function reopenLogin(form: FormData): Promise<ActionResult> {
   revalidatePath("/accounts");
   if (!started) return { error: "The sign-in window could not open. Try again shortly." };
   if (request.alreadyOpening) return { message: "The sign-in window is already opening. Finish there before requesting another." };
-  return { message: process.env.OUTREACH_SMOKE_DIST_DIR ? "Sign-in request saved for the browser check." : "Instagram is opening in a separate window. Sign in there by hand, then close the window." };
+  return { message: process.env.OUTREACH_SMOKE_DIST_DIR ? "Sign-in request saved for the browser check." : "Instagram is opening in a separate window. Sign in there, then refresh this page to see the connection status." };
 }
 export async function changeStatus(form: FormData): Promise<ActionResult> {
   const user = await requireUser();

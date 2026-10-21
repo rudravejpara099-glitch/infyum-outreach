@@ -89,17 +89,17 @@ export function actorLabel(actor: string): string {
 }
 
 export function loginWindowHint(workerRunning: boolean): string {
-  return workerRunning ? "Outreach is opening the sign-in window." : "It will open after Outreach’s background service starts on this computer.";
+  return workerRunning ? "Outreach is opening the sign-in window." : "This sign-in request needs to be started again from the account.";
 }
 
 export type LoginJobSummary = {
   title: string;
   detail: string;
-  tone: "neutral" | "waiting" | "attention" | "error";
+  tone: "neutral" | "waiting" | "attention" | "error" | "success";
 };
 
 /** Describes the sign-in window job only; it never treats a saved account as authenticated. */
-export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string } | null, workerRunning: boolean): LoginJobSummary {
+export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean): LoginJobSummary {
   if (!job) return {
     title: "Sign-in status not checked",
     detail: "Open the sign-in window if this account still needs Instagram access. Saving the account alone does not confirm sign-in.",
@@ -116,8 +116,18 @@ export function loginJobSummary(job: { status: "queued" | "running" | "done" | "
   };
   if (job.status === "running") return {
     title: "Opening sign-in window",
-    detail: "Sign in to Instagram by hand when the window appears. This step does not confirm sign-in.",
+    detail: "Sign in to Instagram by hand. When the window closes, refresh this page to see whether it connected.",
     tone: "waiting",
+  };
+  if (job.status === "done" && job.payload?.authenticated === true) return {
+    title: "Instagram is connected",
+    detail: "Outreach verified this account’s sign-in. You can reopen the window if Instagram asks you to sign in again.",
+    tone: "success",
+  };
+  if (job.status === "done" && job.payload?.authenticated === false) return {
+    title: "Sign-in wasn’t completed",
+    detail: "Open the sign-in window and finish signing in. Outreach will confirm when it’s connected.",
+    tone: "attention",
   };
   if (job.status === "done") return {
     title: "Sign-in window opened",

@@ -30,8 +30,14 @@ describe("plain-language UI copy", () => {
   });
 
   it("explains whether an Instagram sign-in request is waiting for background work", () => {
-    expect(loginWindowHint(false)).toBe("It will open after Outreach’s background service starts on this computer.");
+    expect(loginWindowHint(false)).toBe("This sign-in request needs to be started again from the account.");
     expect(loginWindowHint(true)).toBe("Outreach is opening the sign-in window.");
+  });
+
+  it("reports Instagram sign-in only after the session check confirms it", () => {
+    expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: true } }, false)).toMatchObject({ title: "Instagram is connected", tone: "success" });
+    expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: false } }, false)).toMatchObject({ title: "Sign-in wasn’t completed", tone: "attention" });
+    expect(loginJobSummary({ status: "done", lastError: "" }, false).title).toBe("Sign-in window opened");
   });
 
   it("shows the real sign-in window outcome without claiming the account is authenticated", () => {

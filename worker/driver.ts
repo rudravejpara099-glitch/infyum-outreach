@@ -15,7 +15,7 @@ export type WarmUpResult = { likes: number; comments: number; followed: boolean 
 
 /** Everything the app needs from Instagram. The real one drives a browser; tests use a fake. */
 export interface InstagramDriver {
-  openLogin(account: IgAccount): Promise<void>;
+  openLogin(account: IgAccount): Promise<boolean>;
   readFacts(account: IgAccount, handle: string): Promise<ProfileFacts>;
   readProfileNotes(account: IgAccount, handle: string): Promise<string>;
   warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>): Promise<WarmUpResult>;

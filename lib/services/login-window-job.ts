@@ -14,7 +14,8 @@ export async function openLoginWindowJob(db: Db, jobId: number, accountId: numbe
     throw new Error("The saved Instagram account could not be found.");
   }
   try {
-    await driver.openLogin(account);
+    const authenticated = await driver.openLogin(account);
+    db.prepare("UPDATE jobs SET payload=? WHERE id=?").run(JSON.stringify({ authenticated }), jobId);
     completeJob(db, jobId);
   } catch {
     failJobPermanently(db, jobId, "The sign-in window could not finish. Try again from Accounts.");

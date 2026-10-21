@@ -3,7 +3,7 @@ import type { IgAccount } from "@/lib/db/types";
 import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { humanDelayMs } from "@/lib/domain/pacing";
 import * as human from "./human";
-import { followersFromText, looksBlocked, looksLoggedOut, skipComment } from "./parse";
+import { followersFromText, hasInstagramSession, looksBlocked, looksLoggedOut, skipComment } from "./parse";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -40,14 +40,27 @@ export class PlaywrightInstagram implements InstagramDriver {
     if (looksBlocked(text, page.url())) throw new InstagramBlockedError("Instagram showed a warning or a human check. Review the account by hand.");
   }
 
-  async openLogin(account: IgAccount): Promise<void> {
+  async openLogin(account: IgAccount): Promise<boolean> {
     const ctx = await this.context(account);
     const page = ctx.pages()[0] ?? (await ctx.newPage());
     await page.goto("https://www.instagram.com/", { waitUntil: "domcontentloaded" });
     await page.bringToFront();
-    // The team signs in, then closes the window. Give them up to 15 minutes.
-    await Promise.race([new Promise<void>((r) => ctx.once("close", () => r())), sleep(15 * 60_000)]);
+    // Confirm only that Instagram has a session cookie; never persist or log its value.
+    const authenticated = await new Promise<boolean>((resolve) => {
+      let finished = false;
+      const timers: { poll?: ReturnType<typeof setInterval>; timeout?: ReturnType<typeof setTimeout> } = {};
+      const finish = (value: boolean) => { if (finished) return; finished = true; clearInterval(timers.poll); clearTimeout(timers.timeout); resolve(value); };
+      timers.poll = setInterval(async () => {
+        try {
+          const cookies = await ctx.cookies("https://www.instagram.com");
+          if (hasInstagramSession(cookies, page.url())) finish(true);
+        } catch { /* The window may be closing. */ }
+      }, 2_000);
+      timers.timeout = setTimeout(() => finish(false), 15 * 60_000);
+      ctx.once("close", () => finish(false));
+    });
     await ctx.close().catch(() => {});
+    return authenticated;
   }
 
   async readFacts(account: IgAccount, handle: string): Promise<ProfileFacts> {

@@ -17,6 +17,7 @@ import { logActivity } from "@/lib/db/repos/activity";
 import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
 import { afterSent, handleIncoming } from "@/lib/services/outreach";
 import { findLeadsForCampaign } from "@/lib/services/findLeads";
+import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import type { ApifyClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
@@ -152,7 +153,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
     }
 
     case "open_login":
-      if (account) await driver.openLogin(account);
+      if (account) await openLoginWindowJob(db, job.id, account.id, driver);
       return;
 
     case "qualify": {

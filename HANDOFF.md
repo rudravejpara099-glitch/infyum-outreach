@@ -327,3 +327,11 @@ Verified: 220 tests pass, typecheck and Webpack production build pass, targeted 
 Still unverified: a real account window launched by the new Accounts action, successful hand sign-in/session persistence, live worker execution, Claude draft generation, Apify usage, and Stripe TEST checkout. A single hand-sign-in window opened earlier directly against a saved profile is still awaiting the owner; do not start the full worker while it is open. The CLI auth status is signed in, but the owner's Claude quota is exhausted, so no generation was attempted. Apify and Stripe credentials are absent and lead search remains off.
 
 Needs from owner: sign in by hand in the currently open Instagram window and close it; then we can verify session presence without reading or logging the cookie value. Do not send any password or token in chat.
+
+### Instagram sign-in confirmation (Codex, 2026-10-22)
+
+The sign-in window now watches only for the presence of Instagram's `sessionid` cookie while the Instagram page is not on a login or challenge URL. It never saves or logs the cookie value. When the cookie appears, the window closes and the login job records a simple authenticated true/false result in its existing payload. The Accounts page distinguishes confirmed connection, incomplete sign-in, and legacy “window opened” jobs. This shared login-only check is used both by the Accounts button and normal worker login jobs. The dashboard and Accounts page now explain that account sign-in can work while campaign processing waits for the background service.
+
+Verified: `npm test` passes (223 tests), `npm run typecheck`, `npx next build --webpack`, targeted ESLint, and `git diff --check`. Tests cover cookie-presence classification, rejecting login/challenge pages, job outcome recording, and user-visible status. No real Instagram session was available to verify live; no worker campaign work, like, comment, follow, or send ran. No paid provider or payment ran.
+
+Still unverified: whether Instagram's current login flow creates the expected session cookie in this environment, successful owner sign-in, real Claude drafts (owner quota exhausted), Apify, Stripe TEST, and live worker campaign processing. The saved profiles previously had no session cookie. The owner must sign in through Accounts and refresh the page to see the result.

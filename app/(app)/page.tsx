@@ -38,7 +38,7 @@ export default async function Dashboard() {
           <li className="rounded-2xl border border-line bg-bg p-4">
             <p className="text-xs font-medium text-muted">STEP 2</p>
             <p className="mt-1 font-medium">Keep Outreach running</p>
-            <p className="mt-1 text-sm text-muted">{worker.running ? "Outreach is handling work on this computer." : "Campaigns and sign-in requests wait until Outreach’s background service starts on this computer."}</p>
+            <p className="mt-1 text-sm text-muted">{worker.running ? "Outreach is handling work on this computer." : "Campaigns wait until Outreach’s background service starts on this computer. You can still connect an Instagram account."}</p>
             <Link href="/accounts" className="mt-3 inline-block text-sm text-accent underline">See account setup</Link>
           </li>
           <li className="rounded-2xl border border-line bg-bg p-4">

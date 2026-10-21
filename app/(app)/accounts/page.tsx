@@ -20,8 +20,8 @@ export default async function AccountsPage() {
   const today = todayIso();
   const accounts = listAccounts(db);
   const worker = workerStatus(db, new Date());
-  const loginJobs = db.prepare("SELECT account_id,status,last_error FROM jobs j WHERE type='open_login' AND account_id IS NOT NULL AND id=(SELECT MAX(j2.id) FROM jobs j2 WHERE j2.type='open_login' AND j2.account_id=j.account_id)").all() as { account_id: number; status: Job["status"]; last_error: string }[];
-  const loginJobByAccount = new Map(loginJobs.map((job) => [job.account_id, { status: job.status, lastError: job.last_error }]));
+  const loginJobs = db.prepare("SELECT account_id,status,last_error,payload FROM jobs j WHERE type='open_login' AND account_id IS NOT NULL AND id=(SELECT MAX(j2.id) FROM jobs j2 WHERE j2.type='open_login' AND j2.account_id=j.account_id)").all() as { account_id: number; status: Job["status"]; last_error: string; payload: string }[];
+  const loginJobByAccount = new Map(loginJobs.map((job) => [job.account_id, { status: job.status, lastError: job.last_error, payload: JSON.parse(job.payload) as Record<string, unknown> }]));
   return (
     <>
       <PageHeader title="Instagram accounts" sub="Each account runs in its own browser window. You log in once; the app never sees the password." />
@@ -32,12 +32,12 @@ export default async function AccountsPage() {
         <p className="basis-full text-xs text-muted">Outreach opens a sign-in window on this computer. Sign in to Instagram there. Saving an account does not confirm that sign-in worked.</p>
       </ActionForm>
 
-      {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Outreach is waiting. Sign-in requests and campaign work will not start until its background service is running on this computer.</p>}
+      {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Campaign work is waiting for Outreach’s background service on this computer. You can still connect an Instagram account here.</p>}
       {accounts.length === 0 ? <Empty title="No accounts yet">Connect the Instagram account that will send the DMs.</Empty> : (
         <div className="card divide-y divide-line">
           {accounts.map((a) => {
             const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running);
-            const signInTone = signIn.tone === "error" ? "border-bad bg-bad/5 text-bad" : signIn.tone === "attention" ? "border-warn bg-warn/5 text-warn" : "border-line bg-panel text-muted";
+            const signInTone = signIn.tone === "error" ? "border-bad bg-bad/5 text-bad" : signIn.tone === "success" ? "border-ok bg-ok/5 text-ok" : signIn.tone === "attention" ? "border-warn bg-warn/5 text-warn" : "border-line bg-panel text-muted";
             return <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div className="min-w-0">
                 <div className={`mb-3 max-w-2xl rounded-xl border p-3 ${signInTone}`} role={signIn.tone === "error" ? "alert" : "status"}>

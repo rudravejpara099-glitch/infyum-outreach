@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { followersFromText, looksBlocked, looksLoggedOut, parseCount, skipComment } from "@/worker/parse";
+import { followersFromText, hasInstagramSession, looksBlocked, looksLoggedOut, parseCount, skipComment } from "@/worker/parse";
 
 describe("instagram text helpers", () => {
+  it("confirms sign-in from cookie presence only and rejects login/challenge pages", () => {
+    expect(hasInstagramSession([{ name: "sessionid", value: "present" }], "https://www.instagram.com/")).toBe(true);
+    expect(hasInstagramSession([{ name: "csrftoken", value: "present" }], "https://www.instagram.com/")).toBe(false);
+    expect(hasInstagramSession([{ name: "sessionid", value: "present" }], "https://www.instagram.com/accounts/login/")).toBe(false);
+    expect(hasInstagramSession([{ name: "sessionid", value: "present" }], "https://www.instagram.com/challenge/")).toBe(false);
+  });
   it("parses counts", () => {
     expect(parseCount("4,728")).toBe(4728);
     expect(parseCount("13.5K")).toBe(13500);
