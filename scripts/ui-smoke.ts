@@ -34,6 +34,7 @@ try {
   assert(ready, "Review server did not start");
   browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  context.setDefaultTimeout(30000);
   const page = await context.newPage();
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -42,6 +43,12 @@ try {
   await page.goto(`${base}/setup`);
   await page.getByLabel("Your name").fill("UI Review");
   await page.getByLabel("Email", { exact: true }).fill("review@example.test");
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Your name").fill("   ");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "Enter your name" }).waitFor();
+  assert.equal(await page.getByLabel("Email", { exact: true }).inputValue(), "review@example.test");
+  await page.getByLabel("Your name").fill("UI Review");
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await page.waitForURL(`${base}/`);
@@ -261,6 +268,36 @@ try {
   await teammatePage.getByLabel("Password", { exact: true }).fill(teammatePassword);
   await teammatePage.getByRole("button", { name: "Sign in", exact: true }).click();
   await teammatePage.waitForURL(`${base}/`); await teammatePage.context().close();
+  const rateContext = await browser.newContext(), ratePage = await rateContext.newPage();
+  rateContext.setDefaultTimeout(30000);
+  await ratePage.goto(`${base}/login`);
+  await ratePage.getByLabel("Email", { exact: true }).fill("no.such.user@example.test");
+  async function rejectedLogin(expected: string) {
+    await ratePage.getByLabel("Password", { exact: true }).fill("incorrect-fixture-password");
+    const completed = ratePage.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === "/login");
+    await ratePage.getByRole("button", { name: "Sign in", exact: true }).click();
+    await completed;
+    await ratePage.waitForFunction(() => (document.getElementById("password") as HTMLInputElement)?.value === "", undefined, { timeout: 15000 });
+    await ratePage.getByRole("alert").filter({ hasText: expected }).waitFor();
+  }
+  for (let attempt = 0; attempt < 5; attempt++) await rejectedLogin("Email or password is wrong.");
+  await rejectedLogin("Too many sign-in attempts");
+  for (const mode of ["light", "dark"] as const) {
+    await ratePage.getByRole("button", { name: `Use ${mode} appearance` }).click();
+    for (const width of [1440, 1024, 390]) {
+      await ratePage.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      assert(await ratePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await ratePage.screenshot({ path: path.join(screenshots, `login-limited-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    }
+  }
+  const rateState = JSON.parse((db.prepare("SELECT value FROM settings WHERE key='auth_login_attempts'").get() as { value: string }).value) as Record<string, { startedAt: number; attempts: number }>;
+  for (const window of Object.values(rateState)) window.startedAt = Date.now() - 15 * 60 * 1000;
+  db.prepare("UPDATE settings SET value=? WHERE key='auth_login_attempts'").run(JSON.stringify(rateState));
+  await rejectedLogin("Email or password is wrong.");
+  await ratePage.getByLabel("Email", { exact: true }).fill("review@example.test");
+  await ratePage.getByLabel("Password", { exact: true }).fill(password);
+  await ratePage.getByRole("button", { name: "Sign in", exact: true }).click();
+  await ratePage.waitForURL(`${base}/`); await rateContext.close();
 
   await page.goto(`${base}/accounts`);
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
