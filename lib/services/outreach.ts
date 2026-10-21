@@ -16,7 +16,7 @@ const addDays = (days: number, from = new Date()) => new Date(from.getTime() + d
 export function afterSent(db: Db, messageId: number, now = new Date()): void {
   const m = getMessage(db, messageId);
   if (!m) throw new Error(`Message ${messageId} not found`);
-  markSent(db, messageId);
+  markSent(db, messageId, now);
   const lead = getLead(db, m.leadId)!;
   const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
   logActivity(db, "worker", `message.sent.${m.kind}`, { leadId: lead.id, accountId: m.accountId });

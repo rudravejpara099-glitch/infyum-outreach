@@ -8,6 +8,8 @@ import { parseCampaignForm } from "@/lib/campaign-form";
 import { createCampaign, getCampaign, setCampaignStatus, updateCampaign } from "@/lib/db/repos/campaigns";
 import { addLead } from "@/lib/db/repos/leads";
 import { isDnc } from "@/lib/db/repos/dnc";
+import { publicBillingError } from "@/lib/billing/errors";
+import { assertCampaignCanStart } from "@/lib/billing/guards";
 import { enqueue } from "@/lib/db/repos/jobs";
 
 export async function saveCampaign(form: FormData) {
@@ -28,8 +30,10 @@ export async function changeCampaignStatus(form: FormData) {
   const user = await requireUser();
   const id = Number(form.get("id"));
   const status = z.enum(["active", "paused", "done"]).parse(form.get("status"));
+  if (status === "active") { try { assertCampaignCanStart(getDb(), id, user.id); } catch (error) { return { error: publicBillingError(error) }; } }
   setCampaignStatus(getDb(), id, status, user.email);
   revalidatePath(`/campaigns/${id}`);
+  return { message: status === "active" ? "Campaign started." : "Campaign paused." };
 }
 
 /** Paste handles (one per line or comma separated). Duplicates and do-not-contact handles are skipped. */
@@ -46,8 +50,10 @@ export async function addLeads(form: FormData) {
 }
 
 export async function findLeads(form: FormData) {
-  await requireUser();
+  const user = await requireUser();
   const campaignId = Number(form.get("id"));
+  try { assertCampaignCanStart(getDb(), campaignId, user.id); } catch (error) { return { error: publicBillingError(error) }; }
   enqueue(getDb(), { type: "find_leads", payload: { campaignId } });
   revalidatePath(`/campaigns/${campaignId}`);
+  return { message: "Lead search requested. Usage limits still apply." };
 }
