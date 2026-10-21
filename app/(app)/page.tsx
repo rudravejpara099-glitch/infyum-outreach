@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
+import { WorkerStatusRefresh } from "@/components/worker-status-refresh";
+import { workerStatus } from "@/lib/queries/worker-status";
 import { dashboardData } from "@/lib/queries/dashboard";
 import { listActivity } from "@/lib/db/repos/activity";
 import { STAGES, STAGE_LABEL, type Stage } from "@/lib/domain/stages";
@@ -12,6 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   await requireUser();
   const db = getDb();
+  const worker = workerStatus(db, new Date());
   const d = dashboardData(db, todayIso());
   const recent = listActivity(db, { limit: 8 });
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
@@ -20,9 +23,15 @@ export default async function Dashboard() {
   return (
     <>
       <PageHeader title="Dashboard" sub="What is happening across every campaign." />
+      <section className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Worker status">
+        <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{worker.running ? "Worker running" : "Worker not running"}</span>
+          <p className="mt-2 text-sm text-muted">{worker.running ? "The background worker is checking for tasks. Account hours, approvals and limits still apply." : "Saved tasks are waiting. The background worker needs to be started on this computer."}</p>
+          {!worker.running && worker.lastSeen && <p className="mt-1 text-xs text-muted">Last seen {ago(worker.lastSeen)}.</p>}
+        </div><div className="flex flex-wrap gap-2"><WorkerStatusRefresh /><Link href="/activity" className="btn">View activity</Link></div>
+      </section>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Leads" value={number(d.totalLeads)} />
-        <Stat label="DMs sent today" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
+        <Stat label="DMs sent today (UTC)" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
         <Stat label="Replies" value={d.stages.replied ?? 0} />
         <Stat label="Reply rate" value={`${Math.round(((d.stages.replied ?? 0) / Math.max(1, (d.stages.dm_sent ?? 0) + (d.stages.replied ?? 0))) * 100)}%`} hint="of leads we messaged" />
       </div>
@@ -54,7 +63,7 @@ export default async function Dashboard() {
         </section>
 
         <section className="card p-5">
-          <h2 className="mb-4 text-base font-semibold">Accounts today</h2>
+          <h2 className="mb-4 text-base font-semibold">Accounts today (UTC)</h2>
           {d.accounts.length === 0 ? (
             <p className="text-muted">No Instagram account connected yet. <Link href="/accounts" className="text-accent underline">Connect one</Link>.</p>
           ) : (

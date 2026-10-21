@@ -45,7 +45,7 @@ export function CampaignForm({ campaign, accounts, selected }: { campaign?: Camp
 
       <div className="flex flex-col gap-2">
         <label className="flex items-start gap-2"><input type="checkbox" name="approvalRequired" defaultChecked={campaign?.approvalRequired ?? true} className="mt-1 accent-[var(--accent)]" />
-          <span><span className="font-medium">Ask me before anything is sent</span><br /><span className="text-muted">Price, contract and partnership talk always waits for you, even when this is off.</span></span></label>
+          <span><span className="font-medium">Ask me before anything is sent</span><br /><span className="text-muted">Review each first DM and follow-up before it is queued. Outreach stops at the first real reply.</span></span></label>
         <label className="flex items-start gap-2"><input type="checkbox" name="followupsEnabled" defaultChecked={campaign?.followupsEnabled ?? true} className="mt-1 accent-[var(--accent)]" />
           <span><span className="font-medium">Send follow-ups</span><br /><span className="text-muted">Up to 2, days apart, only if they have not replied.</span></span></label>
       </div>

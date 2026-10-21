@@ -19,7 +19,7 @@ const port = 3190;
 const base = `http://127.0.0.1:${port}`;
 mkdirSync(screenshots, { recursive: true });
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
-  env: { ...process.env, DB_PATH: dbPath, SESSION_SECRET: randomBytes(48).toString("hex") }, stdio: "ignore",
+  env: { ...process.env, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: randomBytes(48).toString("hex") }, stdio: "ignore",
 });
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {
@@ -35,6 +35,7 @@ try {
   const page = await context.newPage();
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
   const password = randomBytes(24).toString("hex"); // Never persisted or printed.
   await page.goto(`${base}/setup`);
   await page.getByLabel("Your name").fill("UI Review");
@@ -62,7 +63,7 @@ try {
   const campaignUrl = page.url();
   const id = Number(new URL(campaignUrl).pathname.split("/").pop());
   await page.getByRole("heading", { name: "You’re all caught up" }).waitFor();
-  await page.screenshot({ path: path.join(screenshots, "campaign-empty.png"), fullPage: true });
+  await page.screenshot({ path: path.join(screenshots, "campaign-empty.png"), fullPage: true, caret: "initial" });
   await page.getByRole("link", { name: "Add leads", exact: true }).click();
   assert(await page.locator("#add-leads").getAttribute("open") !== null, "In-page link must open the disclosure");
   await page.getByLabel("Instagram handles").fill("maya.coaches\ngrowthwithalex\nstudio.sarah");
@@ -99,7 +100,7 @@ try {
       });
       assert(contrast.every(ratio => ratio >= 4.5), `Text token contrast must meet 4.5:1 in ${mode}`);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Campaign overflow: ${mode} ${width}`);
-      await page.screenshot({ path: path.join(screenshots, `campaign-${mode}-${width}.png`), fullPage: true });
+      await page.screenshot({ path: path.join(screenshots, `campaign-${mode}-${width}.png`), fullPage: true, caret: "initial" });
     }
   }
   await page.reload();
@@ -126,6 +127,96 @@ try {
   await page.goto(campaignUrl);
   await page.getByRole("heading", { name: "2 drafts need your review" }).waitFor();
 
+  // Operational controls must change real rows and give honest feedback without a worker.
+  await page.goto(`${base}/`);
+  await page.getByText("Worker not running", { exact: true }).waitFor();
+  db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
+  await page.getByRole("button", { name: "Check worker status" }).click();
+  await page.getByText("Worker running", { exact: true }).waitFor();
+  db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60000).toISOString());
+  await page.getByRole("button", { name: "Check worker status" }).click();
+  await page.getByText("Worker not running", { exact: true }).waitFor();
+
+  await page.goto(`${base}/settings`);
+  await page.getByLabel("Time zone", { exact: true }).fill("Mars/Olympus");
+  await page.getByRole("button", { name: "Save time zone" }).click();
+  await page.getByRole("alert").filter({ hasText: "Choose a valid time zone" }).waitFor();
+  assert.equal(await page.getByLabel("Time zone", { exact: true }).inputValue(), "Mars/Olympus");
+  await page.getByLabel("Time zone", { exact: true }).fill("Asia/Kolkata");
+  await page.getByRole("button", { name: "Save time zone" }).click();
+  await page.getByRole("status").filter({ hasText: "Team time zone saved" }).waitFor();
+  assert.equal((db.prepare("SELECT value FROM settings WHERE key='team_timezone'").get() as { value: string }).value, "Asia/Kolkata");
+  await page.getByLabel("Monthly limit (USD)", { exact: true }).fill("1.05");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Monthly lead-search limit saved" }).waitFor();
+  assert.equal((db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string }).value, "1.05");
+  await page.getByLabel("Monthly limit (USD)", { exact: true }).fill("");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Lead searches are switched off" }).waitFor();
+  assert.equal((db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string }).value, "");
+
+  const block = page.locator("section").filter({ has: page.getByRole("heading", { name: "Do not contact", exact: true }) });
+  await block.getByLabel("Instagram handle").fill("@maya.coaches");
+  await block.getByLabel("Reason (optional)").fill("Review fixture only");
+  await block.getByRole("button", { name: "Add", exact: true }).click();
+  await block.getByRole("status").filter({ hasText: "Handle added" }).waitFor();
+  assert.equal((db.prepare("SELECT stage FROM leads WHERE handle='maya.coaches'").get() as { stage: string }).stage, "skipped");
+  assert(db.prepare("SELECT handle FROM do_not_contact WHERE handle='maya.coaches'").get());
+  await block.getByRole("button", { name: "Remove", exact: true }).click();
+  await page.getByText("Nobody blocked.", { exact: true }).waitFor();
+  assert(!db.prepare("SELECT handle FROM do_not_contact WHERE handle='maya.coaches'").get());
+
+  const team = page.locator("section").filter({ has: page.getByRole("heading", { name: "Team", exact: true }) });
+  await team.getByLabel("Name", { exact: true }).fill("  Teammate  ");
+  await team.getByLabel("Email", { exact: true }).fill("TEAMMATE@example.test");
+  const teammatePassword = randomBytes(24).toString("hex");
+  await team.getByLabel("Temporary password").fill(teammatePassword);
+  await team.getByRole("button", { name: "Add teammate", exact: true }).click();
+  await team.getByRole("status").filter({ hasText: "can now sign in" }).waitFor();
+  assert.equal(await team.getByLabel("Temporary password").inputValue(), "");
+  assert(db.prepare("SELECT id FROM users WHERE email='teammate@example.test' AND name='Teammate'").get());
+  await team.getByLabel("Temporary password").fill(teammatePassword);
+  await team.getByRole("button", { name: "Add teammate", exact: true }).click();
+  await team.getByRole("alert").filter({ hasText: "already exists" }).waitFor();
+  assert.equal(await team.getByLabel("Temporary password").inputValue(), "");
+  const teammatePage = await (await browser.newContext()).newPage();
+  await teammatePage.goto(`${base}/login`);
+  await teammatePage.getByLabel("Email", { exact: true }).fill("teammate@example.test");
+  await teammatePage.getByLabel("Password", { exact: true }).fill(teammatePassword);
+  await teammatePage.getByRole("button", { name: "Sign in", exact: true }).click();
+  await teammatePage.waitForURL(`${base}/`); await teammatePage.context().close();
+
+  await page.goto(`${base}/accounts`);
+  await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
+  await page.getByRole("button", { name: "Connect account", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "worker is not running" }).waitFor();
+  const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
+  assert(account.profile_dir.startsWith(temp));
+  await page.getByRole("button", { name: "Connect account", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "already saved" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 1);
+  await page.getByRole("button", { name: "Open login window", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "worker is not running" }).last().waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login' AND account_id=?").get(account.id) as { n: number }).n, 1);
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "paused");
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await page.getByRole("button", { name: "Pause", exact: true }).waitFor();
+  await page.getByLabel("Daily cap", { exact: true }).fill("20");
+  await page.getByRole("button", { name: "Set cap", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Daily limit saved" }).waitFor();
+  assert.equal((db.prepare("SELECT daily_cap FROM ig_accounts WHERE id=?").get(account.id) as { daily_cap: number }).daily_cap, 20);
+  db.prepare("UPDATE ig_accounts SET status='blocked',status_note='Simulated Instagram warning' WHERE id=?").run(account.id);
+  await page.reload();
+  assert(await page.getByRole("button", { name: "Stopped by Instagram", exact: true }).isDisabled());
+  // Forging the hidden status and re-enabling the button must also fail on the server.
+  const blockedForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Stopped by Instagram", exact: true }) });
+  await blockedForm.getByRole("button").evaluate((el: HTMLButtonElement) => { el.disabled = false; });
+  await blockedForm.getByRole("button").click();
+  await blockedForm.getByRole("alert").filter({ hasText: "stays stopped" }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "blocked");
+
   const routes = ["/", "/campaigns", "/campaigns/new", "/pipeline", "/approvals", "/inbox", "/accounts", "/activity", "/settings"];
   for (const mode of ["dark", "light"] as const) {
     await page.getByRole("button", { name: `Use ${mode} appearance` }).click();
@@ -136,28 +227,36 @@ try {
         await page.locator("h1").waitFor();
         if (route === "/approvals") assert(await page.locator("textarea").evaluateAll(elements => elements.every(el => el.scrollHeight <= el.clientHeight + 2)), "Draft text must be fully visible");
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Overflow: ${route} ${width} ${mode}`);
-        await page.screenshot({ path: path.join(screenshots, `${route === "/" ? "dashboard" : route.slice(1).replaceAll("/", "-")}-${mode}-${width}.png`), fullPage: true });
+        await page.screenshot({ path: path.join(screenshots, `${route === "/" ? "dashboard" : route.slice(1).replaceAll("/", "-")}-${mode}-${width}.png`), fullPage: true, caret: "initial" });
       }
     }
   }
+  db.prepare("INSERT INTO activity(actor,action,detail) VALUES(?,?,?)").run("=1+2", "fixture.csv", " =SUM(1,2)");
+  const activityExport = await context.request.get(`${base}/activity/export`);
+  assert.equal(activityExport.status(), 200);
+  assert(activityExport.headers()["cache-control"].includes("no-store"));
+  const activityCsv = await activityExport.text();
+  assert(activityCsv.includes("\"'=1+2\""));
+  assert(activityCsv.includes("\"' =SUM(1,2)\""));
   await page.goto(`${base}/approvals?campaign=invalid`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
   await page.goto(`${base}/settings`);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.waitForURL(`${base}/login`);
+  assert.equal((await context.request.get(`${base}/activity/export`, { maxRedirects: 0 })).status(), 307);
   await page.goto(campaignUrl);
   await page.waitForURL(`${base}/login`);
   for (const mode of ["light", "dark"]) {
     await page.getByRole("button", { name: `Use ${mode} appearance` }).click();
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.screenshot({ path: path.join(screenshots, `login-${mode}-${width}.png`), fullPage: true });
+      await page.screenshot({ path: path.join(screenshots, `login-${mode}-${width}.png`), fullPage: true, caret: "initial" });
     }
   }
   assert.equal((db.prepare("SELECT count(*) AS count FROM messages WHERE direction='out' AND status='sent'").get() as { count: number }).count, 0);
   db.close();
   assert.deepEqual(errors, [], "No browser runtime errors");
-  console.log("UI smoke passed: setup, login, campaign creation, adding leads, campaign-scoped approval, live counts, appearance persistence, system theme, reduced motion, keyboard focus, authenticated routes, and responsive layouts. No messages sent.");
+  console.log("UI smoke passed: setup, login, campaign creation, adding leads, campaign-scoped approval, live counts, appearance persistence, system theme, reduced motion, keyboard focus, authenticated routes, responsive layouts, real worker heartbeat states, time-zone/cap saves, DNC stop, teammate sign-in, duplicate account/login protection, caps/pause/resume and forged blocked-account rejection. No messages sent.");
   console.log(`Screenshots: ${screenshots}`);
 } finally {
   await browser?.close();
