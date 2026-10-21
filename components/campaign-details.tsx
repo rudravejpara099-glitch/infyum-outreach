@@ -4,7 +4,7 @@ import { STAGES, STAGE_LABEL } from "@/lib/domain/stages";
 import { number, STAGE_BADGE } from "@/lib/format";
 import { CampaignForm } from "./campaign-form";
 import { Icon } from "./icon";
-import { SubmitButton } from "./submit-button";
+import { ActionForm } from "./action-form";
 import { DisclosureLinks } from "./disclosure-links";
 import { addLeads, findLeads } from "@/app/(app)/campaigns/actions";
 
@@ -20,20 +20,20 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
     <details className="disclosure" id="add-leads">
       <summary><Icon name="plus" /><span>Add leads<small>Paste handles or search for this audience</small></span><Icon name="chevron" /></summary>
       <div className="disclosure-content add-leads-grid">
-        <form action={addLeads}>
+        <ActionForm action={addLeads}>
           <input type="hidden" name="id" value={campaign.id} />
           <label className="label" htmlFor="handles">Instagram handles</label>
           <textarea name="handles" id="handles" required rows={4} placeholder={"@handle1\n@handle2"} className="input" />
           <p className="help-text">One per line. Existing leads and do-not-contact handles are skipped.</p>
-          <SubmitButton>Add to campaign</SubmitButton>
-        </form>
-        <form action={findLeads}>
+          <button className="btn">Add to campaign</button>
+        </ActionForm>
+        <ActionForm action={findLeads}>
           <input type="hidden" name="id" value={campaign.id} />
           <h3>Find leads automatically</h3>
           <p className="help-text">Search for the audience saved in this campaign.</p>
-          <SubmitButton disabled={!searchOn}>Queue lead search</SubmitButton>
+          <button className="btn" disabled={!searchOn}>Queue lead search</button>
           <p className="help-text">{searchOn ? "Requires the worker and an Apify connection. Usage limits still apply." : <>Search is off. Set a monthly cap in <Link href="/settings">Settings</Link> first.</>}</p>
-        </form>
+        </ActionForm>
       </div>
     </details>
     <details className="disclosure" id="leads">

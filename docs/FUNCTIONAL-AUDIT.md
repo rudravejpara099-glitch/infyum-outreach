@@ -7,7 +7,8 @@ The owner requests the whole app working, without intermediate questions. Comple
 | Requirement | Evidence | State |
 |---|---|---|
 | Setup, login/error retention, protected routes | Expanded disposable browser suite; teammate created through Settings then signed in from a separate browser context | Verified locally |
-| Create campaign, audience defaults, add leads, campaign review links/counts | Browser suite with real temporary SQLite rows | Verified locally; malformed input and broader editing still need audit |
+| Campaign create/edit/start/pause, pasted handles and validation | Browser retains invalid form input, saves audience/sender, refuses start without sender, persists active/paused state and reports duplicate/invalid handles | Verified at UI boundary; worker must still recheck paused state before external actions |
+| Lead-search queue | Disconnected key refuses enqueue; second disposable server with a fake key queues one active job per campaign and deduplicates repeats, permits another campaign; no worker runs | Queue boundary verified; actual provider/cost bounding remains unverified |
 | Approvals | Browser rejects edited disallowed link, approval after reply and forged retired-reply approval; valid approval/rejection persist | Verified locally at the action boundary; already-approved worker jobs still need final send guard |
 | Team time zone | New authenticated save action validates supported IANA zones/UTC and aliases; browser persists Asia/Kolkata and rejects invalid zone | Verified locally; worker already reads setting for pacing |
 | Lead notes/stages/stop | Browser persists notes, refuses forged illegal transition, accepts legal transition, invokes DNC and returns 404 for malformed ID | Verified locally |
@@ -21,7 +22,7 @@ The owner requests the whole app working, without intermediate questions. Comple
 | Daily limits, warnings, retries, restarts | Existing fake-driver tests except clock failure; UI now refuses warning reset | Real runtime/restart behavior remains unverified; uncertain external-action retries require review |
 | Instagram readProfileNotes | Actual read-only driver against instagram’s public profile from saved account 3 | Returned public profile notes; does NOT prove authenticated session |
 | Instagram readFacts / country / connection checks | Actual read-only diagnostics reached country step; public page showed login/signup dialog, no Options icon; all 3 saved cookie stores lack sessionid | Not verified. Guard misses logged-out public-page modals; manual sign-in and Claude guard/selector fix needed |
-| Claude CLI | Installed; auth status diagnostic timed out without exposing credentials | Authentication/draft generation unverified; no draft was generated |
+| Claude CLI | Privileged read-only auth status reports loggedIn true/claude.ai; two bounded unbilled fixture draft checks through existing engine failed | Cached sign-in does not prove working generation. No draft stored/sent; runtime generation remains unverified |
 | Apify | Private config presence-only check: no token. Bounded/metered run hook still pending | No real run authorized or verified |
 | Billing and payments | Separate draft PR #7 implements tested ledger/UI/SDK simulator; actual TEST credentials absent and worker hooks pending | Not operational; no live charges/calls authorized |
 | Design | Operational screens inspected in both themes at narrow/wide; full browser loop checks overflow/reduced motion/focus | Verified for changed UI; not proof of live integrations |
@@ -33,10 +34,23 @@ Board Codex #6 requests injected-clock persistence/daily rollover, safe retry he
 
 ## Verification commands
 
-- `npm test`: 82 passed / 1 failed, same pre-existing runner daily-limit clock failure as initial unchanged baseline (initial 72/1, ten new tests now pass).
+- `npm test`: 87 passed / 1 failed, same pre-existing runner daily-limit clock failure as initial unchanged baseline (initial 72/1, fifteen new tests now pass).
 - `npm run typecheck`: passed after removing ignored dev route types left by switching from billing branch.
 - `npx next build`: passed.
 - `npm run smoke:ui`: expanded suite passed with temporary database and profiles, no worker, no provider calls and zero outgoing messages. Includes actual Settings/account/lead actions, teammate sign-in, forged blocked-resume/illegal-stage/stale-approval/retired-reply rejection, valid approval/rejection and scoped CSV. Screenshots now cover 1440/1024/390px for every checked route in both themes. Browser console/page errors asserted empty. Screenshots use caret:initial because screenshot-injected caret hiding before React hydration caused a test-harness warning; corrected and rerun cleanly.
 - Changed-file ESLint: passed. Full lint retains main’s existing prefer-const and unused-parameter findings.
 
 No saved data was modified by the audit. Presence-only private configuration checks and read-only database counts were used; no secret/password/card data was printed or copied. The actual read-only browser updated its own existing profile cache and was closed. Shared preview remains stopped. The full goal stays active; this table is not a claim that the whole app is finished.
+
+## Remaining explicit requirements from the original build brief
+
+Re-read the original MASTER PROMPT and README on Oct 21. The broad goal includes these unfinished items; successful form checks alone are not completion:
+
+- Production startup must refuse the default/missing session secret; login attempts must be rate-limited. These are original task D requirements, not new product policy. Worker heartbeat UI/backup exist; safe failed-job retry still needs Claude’s backend helper/uncertain-outcome rules.
+- Team time zone must govern daily limits and follow-up timing, not only pacing and display labels. Cross-midnight tests and the timestamp patch remain pending backend ACK. Keep current UTC counter labels honest until that is done.
+- Original task E still needs CSV upload, a useful re-run-checks control within allowed stages, safe bulk approval, daily sent/first-reply campaign charts, and Settings visibility/control for the approved portfolio link and AI model. Never restore booked/call stages or reply drafting: the later first-reply ruling supersedes those older brief lines. The outbound portfolio link remains the single locked approved URL; changing it is not silently authorized by a Settings field. Do not ship an AI-model setting that the worker ignores.
+- Backend must check campaign pause/state and selected sender immediately before executing queued jobs: source currently filters active campaigns when planning, but its approvedQueue and execution paths do not enforce campaign state. Pausing a saved row is not proven to stop an already queued send. Keep this distinct from the passing start/pause UI persistence checks.
+- Actual Instagram authentication, facts/connection/inbox reads and a valid real internal CLI draft are not proven. Warm-up/send tests require the owner’s explicit permission for that step; none given here. Real paid API/Apify calls and live payments remain unauthorized. Actual Stripe TEST E2E and the reviewed billing/paid-engine hooks remain outstanding in PR #7.
+- Every changed screen must keep the HIG/token direction and be checked at 1440/1024/390 in both themes. Required tests/typecheck/build and a PR are completion gates; the existing failing baseline blocks a ready PR. No protected backend area can be edited until board ACK/owner ruling.
+
+Campaign changes passed production build and the expanded browser suite. Search queue happy/duplicate/different-campaign behavior uses a fake configured key in a restarted temporary server and no worker; it is not an Apify provider test. New queue helper tests persist real SQLite rows. Generic form navigation now uses Next router and avoids unnecessary same-route reloads; all custom forms explicitly use POST so password forms cannot fall back to GET.

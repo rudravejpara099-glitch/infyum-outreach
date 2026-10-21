@@ -18,9 +18,11 @@ const screenshots = path.resolve(process.env.UI_SCREENSHOT_DIR ?? "data/ui-smoke
 const port = 3190;
 const base = `http://127.0.0.1:${port}`;
 mkdirSync(screenshots, { recursive: true });
-const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
-  env: { ...process.env, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: randomBytes(48).toString("hex") }, stdio: "ignore",
+const sessionSecret = randomBytes(48).toString("hex");
+const startServer = (apifyToken = "") => spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
+  env: { ...process.env, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret }, stdio: "ignore",
 });
+let server = startServer();
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {
   let ready = false;
@@ -58,17 +60,27 @@ try {
   await page.getByLabel("Campaign name", { exact: true }).fill("US business coaches");
   await page.getByLabel("Business coach", { exact: true }).check();
   await page.getByLabel("Describe the audience in your own words").fill("Independent business coaches in the United States who sell coaching through Instagram.");
+  await page.getByLabel("Min followers", { exact: true }).fill("200000");
+  await page.getByRole("button", { name: "Create campaign", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "Minimum followers cannot be above" }).waitFor();
+  assert.equal(await page.getByLabel("Campaign name", { exact: true }).inputValue(), "US business coaches");
+  await page.getByLabel("Min followers", { exact: true }).fill("2000");
   await page.getByRole("button", { name: "Create campaign", exact: true }).click();
   await page.waitForURL(/\/campaigns\/\d+$/);
   const campaignUrl = page.url();
   const id = Number(new URL(campaignUrl).pathname.split("/").pop());
   await page.getByRole("heading", { name: "You’re all caught up" }).waitFor();
+  await page.getByRole("button", { name: "Start campaign", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "Choose a sending account" }).waitFor();
   await page.screenshot({ path: path.join(screenshots, "campaign-empty.png"), fullPage: true, caret: "initial" });
   await page.getByRole("link", { name: "Add leads", exact: true }).click();
   assert(await page.locator("#add-leads").getAttribute("open") !== null, "In-page link must open the disclosure");
   await page.getByLabel("Instagram handles").fill("maya.coaches\ngrowthwithalex\nstudio.sarah");
   await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
   await page.getByRole("heading", { name: "3 leads in this campaign" }).waitFor();
+  await page.getByLabel("Instagram handles").fill("MAYA.COACHES, growthwithalex, studio.sarah, https://invalid.example.test");
+  await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "3 duplicate" }).waitFor();
   const db = openDb(dbPath);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
@@ -178,6 +190,8 @@ try {
   assert(db.prepare("SELECT handle FROM do_not_contact WHERE handle='another.campaign'").get());
   await page.goto(`${base}/leads/not-a-number`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
+  await page.goto(`${base}/campaigns/not-a-number`);
+  await page.getByRole("heading", { name: "404", exact: true }).waitFor();
 
   // Operational controls must change real rows and give honest feedback without a worker.
   await page.goto(`${base}/`);
@@ -205,6 +219,12 @@ try {
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Monthly lead-search limit saved" }).waitFor();
   assert.equal((db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string }).value, "1.05");
+  await page.goto(campaignUrl);
+  await page.locator("#add-leads summary").click();
+  await page.getByRole("button", { name: "Queue lead search", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "Lead search is not connected" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='find_leads'").get() as { n: number }).n, 0);
+  await page.goto(`${base}/settings`);
   await page.getByLabel("Monthly limit (USD)", { exact: true }).fill("");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Lead searches are switched off" }).waitFor();
@@ -222,6 +242,7 @@ try {
   assert(!db.prepare("SELECT handle FROM do_not_contact WHERE handle='maya.coaches'").get());
 
   const team = page.locator("section").filter({ has: page.getByRole("heading", { name: "Team", exact: true }) });
+  assert.equal(await team.locator("form").getAttribute("method"), "post", "Password forms must never fall back to GET");
   await team.getByLabel("Name", { exact: true }).fill("  Teammate  ");
   await team.getByLabel("Email", { exact: true }).fill("TEAMMATE@example.test");
   const teammatePassword = randomBytes(24).toString("hex");
@@ -262,6 +283,22 @@ try {
   await page.getByRole("button", { name: "Set cap", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Daily limit saved" }).waitFor();
   assert.equal((db.prepare("SELECT daily_cap FROM ig_accounts WHERE id=?").get(account.id) as { daily_cap: number }).daily_cap, 20);
+  await page.goto(campaignUrl);
+  await page.getByRole("link", { name: "Edit audience", exact: true }).click();
+  await page.getByLabel("Campaign name", { exact: true }).fill("US business coaches revised");
+  await page.getByLabel("@review.account", { exact: true }).check();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await page.getByRole("heading", { name: "US business coaches revised", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM campaign_accounts WHERE campaign_id=? AND account_id=?").get(id, account.id) as { n: number }).n, 1);
+  await page.getByRole("button", { name: "Start campaign", exact: true }).click();
+  await page.getByRole("button", { name: "Pause campaign", exact: true }).waitFor().catch(async error => {
+    console.log(JSON.stringify({ campaignControlFailure: true, url: page.url(), status: (db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, alerts: await page.getByRole("alert").allTextContents() })); throw error;
+  });
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "active");
+  await page.getByRole("button", { name: "Pause campaign", exact: true }).click();
+  await page.getByRole("button", { name: "Resume campaign", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "paused");
+  await page.goto(`${base}/accounts`);
   db.prepare("UPDATE ig_accounts SET status='blocked',status_note='Simulated Instagram warning' WHERE id=?").run(account.id);
   await page.reload();
   assert(await page.getByRole("button", { name: "Stopped by Instagram", exact: true }).isDisabled());
@@ -293,6 +330,33 @@ try {
   const activityCsv = await activityExport.text();
   assert(activityCsv.includes("\"'=1+2\""));
   assert(activityCsv.includes("\"' =SUM(1,2)\""));
+  // A second local-only phase uses a fake configured key to test queueing. No worker exists.
+  if (server.exitCode === null) {
+    const stopped = new Promise<void>(resolve => server.once("exit", () => resolve()));
+    server.kill("SIGTERM"); await stopped;
+  }
+  server = startServer("fixture-apify-token-never-used");
+  let restarted = false;
+  for (let attempt = 0; attempt < 90; attempt++) {
+    if (server.exitCode !== null) throw new Error("Queue review server exited");
+    try { if ((await fetch(`${base}/login`)).ok) { restarted = true; break; } } catch {}
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  assert(restarted, "Queue review server did not restart");
+  db.prepare("UPDATE settings SET value='1.05' WHERE key='apify_monthly_cap_usd'").run();
+  await page.goto(campaignUrl);
+  await page.locator("#add-leads summary").click();
+  await page.getByRole("button", { name: "Queue lead search", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Lead search saved" }).waitFor();
+  await page.getByRole("button", { name: "Queue lead search", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "already has a lead search" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='find_leads' AND json_extract(payload,'$.campaignId')=?").get(id) as { n: number }).n, 1);
+  await page.goto(`${base}/campaigns/${other.id}`);
+  await page.locator("#add-leads summary").click();
+  await page.getByRole("button", { name: "Queue lead search", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Lead search saved" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='find_leads'").get() as { n: number }).n, 2);
+
   await page.goto(`${base}/approvals?campaign=invalid`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
   await page.goto(`${base}/settings`);

@@ -1,3 +1,4 @@
+import { ActionForm } from "./action-form";
 import type { Campaign, IgAccount } from "@/lib/db/types";
 import { NICHE_OPTIONS } from "@/lib/campaign-form";
 import { saveCampaign } from "@/app/(app)/campaigns/actions";
@@ -5,7 +6,7 @@ import { saveCampaign } from "@/app/(app)/campaigns/actions";
 export function CampaignForm({ campaign, accounts, selected }: { campaign?: Campaign; accounts: IgAccount[]; selected: number[] }) {
   const custom = campaign?.niches.filter((n) => !(NICHE_OPTIONS as readonly string[]).includes(n)).join(", ") ?? "";
   return (
-    <form action={saveCampaign} className="flex max-w-2xl flex-col gap-6">
+    <ActionForm action={saveCampaign} className="flex max-w-2xl flex-col gap-6">
       {campaign && <input type="hidden" name="id" value={campaign.id} />}
       <div><label className="label" htmlFor="name">Campaign name</label><input id="name" name="name" required defaultValue={campaign?.name} placeholder="e.g. Credit repair, US" className="input" /></div>
 
@@ -24,7 +25,7 @@ export function CampaignForm({ campaign, accounts, selected }: { campaign?: Camp
       <div><label className="label" htmlFor="audienceText">Describe the audience in your own words</label>
         <textarea id="audienceText" name="audienceText" rows={3} defaultValue={campaign?.audienceText} placeholder="US credit repair owners who run free consultations and post reels" className="input" /></div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <div><label className="label" htmlFor="minFollowers">Min followers</label><input id="minFollowers" name="minFollowers" type="number" min={0} defaultValue={campaign?.minFollowers ?? 2000} className="input" /></div>
         <div><label className="label" htmlFor="maxFollowers">Max followers</label><input id="maxFollowers" name="maxFollowers" type="number" min={1} defaultValue={campaign?.maxFollowers ?? 150000} className="input" /></div>
         <div><label className="label" htmlFor="country">Country</label><input id="country" name="country" defaultValue={campaign?.country ?? "United States"} className="input" /></div>
@@ -51,6 +52,6 @@ export function CampaignForm({ campaign, accounts, selected }: { campaign?: Camp
       </div>
 
       <div><button className="btn btn-primary">{campaign ? "Save changes" : "Create campaign"}</button></div>
-    </form>
+    </ActionForm>
   );
 }
