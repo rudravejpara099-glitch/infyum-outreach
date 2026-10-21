@@ -226,8 +226,12 @@ Dashboard recent activity and lead conversation/history now explain what will ap
 
 Expanded `scripts/security-smoke.ts` to verify first-user setup, all primary protected routes, sign-out, protected-route redirect, and sign-in against `next start` with a disposable database. Passes after a clean `npx next build --webpack`; no worker, provider, payment or outreach action. Default Turbopack currently panics at the sandbox local-port boundary.
 
+### Isolated smoke build outputs (Codex, 2026-10-21)
+
+Dev smoke servers now get validated per-run build directories and throwaway TypeScript configs, so UI and billing browser suites can run while the local app server stays open and cannot edit the project's `tsconfig.json`. The UI smoke ignores only the known localhost resource/RSC fallback errors during its intentional Next dev-server restart. Path rules are unit-tested. UI smoke and billing simulator both pass with this isolation, and a Webpack production build passed in a disposable build directory. No data, profile, paid provider or Instagram action was used. Normal app runs still use `.next` and `tsconfig.json`.
+
 ### Accounts login-request feedback (Codex, 2026-10-21)
 
-Fixed the account row hint so it reports “The worker is handling this request” while its heartbeat is current and “Waiting for the worker to start” when stale. Added pure-copy tests and browser smoke assertions for both heartbeat states, with mobile/tablet/desktop overflow and screenshots. Unit tests and typecheck pass. The live Accounts page rendered the new current-heartbeat message. Full disposable smoke could not start because the app's existing Next dev server owns the shared `.next` directory; I left the app and pending `open_login` job undisturbed. Re-run the browser smoke once that server is no longer using the build directory.
+Fixed the account row hint so it reports “The worker is handling this request” while its heartbeat is current and “Waiting for the worker to start” when stale. Added pure-copy tests and browser smoke assertions for both heartbeat states, with mobile/tablet/desktop overflow and screenshots. The live Accounts page rendered the new current-heartbeat message. The smoke suites now use isolated Next build output and temporary TypeScript configs so they run while the preview and pending `open_login` job stay undisturbed. Unit tests, typecheck and full UI browser smoke pass.
 
 The full application remains incomplete. The live login window is not visible in the available browser inventory, and no sign-in is confirmed. No Instagram write action or paid provider/payment action ran.

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
@@ -16,12 +16,15 @@ async function main() {
 const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-ui-"));
 const dbPath = path.join(temp, "review.db");
 const screenshots = path.resolve(process.env.UI_SCREENSHOT_DIR ?? "data/ui-smoke");
+const distDir = `.next-smoke-ui-${randomBytes(4).toString("hex")}`;
+const tsconfigPath = `.tsconfig-smoke-ui-${randomBytes(4).toString("hex")}.json`;
+writeFileSync(tsconfigPath, JSON.stringify({ extends: "./tsconfig.json" }));
 const port = 3190;
 const base = `http://127.0.0.1:${port}`;
 mkdirSync(screenshots, { recursive: true });
 const sessionSecret = randomBytes(48).toString("hex");
 const startServer = (apifyToken = "") => spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
-  env: { ...process.env, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret }, stdio: "ignore",
+  env: { ...process.env, OUTREACH_SMOKE_DIST_DIR: distDir, OUTREACH_SMOKE_TSCONFIG: tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret }, stdio: "ignore",
 });
 let server = startServer();
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
@@ -41,8 +44,12 @@ try {
   let expectedServerRestart = false;
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => {
-    const restartingHmr = expectedServerRestart && message.location().url.includes("/_next/webpack-hmr") && message.text().includes("ERR_CONNECTION_REFUSED");
-    if (message.type() === "error" && !restartingHmr) errors.push(message.text());
+    const text = message.text();
+    const expectedRestartFailure = expectedServerRestart && (
+      /Failed to load resource: net::ERR_(?:CONNECTION_REFUSED|INCOMPLETE_CHUNKED_ENCODING)/.test(text)
+      || (text.includes("Failed to fetch RSC payload") && text.includes("Falling back to browser navigation"))
+    );
+    if (message.type() === "error" && !expectedRestartFailure) errors.push(message.text());
   });
   const password = randomBytes(24).toString("hex"); // Never persisted or printed.
   await page.goto(`${base}/setup`);
@@ -609,6 +616,8 @@ try {
 } finally {
   await browser?.close();
   server.kill("SIGTERM");
+  rmSync(path.resolve(distDir), { recursive: true, force: true });
+  rmSync(path.resolve(tsconfigPath), { force: true });
   rmSync(temp, { recursive: true, force: true });
 }
 

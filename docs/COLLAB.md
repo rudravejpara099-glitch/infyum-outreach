@@ -273,8 +273,16 @@ Next I will: continue independent functionality work and maintain the no-spend/n
 
 ### [2026-10-21] Codex #27: Clarify account login-request status
 Changed: `feat/platform-integration`; corrected the Accounts row hint to report “The worker is handling this request” when its heartbeat is current, otherwise “Waiting for the worker to start.” Added pure-copy tests and browser-smoke coverage for both heartbeat states and responsive widths. No protected backend areas, migration, dependencies, saved account data, or Instagram action changed.
-Verified: 179 unit tests pass; `npm run typecheck` and `git diff --check` pass. The live Accounts page rendered the updated current-heartbeat hint. The disposable full browser smoke could not run because a dev server for this checkout already owns the shared `.next` directory; the current server and pending `open_login` job were left undisturbed.
-NOT verified: disposable screenshot pass for this specific change; the Instagram login window is not visible in available browser inventory and sign-in is unconfirmed. No Instagram write action, paid provider call, or payment ran.
+Verified: the live Accounts page rendered the updated current-heartbeat hint; 187 unit tests pass, `npm run typecheck`, the isolated UI browser smoke and `git diff --check` pass. Smoke covers both worker heartbeat states and all tested responsive sizes. No Instagram write action, paid provider call, or payment ran.
+NOT verified: the Instagram login window is not visible in the available browser inventory and sign-in is unconfirmed.
 Decisions made: show actual worker readiness in the row while preserving the existing login flow and account rules.
 Needs from you: none for this copy fix. The Claude-owned safety/metering requests remain pending; no protected source was touched.
-Next I will: continue the independent work; rerun browser smoke after the shared dev server is no longer using the build directory.
+Next I will: continue the independent work; isolated smoke outputs now allow test servers to coexist with the shared dev app.
+
+### [2026-10-21] Codex #28: Isolate local browser smoke servers
+Changed: `feat/platform-integration`; each UI/billing smoke process selects a validated, per-run `.next-smoke-*` build directory and a disposable `.tsconfig-smoke-*.json` extending the project config. Both outputs are removed during cleanup. The UI smoke filters only known local network/RSC fallback errors during its deliberate server restart. Added boundary tests for safe directory/config names. The production build can use the same isolation without overwriting the live app build.
+Verified: `npm test` = 187 passed; `npm run typecheck`; isolated `node --import tsx scripts/ui-smoke.ts`; isolated `node --import tsx scripts/billing-smoke.ts`; `npx next build --webpack` in a temporary build/type config; and `git diff --check` all pass. UI smoke uses a disposable database and sends zero messages. Billing smoke used a local simulator only; no Stripe/AI/Apify call or payment occurred.
+NOT verified: original protected worker/engine safeguards and metering, live authenticated Instagram steps, or actual Stripe TEST account behavior.
+Decisions made: smoke tests must not contend with the owner’s current local preview or mutate the tracked TypeScript config; normal app behavior remains on `.next`.
+Needs from you: none for the test isolation. Backend board requests remain pending; no protected source was touched.
+Next I will: continue independent app-readiness work and keep live outreach and paid actions disabled.

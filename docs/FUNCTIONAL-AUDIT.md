@@ -1,6 +1,6 @@
 # Full functionality audit — 2026-10-21
 
-The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. No worker or shared-data app server is running from this task.
+The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. The existing preview at `http://127.0.0.1:3100/accounts` and the single worker session handling one `open_login` request remain running; keep the server and job intact until that request reaches a terminal state. No other worker action was queued.
 
 ## Current evidence
 
@@ -35,7 +35,8 @@ The owner requests the whole app working, without intermediate questions. Comple
 | Dashboard onboarding | Three-step setup checklist reflects saved account count, worker heartbeat and leads; explicitly says that saving an account does not confirm Instagram sign-in | Browser smoke verified empty-workspace copy and navigation; live account sign-in remains unverified |
 | History empty state | No-activity page explains what appears here and links to campaign creation; uses a semantic heading | Browser smoke verified at 1440/1024/390 in light and dark; history with data remains covered by the existing populated table flow |
 | Pipeline empty and invalid-filter states | Workspace and campaign empty views provide next actions; empty stages/skipped list are explicit; malformed or unknown campaign filters return 404 | Disposable browser flow verifies empty workspace and campaign, zero skipped, malformed query, and light/dark 1440/1024/390 layouts |
-| Production compilation | `npx next build --webpack` passed after the default Turbopack build hit the sandbox's local port-binding restriction | Verified with Webpack; Turbopack path not verified in this sandbox |
+| Production compilation | `npx next build --webpack` passed in a validated disposable build directory while the local preview remained running | Verified with Webpack; Turbopack path not verified in this sandbox |
+| Smoke isolation | UI and billing smoke each use temporary build output and a throwaway TypeScript config; source `tsconfig.json` stays unchanged | Both browser suites pass while the existing preview remains active |
 
 ## Backend requests already posted
 
@@ -43,9 +44,9 @@ Board Codex #6 requests team-time-zone daily boundaries, safe retry helper and b
 
 ## Verification commands
 
-- Latest plain-language UI pass: `npm test` = 131 passed; `npm run typecheck`; `npx next build --webpack`; full local Playwright smoke passed with temporary data and zero outgoing messages; changed-file ESLint and `git diff --check` passed.
+- Latest isolated integration pass: `npm test` = 187 passed; `npm run typecheck`; `npx next build --webpack` in a temporary output/config; full local Playwright UI and billing simulator smokes pass with disposable data and zero outgoing messages/provider calls; `git diff --check` passes.
 
-No saved data was modified by the audit. Presence-only private configuration checks and read-only database counts were used; no secret/password/card data was printed or copied. The actual read-only browser updated its own existing profile cache and was closed. Shared preview remains stopped. The full goal stays active; this table is not a claim that the whole app is finished.
+No saved application data was modified by the current isolated browser/production checks. Presence-only private configuration checks and read-only database counts were used; no secret/password/card data was printed or copied. The existing preview/profile and single `open_login` worker session remain active from the previous local setup; the available browser inventory shows no Instagram login window, and there is no evidence the owner signed in. No outbound Instagram action ran. The full goal stays active; this table is not a claim that the whole app is finished.
 
 ## Daily-limit timestamp correction
 

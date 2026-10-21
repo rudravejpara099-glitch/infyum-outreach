@@ -1,11 +1,14 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 import { PHASE_PRODUCTION_SERVER } from "next/constants";
+import { nextDistDir, nextTsconfigPath } from "./lib/config/next-dist-dir";
 import { assertProductionSecret } from "./lib/auth/production-secret";
 
 const nextConfig: NextConfig = {
   // Live internal data stays uncached; keep the native SQLite module external.
   serverExternalPackages: ["better-sqlite3"],
+  distDir: nextDistDir(),
+  typescript: { tsconfigPath: nextTsconfigPath() },
   turbopack: { root: path.resolve(process.cwd()) },
 };
 
