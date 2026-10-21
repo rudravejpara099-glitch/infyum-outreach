@@ -3,8 +3,9 @@ import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { listLeads } from "@/lib/db/repos/leads";
 import { listCampaigns } from "@/lib/db/repos/campaigns";
-import { STAGES, STAGE_LABEL } from "@/lib/domain/stages";
+import { STAGES } from "@/lib/domain/stages";
 import { number } from "@/lib/format";
+import { stageCopy } from "@/lib/ui/copy";
 import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default async function Pipeline({ searchParams }: PageProps<"/pipeline">)
 
   return (
     <>
-      <PageHeader title="Pipeline" sub="Every lead, by where it is in the journey."
+      <PageHeader title="Lead progress" sub="See which checks and messages each lead has reached."
         actions={
           <form className="flex gap-2">
             <select name="campaign" defaultValue={campaignId ?? ""} className="input w-52" aria-label="Campaign">
@@ -37,7 +38,7 @@ export default async function Pipeline({ searchParams }: PageProps<"/pipeline">)
           return (
             <section key={stage} id={stage} className="w-64 shrink-0">
               <h2 className="mb-2 flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                {STAGE_LABEL[stage]}<span className="tabular-nums">{items.length}</span>
+                <span title={stageCopy[stage].description}>{stageCopy[stage].label}</span><span className="tabular-nums">{items.length}</span>
               </h2>
               <div className="flex flex-col gap-2">
                 {items.slice(0, PER_COLUMN).map((l) => (

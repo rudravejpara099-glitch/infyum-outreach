@@ -5,8 +5,10 @@ import { WorkerStatusRefresh } from "@/components/worker-status-refresh";
 import { workerStatus } from "@/lib/queries/worker-status";
 import { dashboardData } from "@/lib/queries/dashboard";
 import { listActivity } from "@/lib/db/repos/activity";
-import { STAGES, STAGE_LABEL, type Stage } from "@/lib/domain/stages";
+import { STAGES, type Stage } from "@/lib/domain/stages";
 import { ago, number, todayIso } from "@/lib/format";
+import { stageCopy } from "@/lib/ui/copy";
+import { activityLabel } from "@/lib/ui/copy";
 import { Empty, PageHeader, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +24,7 @@ export default async function Dashboard() {
 
   return (
     <>
-      <PageHeader title="Dashboard" sub="What is happening across every campaign." />
+      <PageHeader title="Overview" sub="What is happening across your campaigns." />
       <section className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Worker status">
         <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{worker.running ? "Worker running" : "Worker not running"}</span>
           <p className="mt-2 text-sm text-muted">{worker.running ? "The background worker is checking for tasks. Account hours, approvals and limits still apply." : "Saved tasks are waiting. The background worker needs to be started on this computer."}</p>
@@ -52,7 +54,7 @@ export default async function Dashboard() {
           <div className="flex flex-col gap-2.5">
             {funnel.map((s) => (
               <Link key={s} href={`/pipeline#${s}`} className="group flex items-center gap-3">
-                <span className="w-24 text-muted group-hover:text-ink">{STAGE_LABEL[s]}</span>
+                <span className="w-24 text-muted group-hover:text-ink" title={stageCopy[s].description}>{stageCopy[s].label}</span>
                 <span className="h-2 flex-1 overflow-hidden rounded-full bg-bg">
                   <span className="block h-full rounded-full bg-accent" style={{ width: `${((d.stages[s] ?? 0) / max) * 100}%` }} />
                 </span>
@@ -88,7 +90,7 @@ export default async function Dashboard() {
           <ul className="divide-y divide-line">
             {recent.map((a) => (
               <li key={a.id} className="flex items-center justify-between py-2">
-                <span><span className="font-medium">{a.action}</span> <span className="text-muted">{a.detail}</span></span>
+                <span><span className="font-medium">{activityLabel(a.action)}</span> <span className="text-muted">{a.detail}</span></span>
                 <span className="text-xs text-muted">{ago(a.ts)}</span>
               </li>
             ))}

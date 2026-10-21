@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Campaign, IgAccount, Lead } from "@/lib/db/types";
-import { STAGES, STAGE_LABEL } from "@/lib/domain/stages";
+import { STAGES } from "@/lib/domain/stages";
 import { number, STAGE_BADGE } from "@/lib/format";
+import { stageCopy } from "@/lib/ui/copy";
 import { CampaignForm } from "./campaign-form";
 import { Icon } from "./icon";
 import { ActionForm } from "./action-form";
@@ -17,7 +18,7 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
     <DisclosureLinks />
     <details className="disclosure" id="progress">
       <summary><Icon name="pipeline" /><span>Campaign progress<small>See leads at each stage</small></span><Icon name="chevron" /></summary>
-      <div className="disclosure-content"><div className="stage-grid">{STAGES.map(stage => <Link key={stage} href={`/pipeline?campaign=${campaign.id}#${stage}`}><span>{STAGE_LABEL[stage]}</span><strong>{counts[stage] ?? 0}</strong></Link>)}</div><CampaignHistory days={history} timeZone={timeZone} /></div>
+      <div className="disclosure-content"><div className="stage-grid">{STAGES.map(stage => <Link key={stage} href={`/pipeline?campaign=${campaign.id}#${stage}`} title={stageCopy[stage].description}><span>{stageCopy[stage].label}</span><strong>{counts[stage] ?? 0}</strong></Link>)}</div><CampaignHistory days={history} timeZone={timeZone} /></div>
     </details>
     <details className="disclosure" id="add-leads">
       <summary><Icon name="plus" /><span>Add leads<small>Paste handles, import a spreadsheet or search</small></span><Icon name="chevron" /></summary>
@@ -43,7 +44,7 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
     </details>
     <details className="disclosure" id="leads">
       <summary><Icon name="accounts" /><span>Latest leads<small>{leads.length ? "Open a profile to see its history" : "Your campaign’s leads will appear here"}</small></span><Icon name="chevron" /></summary>
-      <div className="disclosure-content">{leads.length === 0 ? <p className="text-muted">No leads yet. Add Instagram handles above to get started.</p> : <ul className="lead-list">{leads.map(l => <li key={l.id}><Link href={`/leads/${l.id}`}><span>@{l.handle}<small>{number(l.followers)} followers</small></span><span className={`badge ${STAGE_BADGE[l.stage]}`}>{STAGE_LABEL[l.stage]}</span><Icon name="chevron" size={16} /></Link></li>)}</ul>}</div>
+      <div className="disclosure-content">{leads.length === 0 ? <p className="text-muted">No leads yet. Add Instagram handles above to get started.</p> : <ul className="lead-list">{leads.map(l => <li key={l.id}><Link href={`/leads/${l.id}`}><span>@{l.handle}<small>{number(l.followers)} followers</small></span><span className={`badge ${STAGE_BADGE[l.stage]}`} title={stageCopy[l.stage].description}>{stageCopy[l.stage].label}</span><Icon name="chevron" size={16} /></Link></li>)}</ul>}</div>
     </details>
     <details className="disclosure" id="settings">
       <summary><Icon name="settings" /><span>Campaign settings<small>Audience, sending accounts, approvals and follow-ups</small></span><Icon name="chevron" /></summary>

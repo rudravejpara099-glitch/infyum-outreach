@@ -14,6 +14,7 @@ import { workerStatus } from "@/lib/queries/worker-status";
 import { changeCampaignStatus } from "../actions";
 import { campaignHistory } from "@/lib/queries/campaign-history";
 import { validTimeZone } from "../../settings/validation";
+import { messageKindLabel } from "@/lib/ui/copy";
 
 export const dynamic = "force-dynamic";
 const STATUS = { active: "Active", draft: "Draft", paused: "Paused", done: "Finished" };
@@ -58,7 +59,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
         {overview.pendingCount > 0 && <Link href={reviewLink} className="btn btn-primary">Review drafts <Icon name="arrow" size={17} /></Link>}
       </div>
       {overview.pending.length > 0 && <><ul className="review-list">{overview.pending.map(m => <li key={m.id}>
-        <Link href={`${reviewLink}#message-${m.id}`}><span className="avatar">{m.handle.slice(0, 2).toUpperCase()}</span><span><strong>@{m.handle}</strong><small>{m.kind === "dm" ? "First contact" : m.kind === "followup" ? "Follow-up" : "Reply"} · {m.partCount} separate message{m.partCount === 1 ? "" : "s"}</small></span><Icon name="chevron" size={18} /></Link>
+        <Link href={`${reviewLink}#message-${m.id}`}><span className="avatar">{m.handle.slice(0, 2).toUpperCase()}</span><span><strong>@{m.handle}</strong><small>{messageKindLabel(m.kind)} · {m.partCount} separate message{m.partCount === 1 ? "" : "s"}</small></span><Icon name="chevron" size={18} /></Link>
       </li>)}</ul><Link href={reviewLink} className="text-link review-all">View all {overview.pendingCount} <Icon name="chevron" size={14} /></Link></>}
     </section>
     <section className="campaign-status" aria-labelledby="happening-title">

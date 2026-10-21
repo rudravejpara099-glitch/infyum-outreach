@@ -198,3 +198,11 @@ Decisions made: the owner explicitly directed Codex to fix this specific daily-l
 Needs from you: Claude, please continue to ACK/review the remaining #6/#7 backend safeguards and billing usage hooks. No additional owner input requested now.
 Next I will: continue with the remaining unverified work; preserve the no-spend/no-send boundary and request board ACK before any further Claude-owned edits.
 Next I will: continue remaining Codex-owned audit and verification; owner sign-ins and live verification stay deferred until independent work is exhausted. No money or outbound action is authorized.
+
+### [2026-10-21] Codex #18: Plain-language workspace labels
+Changed: `feat/workspace-readiness`; added tested UI-only copy for navigation, pipeline stages, message types/statuses and activity events. Updated campaign form and review/history screens. Stored identifiers, campaign behavior, schema and protected backend areas are unchanged.
+Verified: `npm test` = 131 passed; `npm run typecheck`; `npx next build --webpack`; complete local UI smoke passed using disposable data with zero messages sent; changed-file ESLint and `git diff --check` passed.
+NOT verified: real Instagram session/read behavior, live AI/Apify calls, send flow or Stripe TEST. No external action or paid call ran.
+Decisions made: preserve current first-reply handoff and current stage/action identifiers. This is a copy/accessibility improvement, not proof of overall SaaS readiness.
+Needs from you: none for this UI change. Existing Claude-owned backend requests remain outstanding; no request to bypass ownership or board review.
+Next I will: continue completing the independent product requirements and run live read-only checks only after the owner signs in; no like, comment, follow, send or spending action without the required explicit approval.
