@@ -381,3 +381,13 @@ Restarted the local Next dev server at `127.0.0.1:3100`, matching the browser or
 Instagram is presenting a CAPTCHA. Chrome also shows a password-save prompt. The owner must complete the CAPTCHA and sign in by hand, and decide on the browser's password prompt. No credentials were typed or read by Codex, no CAPTCHA was solved, and the prompt was left untouched. No like, comment, follow, message, worker campaign, paid API, Apify or payment ran.
 
 Still unverified: authenticated session result, read-only profile and inbox steps, AI generation, Apify, Stripe TEST and campaign worker. After the owner finishes sign-in, refresh Accounts to confirm status; then run only the read-only Instagram checks. Keep the general worker stopped.
+
+### Live routes and full no-spend browser check (Codex, 2026-10-22)
+
+The app's live browser rendered the Overview, Campaigns, Lead progress, Review messages, Replies, History, Usage and billing, Settings, Accounts, and campaign-detail routes. Read-only runtime state shows the background service waiting with a heartbeat last seen about five hours ago and one failed task; campaign 4 is active but has no leads; 23 drafts await approval across the workspace; the Replies page has one existing reply. Accounts has three saved profiles, none confirmed signed in. Settings reports Anthropic not connected and Apify not set up; billing records $0.00 and the spending ceiling is $0, so paid work remains off.
+
+Verified this turn: `npm test` = 229 passing; `npm run typecheck`; `npx next build --webpack`; full `UI_SMOKE_SCREENSHOTS=0 npm run smoke:ui` passes against disposable local data and verifies setup/login, campaign creation, leads, approvals, account controls, settings, DNC, team, permissions, responsive layouts, and worker heartbeat states. The smoke used local socket access after the restricted run was denied. No worker, Instagram operation, paid provider, payment, or message send ran.
+
+Still not verified: successful hand sign-in and session persistence, read-only live Instagram profile/inbox, worker campaign execution, real Anthropic, Apify, or Stripe TEST. The login-only Instagram window was left for owner handoff at the CAPTCHA/password-manager prompt. Do not start general campaign processing while an active campaign or unreviewed work exists; do not run external/paid checks under the no-spend instruction.
+
+Needs from owner: finish Instagram's CAPTCHA and hand sign-in in the open account window, then tell Codex. Codex can then confirm only session presence and try read-only profile/inbox. No password or token should be sent in chat.

@@ -441,3 +441,10 @@ NOT verified: completed sign-in/session persistence, live read-only profile/inbo
 Decisions made: hand the CAPTCHA and any password-manager choice to the owner. Leave the login-only window open; do not touch Instagram writes or start the general worker.
 Needs from owner: complete the CAPTCHA and hand sign-in in the open window. Do not send credentials in chat. After completion, tell me so I can refresh Accounts and run the read-only checks.
 Next I will: verify the login result without reading or logging the cookie value, then run only read-only Instagram checks.
+
+### [2026-10-22] Codex #49: Recheck live routes and disposable browser flow
+Changed: no product code or owner data changed. Kept work on `fix/first-run-operability`; left the app open on Accounts for the owner's login handoff.
+Verified: `npm test` = 229 passing; `npm run typecheck`; `npx next build --webpack`; full disposable `UI_SMOKE_SCREENSHOTS=0 npm run smoke:ui` passes. Read-only navigation rendered Overview, Campaigns, Pipeline, Approvals, Replies, Activity, Billing, Settings, Accounts, and campaign detail. Smoke uses its own temporary database and reports no messages sent. No worker, live Instagram action, paid call, or payment ran.
+NOT verified: actual Instagram session, live read-only profile/inbox, worker run, Anthropic generation, Apify, or Stripe TEST. Live dashboard shows a stale worker heartbeat (about five hours), one failed task, an active campaign with zero leads, and 23 drafts waiting for approval; Settings shows Anthropic and Apify are disconnected; billing is at $0 with the paid-work ceiling off.
+Needs from owner: complete the CAPTCHA and hand sign-in in the open Instagram window; don't send credentials in chat. Then Codex will verify only session presence and read-only Instagram steps. Keep the general worker and all spending off.
+Next I will: after owner sign-in, verify session and run only read-only Instagram profile/inbox checks; before then, fix only independently actionable local issues that do not touch protected/claimed backend areas or outreach actions.
