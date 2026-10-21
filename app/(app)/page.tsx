@@ -37,8 +37,8 @@ export default async function Dashboard() {
           </li>
           <li className="rounded-2xl border border-line bg-bg p-4">
             <p className="text-xs font-medium text-muted">STEP 2</p>
-            <p className="mt-1 font-medium">Start the background work</p>
-            <p className="mt-1 text-sm text-muted">{worker.running ? "It is running on this computer." : "Saved tasks wait until the worker is started on this computer."}</p>
+            <p className="mt-1 font-medium">Keep Outreach running</p>
+            <p className="mt-1 text-sm text-muted">{worker.running ? "Outreach is handling work on this computer." : "Campaigns and sign-in requests wait until Outreach’s background service starts on this computer."}</p>
             <Link href="/accounts" className="mt-3 inline-block text-sm text-accent underline">See account setup</Link>
           </li>
           <li className="rounded-2xl border border-line bg-bg p-4">
@@ -49,9 +49,9 @@ export default async function Dashboard() {
           </li>
         </ol>
       </section>
-      <section className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Worker status">
-        <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{worker.running ? "Worker running" : "Worker not running"}</span>
-          <p className="mt-2 text-sm text-muted">{worker.running ? "The background worker is checking for tasks. Account hours, approvals and limits still apply." : "Saved tasks are waiting. The background worker needs to be started on this computer."}</p>
+      <section className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Background service status">
+        <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{worker.running ? "Outreach is running" : "Outreach is waiting"}</span>
+          <p className="mt-2 text-sm text-muted">{worker.running ? "It is handling campaign tasks on this computer. Approvals and account limits still apply." : "Campaign and sign-in tasks are waiting for Outreach’s background service to start on this computer."}</p>
           {!worker.running && worker.lastSeen && <p className="mt-1 text-xs text-muted">Last seen {ago(worker.lastSeen)}.</p>}
         </div><div className="flex flex-wrap gap-2"><WorkerStatusRefresh /><Link href="/activity" className="btn">View activity</Link></div>
       </section>

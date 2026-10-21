@@ -88,7 +88,7 @@ export function actorLabel(actor: string): string {
 }
 
 export function loginWindowHint(workerRunning: boolean): string {
-  return workerRunning ? "The worker is handling this request." : "Waiting for the worker to start.";
+  return workerRunning ? "Outreach is opening the sign-in window." : "It will open after Outreach’s background service starts on this computer.";
 }
 
 const jobCopy: Record<string, string> = {

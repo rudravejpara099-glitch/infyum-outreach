@@ -14,7 +14,7 @@ import { accountIdSchema, capSchema, connectSchema } from "./validation";
 function loginQueued(): string {
   return workerStatus(getDb(), new Date()).running
     ? "Login window requested. Sign in by hand when it opens on this computer."
-    : "Login request saved. The worker is not running, so the window will open after it starts on this computer.";
+    : "Login request saved. The sign-in window will open when Outreach’s background service starts on this computer.";
 }
 export async function connectAccount(form: FormData): Promise<ActionResult> {
   const user = await requireUser();

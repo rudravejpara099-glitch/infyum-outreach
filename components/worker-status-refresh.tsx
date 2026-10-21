@@ -12,5 +12,5 @@ export function WorkerStatusRefresh() {
     document.addEventListener("visibilitychange", refresh);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
   }, [router]);
-  return <button type="button" className="btn" disabled={pending} onClick={() => start(() => router.refresh())}>{pending ? "Checking…" : "Check worker status"}</button>;
+  return <button type="button" className="btn" disabled={pending} onClick={() => start(() => router.refresh())}>{pending ? "Checking…" : "Check background status"}</button>;
 }

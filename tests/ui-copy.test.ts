@@ -29,9 +29,9 @@ describe("plain-language UI copy", () => {
     expect(actorLabel("rudra@example.test")).toBe("rudra@example.test");
   });
 
-  it("explains whether a login request is waiting for or being handled by the worker", () => {
-    expect(loginWindowHint(false)).toBe("Waiting for the worker to start.");
-    expect(loginWindowHint(true)).toBe("The worker is handling this request.");
+  it("explains whether an Instagram sign-in request is waiting for background work", () => {
+    expect(loginWindowHint(false)).toBe("It will open after Outreach’s background service starts on this computer.");
+    expect(loginWindowHint(true)).toBe("Outreach is opening the sign-in window.");
   });
 
   it("shows failed task names and known login errors in plain language", () => {

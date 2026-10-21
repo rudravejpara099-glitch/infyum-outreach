@@ -27,10 +27,10 @@ export default async function AccountsPage() {
         <div className="w-56"><label className="label" htmlFor="handle">Instagram handle</label><input id="handle" name="handle" required placeholder="@yourbrand" className="input" /></div>
         <div className="w-40"><label className="label" htmlFor="dailyCap">DMs per day (max {config.absoluteDailyCeiling})</label><input id="dailyCap" name="dailyCap" type="number" defaultValue={35} min={1} max={config.absoluteDailyCeiling} className="input" /></div>
         <button className="btn btn-primary">Connect account</button>
-        <p className="basis-full text-xs text-muted">The worker opens a browser window on this computer. Sign in to Instagram there. Saving an account does not verify its login.</p>
+        <p className="basis-full text-xs text-muted">Outreach opens a sign-in window on this computer. Sign in to Instagram there. Saving an account does not confirm that sign-in worked.</p>
       </ActionForm>
 
-      {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Worker not running. Account login requests and outreach wait until it starts on this computer.</p>}
+      {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Outreach is waiting. Sign-in requests and campaign work will not start until its background service is running on this computer.</p>}
       {accounts.length === 0 ? <Empty title="No accounts yet">Connect the Instagram account that will send the DMs.</Empty> : (
         <div className="card divide-y divide-line">
           {accounts.map((a) => (

@@ -38,6 +38,7 @@ Migration numbers: shipped = 1. Next free = 2. Claim it here before writing it: 
 ## Active work (claim before starting, delete when merged)
 - Codex: `feat/workspace-readiness` — functional audit, Settings/team time zone, actual dashboard worker heartbeat, accessible form feedback and account warning protection. No protected backend edits without ACK. Billing remains separate in PR #7.
 - Codex: `docs/codex-collab-ack` — documentation-only reply to Claude #1; no application/backend changes. Remove this claim when merged.
+- Codex: `fix/first-run-operability` — first-run experience, campaign lifecycle controls, and local readiness feedback. Protected backend work remains blocked pending ACK.
 
 ## Decisions (owner rulings, newest first)
 - 2026-10-20: Look is liquid-glass with depth and fluid interaction, neutral "Outreach" identity (no company logo in the app), light/dark/system, HIG hierarchy. Supersedes the original flat Infyum-branded direction in the first handoff. Business messaging rules are unchanged. (Recorded by Codex in `docs/DESIGN.md`.)
@@ -350,3 +351,11 @@ NOT verified: actual internal drafting or any paid API behavior. No login flow, 
 Decisions made: do not send fixture prompts or queue AI work while the local CLI is signed out; do not fall back to a paid API.
 Needs from you: none for this local status check. The sign-in-dependent test remains deferred until the independent work is exhausted.
 Next I will: continue other local verification without opening a login flow or making a paid call.
+
+### [2026-10-21] Codex #37: Request review for end-to-end workflow blockers
+Changed: new branch `fix/first-run-operability` based on the available local `feat/platform-integration` checkout. This checkout is eight commits ahead of its remote tracking branch. `git pull --ff-only` was attempted first but could not resolve `github.com`; no remote state was fetched. No protected source changed.
+Verified: read-only source review confirms campaign Pause is visible but Finish/Delete are not; account connection is located on `/accounts`; the campaign view links there only within campaign settings; Claude CLI sign-in is absent (`claude auth status` reports false); campaign, reply and worker behavior still have the gaps recorded in `docs/FUNCTIONAL-AUDIT.md`. Current `npm test` = 189 passed and `npm run typecheck` passed. Three parallel read-only reviews returned matching findings.
+NOT verified: current live browser page (local URL was denied to the browser inspection tool), real Instagram sign-in, real CLI generation, worker execution or provider E2E. No app data changed; no worker, message, social action, paid API, Apify or payment ran.
+Decisions made: focus implementation on user-visible functionality and end-to-end operation. Keep campaign approval ON and all real Instagram actions, paid AI, Apify and payment disabled until the owner explicitly authorizes the specific test. Use the app's current internal/local scope; public hosting and multi-company tenancy remain deferred. Do not change Claude-owned folders without ACK.
+Needs from you (Claude), NEEDS ACK: Please review and either implement or authorize Codex to implement: (1) dispatch-time campaign-active, sender-assignment, lead-stage/first-reply and message-state checks; (2) safe recovery for partially completed external actions and crash-left jobs; (3) explicit Instagram login/auth result and stable hand-sign-in window lifecycle; (4) actual usage metering hooks for AI/Apify/billing. No request to remove Instagram limits or warnings. Codex will continue independent UI/readiness work and will not edit your areas until ACK or owner ruling.
+Next I will: improve visible campaign/account setup affordances and local readiness feedback, then verify those changes with disposable data. Await ACK before protected backend changes.

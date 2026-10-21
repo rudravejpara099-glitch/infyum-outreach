@@ -163,6 +163,11 @@ try {
   await page.getByText("No skipped leads.", { exact: true }).waitFor();
   await page.goto(campaignUrl);
   await page.getByRole("heading", { name: "You’re all caught up" }).waitFor();
+  await page.getByRole("link", { name: "Connect Instagram", exact: true }).waitFor();
+  await page.getByRole("link", { name: "Connect Instagram", exact: true }).click();
+  await page.getByRole("heading", { name: "Instagram accounts", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Connect account", exact: true }).waitFor();
+  await page.goto(campaignUrl);
   await page.getByRole("button", { name: "Start campaign", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "Choose a sending account" }).waitFor();
   await page.screenshot({ path: path.join(screenshots, "campaign-empty.png"), fullPage: true, caret: "initial" });
@@ -386,13 +391,13 @@ try {
   await page.getByRole("heading", { name: "Get started" }).waitFor();
   await page.getByText("Add an account, then sign in by hand in the browser window.", { exact: true }).waitFor();
   await page.getByRole("link", { name: "Go to Campaigns", exact: true }).waitFor();
-  await page.getByText("Worker not running", { exact: true }).waitFor();
+  await page.getByText("Outreach is waiting", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
-  await page.getByRole("button", { name: "Check worker status" }).click();
-  await page.getByText("Worker running", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Check background status" }).click();
+  await page.getByText("Outreach is running", { exact: true }).waitFor();
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60000).toISOString());
-  await page.getByRole("button", { name: "Check worker status" }).click();
-  await page.getByText("Worker not running", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Check background status" }).click();
+  await page.getByText("Outreach is waiting", { exact: true }).waitFor();
 
   await page.goto(`${base}/settings`);
   await page.getByRole("listitem").filter({ hasText: "@another.campaign" }).getByRole("button", { name: "Remove", exact: true }).click();
@@ -511,19 +516,19 @@ try {
   await page.goto(`${base}/accounts`);
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
-  await page.getByRole("status").filter({ hasText: "worker is not running" }).waitFor();
+  await page.getByRole("status").filter({ hasText: "background service starts" }).waitFor();
   const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
   assert(account.profile_dir.startsWith(temp));
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "already saved" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 1);
   await page.getByRole("button", { name: "Open login window", exact: true }).click();
-  await page.getByRole("status").filter({ hasText: "worker is not running" }).last().waitFor();
+  await page.getByRole("status").filter({ hasText: "background service starts" }).last().waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login' AND account_id=?").get(account.id) as { n: number }).n, 1);
-  await page.getByText("Login window requested · Waiting for the worker to start.", { exact: true }).waitFor();
+  await page.getByText("Login window requested · It will open after Outreach’s background service starts on this computer.", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.reload();
-  await page.getByText("Login window requested · The worker is handling this request.", { exact: true }).waitFor();
+  await page.getByText("Login window requested · Outreach is opening the sign-in window.", { exact: true }).waitFor();
   for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
@@ -532,7 +537,7 @@ try {
   }
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60_000).toISOString());
   await page.goto(`${base}/accounts`);
-  await page.getByText("Login window requested · Waiting for the worker to start.", { exact: true }).waitFor();
+  await page.getByText("Login window requested · It will open after Outreach’s background service starts on this computer.", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.getByRole("button", { name: "Resume", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "paused");
