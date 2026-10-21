@@ -18,13 +18,16 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
       <div className="disclosure-content stage-grid">{STAGES.map(stage => <Link key={stage} href={`/pipeline?campaign=${campaign.id}#${stage}`}><span>{STAGE_LABEL[stage]}</span><strong>{counts[stage] ?? 0}</strong></Link>)}</div>
     </details>
     <details className="disclosure" id="add-leads">
-      <summary><Icon name="plus" /><span>Add leads<small>Paste handles or search for this audience</small></span><Icon name="chevron" /></summary>
-      <div className="disclosure-content add-leads-grid">
+      <summary><Icon name="plus" /><span>Add leads<small>Paste handles, import a spreadsheet or search</small></span><Icon name="chevron" /></summary>
+      <div className="disclosure-content add-leads-grid items-start">
         <ActionForm action={addLeads}>
           <input type="hidden" name="id" value={campaign.id} />
           <label className="label" htmlFor="handles">Instagram handles</label>
-          <textarea name="handles" id="handles" required rows={4} placeholder={"@handle1\n@handle2"} className="input" />
+          <textarea name="handles" id="handles" rows={4} placeholder={"@handle1\n@handle2"} className="input" />
           <p className="help-text">One per line. Existing leads and do-not-contact handles are skipped.</p>
+          <label className="label" htmlFor="lead-csv">Or choose a CSV file</label>
+          <input type="file" name="csv" id="lead-csv" accept=".csv,text/csv" className="input" aria-describedby="csv-help" />
+          <p id="csv-help" className="help-text">Up to 500 KB. Use a username, handle or Instagram URL column, or one handle per row. The file is read once and isn’t saved.</p>
           <button className="btn">Add to campaign</button>
         </ActionForm>
         <ActionForm action={findLeads}>

@@ -10,6 +10,7 @@ import { openDb } from "@/lib/db/core";
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { createOutgoing } from "@/lib/db/repos/messages";
 import { addLead, listLeads } from "@/lib/db/repos/leads";
+import { addDnc, removeDnc } from "@/lib/db/repos/dnc";
 
 async function main() {
 const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-ui-"));
@@ -91,6 +92,36 @@ try {
   const db = openDb(dbPath);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+  await page.goto(`${base}/campaigns/${other.id}#add-leads`);
+  await page.locator('#add-leads').evaluate((element: HTMLDetailsElement) => { element.open = true; });
+  const upload = page.getByLabel("Or choose a CSV file", { exact: true });
+  const uploadCsv = async (text: string, name = "leads.csv") => {
+    await upload.setInputFiles({ name, mimeType: "text/csv", buffer: Buffer.from(text) });
+    await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
+  };
+  await uploadCsv('name,email\nSomeone,someone@example.test');
+  await page.getByRole("alert").filter({ hasText: "Include one column" }).waitFor();
+  await uploadCsv('username,name\nwould.import,One\n"unfinished');
+  await page.getByRole("alert").filter({ hasText: "unfinished quoted" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM leads WHERE campaign_id=?").get(other.id) as { n: number }).n, 0, "Malformed CSV must not partially import");
+  await uploadCsv("username\n");
+  await page.getByRole("alert").filter({ hasText: "containing leads" }).waitFor();
+  await uploadCsv("x".repeat(500_001));
+  await page.getByRole("alert").filter({ hasText: "500 KB" }).waitFor();
+  addDnc(db, "csv.blocked", "ui-fixture");
+  await uploadCsv('Name,Instagram URL\r\n"Person, one",https://instagram.com/csv.person/\r\nAgain,@CSV.PERSON\r\nBlocked,csv.blocked\r\nExisting,maya.coaches\r\nInvalid,bad handle');
+  await page.getByRole("status").filter({ hasText: "1 lead added. 2 duplicate, 1 do-not-contact and 1 invalid handle skipped." }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM leads WHERE campaign_id=?").get(other.id) as { n: number }).n, 1);
+  await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "0 leads added. 3 duplicate" }).waitFor();
+  for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "CSV input must fit on screen");
+    await page.screenshot({ path: path.join(screenshots, `csv-import-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+  }
+  removeDnc(db, "csv.blocked");
+  await page.goto(campaignUrl);
   for (const lead of listLeads(db, { campaignId: id })) {
     createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"], campaign: { approvalRequired: true } }, "ui-fixture");
   }

@@ -12,6 +12,7 @@ import { queueLeadSearch } from "./queue-search";
 import { getSetting } from "@/lib/db/repos/settings";
 import { workerStatus } from "@/lib/queries/worker-status";
 import type { ActionResult } from "@/lib/ui/action-result";
+import { MAX_LEAD_FILE_BYTES, normalizeHandle, parseLeadCsv, parsePastedHandles } from "@/lib/ui/lead-input";
 const validId = (id: number) => Number.isSafeInteger(id) && id > 0;
 
 export async function saveCampaign(form: FormData): Promise<ActionResult> {
@@ -47,14 +48,24 @@ export async function addLeads(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const campaignId = Number(form.get("id")), db = getDb();
   if (!validId(campaignId) || !getCampaign(db, campaignId)) return { error: "Campaign not found. Refresh the page." };
-  const handles = String(form.get("handles") ?? "").split(/[\s,]+/).map(handle => handle.trim().replace(/^@/, "").toLowerCase()).filter(Boolean);
-  if (!handles.length) return { error: "Paste at least one Instagram handle.", field: "handles" };
-  let added = 0, duplicates = handles.length - new Set(handles).size, blocked = 0, invalid = 0;
+  const handles = parsePastedHandles(String(form.get("handles") ?? ""));
+  const file = form.get("csv");
+  if (file instanceof File && file.size > 0) {
+    if (file.size > MAX_LEAD_FILE_BYTES) return { error: "Choose a CSV smaller than 500 KB.", field: "csv" };
+    if (!file.name.toLowerCase().endsWith(".csv")) return { error: "Choose a .csv file exported from your spreadsheet.", field: "csv" };
+    try { handles.push(...parseLeadCsv(await file.text())); }
+    catch (error) { return { error: error instanceof Error ? error.message : "This CSV could not be read.", field: "csv" }; }
+  }
+  if (!handles.length) return { error: "Paste an Instagram handle or choose a CSV containing leads.", field: "handles" };
+  const normalized = handles.map(normalizeHandle);
+  const unique = new Set(normalized.filter((handle): handle is string => handle !== null));
+  const invalid = normalized.filter(handle => handle === null).length;
+  let added = 0;
+  let duplicates = normalized.length - invalid - unique.size, blocked = 0;
   db.transaction(() => {
-    for (const handle of new Set(handles)) {
-      if (!/^[a-zA-Z0-9._]{1,30}$/.test(handle) || [".", ".."].includes(handle)) { invalid++; continue; }
+    for (const handle of unique) {
       if (isDnc(db, handle)) { blocked++; continue; }
-      if (addLead(db, { handle, campaignId, source: "pasted" }, user.email).created) added++; else duplicates++;
+      if (addLead(db, { handle, campaignId, source: file instanceof File && file.size ? "csv" : "pasted" }, user.email).created) added++; else duplicates++;
     }
   }).immediate();
   revalidatePath(`/campaigns/${campaignId}`); revalidatePath("/pipeline");
