@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["500", "600", "700"] });
+const inter = localFont({ src: "./fonts/inter-latin.woff2", variable: "--font-inter", weight: "100 900", display: "swap" });
+const jakarta = localFont({ src: "./fonts/plus-jakarta-sans-latin.woff2", variable: "--font-jakarta", weight: "500 700", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Outreach", template: "%s · Outreach" },
