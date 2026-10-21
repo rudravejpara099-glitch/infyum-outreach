@@ -228,7 +228,7 @@ Expanded `scripts/security-smoke.ts` to verify first-user setup, all primary pro
 
 ### Isolated smoke build outputs (Codex, 2026-10-21)
 
-Dev smoke servers now get validated per-run build directories and throwaway TypeScript configs, so UI and billing browser suites can run while the local app server stays open and cannot edit the project's `tsconfig.json`. The UI smoke ignores only the known localhost resource/RSC fallback errors during its intentional Next dev-server restart. Path rules are unit-tested. UI smoke and billing simulator both pass with this isolation, and a Webpack production build passed in a disposable build directory. No data, profile, paid provider or Instagram action was used. Normal app runs still use `.next` and `tsconfig.json`.
+Dev smoke servers now get validated per-run build directories and throwaway TypeScript configs, so UI and billing browser suites can run while the local app server stays open and cannot edit the project's `tsconfig.json`. Smoke cleanup waits for each server to exit before deleting its temporary build and config. The UI smoke ignores only the known localhost resource/RSC fallback errors during its intentional Next dev-server restart. Path rules are unit-tested. UI smoke and billing simulator both pass with this isolation, and a Webpack production build passed in a disposable build directory. No data, profile, paid provider or Instagram action was used. Normal app runs still use `.next` and `tsconfig.json`.
 
 ### Accounts login-request feedback (Codex, 2026-10-21)
 

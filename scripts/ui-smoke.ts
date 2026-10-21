@@ -1,7 +1,7 @@
 /** Local-only UI smoke test. Own database, no worker, no Instagram or Apify calls. */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -11,6 +11,15 @@ import { createCampaign } from "@/lib/db/repos/campaigns";
 import { createOutgoing } from "@/lib/db/repos/messages";
 import { addLead, listLeads } from "@/lib/db/repos/leads";
 import { addDnc, removeDnc } from "@/lib/db/repos/dnc";
+
+async function stopServer(child: ChildProcess) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = new Promise<void>(resolve => child.once("exit", () => resolve()));
+  child.kill("SIGTERM");
+  const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
+  await exited;
+  clearTimeout(timer);
+}
 
 async function main() {
 const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-ui-"));
@@ -566,8 +575,7 @@ try {
   // A second local-only phase uses a fake configured key to test queueing. No worker exists.
   if (server.exitCode === null) {
     expectedServerRestart = true;
-    const stopped = new Promise<void>(resolve => server.once("exit", () => resolve()));
-    server.kill("SIGTERM"); await stopped;
+    await stopServer(server);
   }
   server = startServer("fixture-apify-token-never-used");
   let restarted = false;
@@ -615,7 +623,7 @@ try {
   console.log(`Screenshots: ${screenshots}`);
 } finally {
   await browser?.close();
-  server.kill("SIGTERM");
+  await stopServer(server);
   rmSync(path.resolve(distDir), { recursive: true, force: true });
   rmSync(path.resolve(tsconfigPath), { force: true });
   rmSync(temp, { recursive: true, force: true });

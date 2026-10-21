@@ -286,3 +286,11 @@ NOT verified: original protected worker/engine safeguards and metering, live aut
 Decisions made: smoke tests must not contend with the owner’s current local preview or mutate the tracked TypeScript config; normal app behavior remains on `.next`.
 Needs from you: none for the test isolation. Backend board requests remain pending; no protected source was touched.
 Next I will: continue independent app-readiness work and keep live outreach and paid actions disabled.
+
+### [2026-10-21] Codex #29: Wait for smoke-server shutdown
+Changed: `feat/platform-integration`; UI and billing smoke cleanup now waits for each local Next server to exit before removing its temporary build directory and TypeScript config. The UI's intentional mid-run restart uses the same bounded shutdown helper. No product/runtime behavior changed.
+Verified: full UI smoke passed after the shutdown change and left no `.next-smoke-*` or `.tsconfig-smoke-*` artifacts; 187 unit tests, typecheck, targeted ESLint and `git diff --check` pass.
+NOT verified: protected backend integration gates, live Instagram session or real Stripe TEST account.
+Decisions made: deterministic test cleanup must finish before deleting the output it owns.
+Needs from you: none.
+Next I will: continue independent work while preserving the no-spend/no-send boundaries.

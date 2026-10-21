@@ -1,7 +1,7 @@
 /** Disposable full-stack simulator checks. No real Stripe, AI, Apify or worker. */
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -19,6 +19,14 @@ import { addResourceCost } from "@/lib/billing/resources";
 import { syncBilling } from "@/lib/billing/sync";
 import { setSetting } from "@/lib/db/repos/settings";
 import { billingTestProvider } from "./billing-test-provider";
+async function stopServer(child: ChildProcess) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = new Promise<void>(resolve => child.once("exit", () => resolve()));
+  child.kill("SIGTERM");
+  const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
+  await exited;
+  clearTimeout(timer);
+}
 async function main() {
   const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-billing-")), dbPath = path.join(temp, "billing.db");
   const screenshots = path.resolve("data/billing-smoke"); mkdirSync(screenshots, { recursive: true });
@@ -128,7 +136,7 @@ async function main() {
     assert.deepEqual(errors, []);
     console.log("Billing simulator smoke passed: isolated data, six responsive/theme sizes, owner UI, consent/limit save, hosted redirect, declined and paid sessions, signed duplicate webhooks, exact payment and fee reconciliation, CSV, other-user admin/statement/export rejection, and signed-out protection. LOCAL SIMULATOR ONLY; actual Stripe TEST account not verified.");
   } finally {
-    db?.close(); await browser?.close(); server.kill("SIGTERM"); await provider.close(); rmSync(path.resolve(distDir), { recursive: true, force: true }); rmSync(path.resolve(tsconfigPath), { force: true }); rmSync(temp, { recursive: true, force: true }); delete process.env.BILLING_OWNER_USER_ID;
+    db?.close(); await browser?.close(); await stopServer(server); await provider.close(); rmSync(path.resolve(distDir), { recursive: true, force: true }); rmSync(path.resolve(tsconfigPath), { force: true }); rmSync(temp, { recursive: true, force: true }); delete process.env.BILLING_OWNER_USER_ID;
   }
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });
