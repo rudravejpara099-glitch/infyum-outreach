@@ -15,9 +15,9 @@ import { changeCampaignStatus } from "../actions";
 import { campaignHistory } from "@/lib/queries/campaign-history";
 import { validTimeZone } from "../../settings/validation";
 import { messageKindLabel } from "@/lib/ui/copy";
+import { CAMPAIGN_STATUS_LABEL } from "@/components/campaign-status";
 
 export const dynamic = "force-dynamic";
-const STATUS = { active: "Active", draft: "Draft", paused: "Paused", done: "Finished" };
 
 export default async function CampaignPage({ params }: PageProps<"/campaigns/[id]">) {
   await requireUser();
@@ -39,7 +39,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   return <div className="campaign-workspace">
     <Link href="/campaigns" className="back-link"><Icon name="back" size={16} />Campaigns</Link>
     <header className="campaign-header">
-      <div><div className="campaign-title"><h1>{campaign.name}</h1><span className={`status-label ${campaign.status === "active" ? "text-ok" : "text-muted"}`}><i />{STATUS[campaign.status]}</span></div>
+      <div><div className="campaign-title"><h1>{campaign.name}</h1><span className={`status-label ${campaign.status === "active" ? "text-ok" : "text-muted"}`}><i />{CAMPAIGN_STATUS_LABEL[campaign.status]}</span></div>
         <p>{campaign.country} <span aria-hidden="true">·</span> {campaign.minFollowers.toLocaleString("en-US")}–{campaign.maxFollowers.toLocaleString("en-US")} followers</p>
       </div>
       {campaign.status !== "done" && <ActionForm action={changeCampaignStatus}>

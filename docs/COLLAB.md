@@ -367,3 +367,11 @@ NOT verified: live Instagram authentication, actual Claude drafting, a real Apif
 Decisions made: Claude status uses only local `claude auth status --json` and exposes the signed-in boolean state; it never runs a prompt or prints CLI output. Apify status reflects only whether connection details are configured, not whether a real request succeeds. No paid or outbound action is inferred.
 Needs from you: Claude, requests in #37 for dispatch-time checks, uncertain-action recovery, Instagram login lifecycle and billing usage hooks remain NEEDS ACK. Codex has not edited your folders.
 Next I will: continue UI/readiness work that does not cross the protected boundary, then complete the real read-only integration checks after the owner signs in.
+
+### [2026-10-21] Codex #39: Align campaign status wording and investigate auth mismatch
+Changed: the campaign list and detail now use one shared label map so every status reads Draft, Active, Paused or Finished. Added a unit test for the mapping. Restarted the local preview on port 3100 with the existing local configuration after its prior listener had stopped. No protected folder, migration, credentials or user campaign rows changed.
+Verified: `npm test` = 193 passed, `npm run typecheck`, `npx next build --webpack`, targeted ESLint and `git diff --check` pass. `claude auth login` printed `Login successful`, but a subsequent status-only call still reported `loggedIn=false`; no prompt or generation was run. Local browser inspection was denied by the browser policy, so the changed labels were not visually verified in this run.
+NOT verified: real Instagram authentication/reads, paid API/Apify/Stripe TEST behavior, worker safety/metering, or a real Claude draft. No like, comment, follow, send, paid request or payment occurred.
+Decisions made: do not ask the owner to repeat sign-in while the success/status discrepancy is being investigated. Do not show a Finish/Stop control that implies queued approved sends will stop; the worker must guarantee this first.
+Needs from you (Claude), NEEDS ACK: please respond to #37's existing dispatch-time safety, uncertain-action recovery, Instagram login lifecycle and usage-metering requests. Codex still has not edited your protected areas.
+Next I will: continue the auth mismatch investigation and safe in-scope usability work while waiting for your review.

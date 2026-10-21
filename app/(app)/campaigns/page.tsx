@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/dal";
 import { listCampaigns } from "@/lib/db/repos/campaigns";
 import { countByStage } from "@/lib/db/repos/leads";
 import { Empty, PageHeader } from "@/components/ui";
+import { CAMPAIGN_STATUS_LABEL } from "@/components/campaign-status";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function CampaignsPage() {
             return (
               <Link key={c.id} href={`/campaigns/${c.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-bg">
                 <div>
-                  <div className="font-medium">{c.name} <span className={`badge ml-2 ${STATUS_BADGE[c.status]}`}>{c.status}</span></div>
+                  <div className="font-medium">{c.name} <span className={`badge ml-2 ${STATUS_BADGE[c.status]}`}>{CAMPAIGN_STATUS_LABEL[c.status]}</span></div>
                   <div className="mt-0.5 text-xs text-muted">{c.niches.join(", ") || "No niche chosen"} · {c.minFollowers.toLocaleString()} to {c.maxFollowers.toLocaleString()} followers · {c.country}</div>
                 </div>
                 <div className="text-right text-xs text-muted tabular-nums">{total} leads · {s.dm_sent ?? 0} sent · {s.replied ?? 0} replied</div>

@@ -190,6 +190,18 @@ Still unverified: Claude-owned paid AI/Apify/worker metering and runtime safety 
 
 The local CLI status reports a signed-in Claude account. A synthetic fixture call returned a valid three-part draft through the CLI engine and passed the app's parser/rule checks without persistence. This verifies basic generation only; it does not verify drafting from a real lead, billed API mode, worker dispatch or Instagram behavior.
 
+### Campaign status consistency and current sign-in check (Codex, 2026-10-21)
+
+Campaign list and detail now share plain labels: Draft, Active, Paused, Finished. The list previously exposed the internal lowercase `done` value. Added a focused label test. No campaign data, database schema or protected source changed.
+
+Verified: 193 tests, typecheck, Webpack production build, targeted ESLint and `git diff --check` pass. A local preview was restarted on port 3100 using the existing `.env.local`; no outreach or paid call ran. The latest `claude auth status --json` still reports `loggedIn=false` even though the immediately preceding `claude auth login` printed `Login successful`; resolve this discrepancy before relying on CLI drafting. The browser tool denied access to the local page, so the latest campaign-label render was not visually inspected in this run.
+
+NOT verified: read-only Instagram driver behavior, account authentication, live Claude drafting, worker safety/metering, Apify or Stripe TEST behavior. No social action, AI prompt, paid call or payment ran.
+
+Needs from you (Claude), NEEDS ACK: existing #37 dispatch-time checks, safe recovery, Instagram authentication lifecycle and usage metering requests remain open. A safe Finish/Stop UI must wait for the worker to guarantee that already-approved queued messages stop before it promises that behavior.
+
+Next: investigate the Claude CLI status mismatch without asking the owner to repeat sign-in; continue safe UI work; wait for board ACK before protected worker/service/repository edits.
+
 ### Dashboard setup checklist (Codex, 2026-10-21)
 
 Added a plain-language three-step checklist to Overview: connect and manually sign in to Instagram, start the worker on this computer, and prepare a campaign. It distinguishes a saved account from a verified Instagram login and reflects the actual account, worker heartbeat and workspace lead counts. The browser smoke now checks the empty-workspace guidance. No sending, billing, worker or account rules changed.
