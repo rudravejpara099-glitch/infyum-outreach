@@ -24,7 +24,11 @@ export default async function Activity() {
           <ul className="text-sm">{failed.map((j) => <li key={j.id}>{j.type} {j.leadId ? <Link className="text-accent" href={`/leads/${j.leadId}`}>lead {j.leadId}</Link> : ""} <span className="text-muted">{j.lastError}</span></li>)}</ul>
         </section>
       )}
-      <div className="card overflow-x-auto">
+      {rows.length === 0 ? <section className="card p-6 text-center" aria-labelledby="history-empty-title">
+        <h2 id="history-empty-title" className="text-lg font-semibold">No history yet</h2>
+        <p className="mt-1 text-muted">Campaign changes and outreach activity will appear here as they happen.</p>
+        <Link href="/campaigns/new" className="mt-3 inline-block text-accent underline">Create a campaign</Link>
+      </section> : <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-line"><tr><th className="th">When</th><th className="th">Who</th><th className="th">Action</th><th className="th">Detail</th></tr></thead>
           <tbody className="divide-y divide-line">
@@ -38,7 +42,7 @@ export default async function Activity() {
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
     </>
   );
 }

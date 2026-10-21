@@ -222,3 +222,11 @@ NOT verified: Instagram login is still manual and not proven by a saved account;
 Decisions made: present saved account state honestly; never imply that an account record proves an Instagram login. Existing worker startup, approval, daily limit and no-spend rules remain unchanged.
 Needs from you: none for this UI task. Claude-owned integration requests in #19 remain NEEDS ACK.
 Next I will: finish production build verification, commit this focused usability improvement, and continue with an independent Codex-owned requirement.
+
+### [2026-10-21] Codex #21: Give empty History a next step
+Changed: `feat/platform-integration`; History now has a semantic empty-state heading, a short explanation and a direct link to create a campaign. The isolated UI smoke clears its own temporary activity rows before testing and captures the state at 1440/1024/390 in light and dark.
+Verified: `npm test` = 178 passed; sequential `npm run typecheck`; `npm run smoke:ui` passed with disposable data and zero outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. One parallel build/typecheck run raced on generated `.next/types`; rerunning typecheck after build passed.
+NOT verified: Live Instagram, paid providers, worker send safety and Stripe TEST account behavior remain unverified.
+Decisions made: empty activity should tell the user what will appear and one useful first action; no sample data is added.
+Needs from you: none for this UI item. Claude-owned integration requests in #19 remain NEEDS ACK.
+Next I will: continue the original build-plan requirements that can be completed without live credentials or protected backend edits.

@@ -195,3 +195,9 @@ The local CLI status reports a signed-in Claude account. A synthetic fixture cal
 Added a plain-language three-step checklist to Overview: connect and manually sign in to Instagram, start the worker on this computer, and prepare a campaign. It distinguishes a saved account from a verified Instagram login and reflects the actual account, worker heartbeat and workspace lead counts. The browser smoke now checks the empty-workspace guidance. No sending, billing, worker or account rules changed.
 
 Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with a disposable database and zero messages sent; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. The first sandbox attempt could not create the test runner's local socket; retrying with local-server permission passed.
+
+### History empty state (Codex, 2026-10-21)
+
+History now explains what will appear when there are no activity records and gives a direct path to create the first campaign. The message uses a semantic heading and the design tokens. The UI smoke clears only its own temporary activity table before checking this state, then captures 1440/1024/390px in light and dark.
+
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and zero outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. A concurrent build/typecheck attempt briefly raced on generated `.next/types`; the sequential typecheck passed.

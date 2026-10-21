@@ -64,11 +64,24 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL(`${base}/`);
+  const db = openDb(dbPath);
+  db.prepare("DELETE FROM activity").run(); // Keep the disposable fixture genuinely empty for the history state check.
   await page.goto(`${base}/`);
   await page.getByRole("link", { name: "Overview", exact: true }).waitFor();
   await page.getByRole("link", { name: "Lead progress", exact: true }).waitFor();
   await page.getByRole("link", { name: "Review messages", exact: true }).waitFor();
   await page.getByRole("link", { name: "History", exact: true }).waitFor();
+  await page.goto(`${base}/activity`);
+  await page.getByRole("heading", { name: "No history yet" }).waitFor();
+  await page.getByText("Campaign changes and outreach activity will appear here as they happen.", { exact: true }).waitFor();
+  await page.getByRole("link", { name: "Create a campaign", exact: true }).waitFor();
+  for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "History empty state must fit on screen");
+    await page.screenshot({ path: path.join(screenshots, `history-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+  }
+  await page.goto(`${base}/`);
   await page.goto(`${base}/campaigns/new`);
   await page.getByLabel("Campaign name", { exact: true }).fill("US business coaches");
   await page.getByLabel("Business coach", { exact: true }).check();
@@ -94,7 +107,6 @@ try {
   await page.getByLabel("Instagram handles").fill("MAYA.COACHES, growthwithalex, studio.sarah, https://invalid.example.test");
   await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "3 duplicate" }).waitFor();
-  const db = openDb(dbPath);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
   await page.goto(`${base}/campaigns/${other.id}#add-leads`);
