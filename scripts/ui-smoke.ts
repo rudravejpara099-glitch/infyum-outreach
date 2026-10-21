@@ -84,7 +84,11 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByLabel("Your name").fill("   ");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
-  await page.getByRole("alert").filter({ hasText: "Enter your name" }).waitFor();
+  await page.getByRole("alert").filter({ hasText: "Enter your name" }).waitFor().catch(async error => {
+    const nameState = await page.getByLabel("Your name").evaluate((element: HTMLInputElement) => ({ length: element.value.length, valid: element.validity.valid, valueMissing: element.validity.valueMissing, validationMessage: element.validationMessage }));
+    console.log(JSON.stringify({ setupValidation: { url: page.url(), nameState, emailRetained: Boolean(await page.getByLabel("Email", { exact: true }).inputValue()), alerts: await page.getByRole("alert").allTextContents() } }));
+    throw error;
+  });
   assert.equal(await page.getByLabel("Email", { exact: true }).inputValue(), "review@example.test");
   await page.getByLabel("Your name").fill("UI Review");
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -400,6 +404,11 @@ try {
   await page.getByText("Outreach is waiting", { exact: true }).waitFor();
 
   await page.goto(`${base}/settings`);
+  await page.getByRole("heading", { name: "Message writing", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Check Claude connection", exact: true }).click();
+  await page.locator('[role="status"], [role="alert"]').filter({ hasText: /Claude is signed in|Claude is signed out|cannot find Claude Code|could not confirm Claude/ }).waitFor();
+  await page.getByText("Outreach uses Claude signed in on this computer.", { exact: false }).waitFor();
+  await page.getByText("Connection details: not set up on this computer. Checking this does not run a search.", { exact: true }).waitFor();
   await page.getByRole("listitem").filter({ hasText: "@another.campaign" }).getByRole("button", { name: "Remove", exact: true }).click();
   await page.getByText("Nobody blocked.", { exact: true }).waitFor();
   assert(["closed", "skipped"].includes((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage));

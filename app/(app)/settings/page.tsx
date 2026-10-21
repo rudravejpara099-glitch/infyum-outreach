@@ -5,7 +5,7 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
-import { addTeammate, blockHandle, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
+import { addTeammate, blockHandle, checkClaudeConnection, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
 import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
@@ -24,12 +24,20 @@ export default async function Settings() {
       <PageHeader title="Settings" />
       <div className="grid max-w-3xl gap-6">
         <section className="card p-5">
+          <h2 className="text-base font-semibold">Message writing</h2>
+          <p className="mb-3 mt-1 text-muted">Outreach uses Claude signed in on this computer. Check the connection here; sign-in happens in Claude Code and your password stays with you.</p>
+          <ActionForm action={checkClaudeConnection}>
+            <button className="btn w-fit">Check Claude connection</button>
+          </ActionForm>
+        </section>
+        <section className="card p-5">
           <h2 className="text-base font-semibold">Link in first messages</h2>
           <p className="mb-3 mt-1 text-muted">The app includes this link in the second part of every first-contact message. This setting is managed for the whole team.</p>
           <a className="text-link break-all" href={portfolioLink} target="_blank" rel="noreferrer">{portfolioLink}</a>
         </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Lead search (Apify)</h2>
+          <p className="mb-2 mt-1 text-sm text-muted">Connection details: {process.env.APIFY_TOKEN ? "set up on this computer" : "not set up on this computer"}. Checking this does not run a search.</p>
           <p className="mb-3 mt-1 text-muted">{cap ? `Monthly limit: $${cap}. The app stops searching before it goes over.` : "Switched off. Set a monthly limit in dollars to turn it on. Leave the limit empty or use 0 to keep searches off."}</p>
           <ActionForm action={saveApifyCap} className="flex flex-wrap items-end gap-2">
             <div className="w-40"><label className="label" htmlFor="cap">Monthly limit (USD)</label><input id="cap" name="cap" type="number" min={0} step="0.000001" defaultValue={cap ?? ""} className="input" /></div>
