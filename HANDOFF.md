@@ -277,3 +277,7 @@ Activity now displays everyday labels for known background tasks instead of inte
 ### Current CLI sign-in status (Codex, 2026-10-21)
 
 A fresh local `claude auth status --json` check reports `loggedIn=false`. This supersedes the older signed-in status in the historical combined-verification entry; the previous synthetic draft result does not prove current CLI access. No prompt, generation, login window or app data change was attempted. Do not queue AI writing until Claude CLI is signed in and the output is verified.
+
+### Accounts sign-in outcome visibility (Codex, 2026-10-22)
+
+The Accounts page now shows the latest sign-in-window request per account as waiting, opening, opened, or failed, with the existing error translated into plain language. An opened window is explicitly not described as proof of an authenticated Instagram session. Added pure-copy tests; no protected backend files, account data, worker, provider, or Instagram actions were changed. Verified: 194 tests, typecheck, and `git diff --check` pass. Live Instagram sign-in remains unverified; the browser smoke was not run in this turn.

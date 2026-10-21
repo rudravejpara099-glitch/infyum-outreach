@@ -2,13 +2,13 @@ import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { ActionForm } from "@/components/action-form";
 import { workerStatus } from "@/lib/queries/worker-status";
-import { activeJobExists } from "@/lib/db/repos/jobs";
 import { config } from "@/lib/config";
 import { listAccounts } from "@/lib/db/repos/accounts";
 import { sentTodayForAccount } from "@/lib/db/repos/messages";
 import { dailyAllowance } from "@/lib/domain/limits";
 import { todayIso } from "@/lib/format";
-import { loginWindowHint } from "@/lib/ui/copy";
+import { loginJobSummary } from "@/lib/ui/copy";
+import type { Job } from "@/lib/db/types";
 import { Empty, PageHeader } from "@/components/ui";
 import { changeCap, changeStatus, connectAccount, reopenLogin } from "./actions";
 
@@ -20,6 +20,8 @@ export default async function AccountsPage() {
   const today = todayIso();
   const accounts = listAccounts(db);
   const worker = workerStatus(db, new Date());
+  const loginJobs = db.prepare("SELECT account_id,status,last_error FROM jobs j WHERE type='open_login' AND account_id IS NOT NULL AND id=(SELECT MAX(j2.id) FROM jobs j2 WHERE j2.type='open_login' AND j2.account_id=j.account_id)").all() as { account_id: number; status: Job["status"]; last_error: string }[];
+  const loginJobByAccount = new Map(loginJobs.map((job) => [job.account_id, { status: job.status, lastError: job.last_error }]));
   return (
     <>
       <PageHeader title="Instagram accounts" sub="Each account runs in its own browser window. You log in once; the app never sees the password." />
@@ -33,14 +35,19 @@ export default async function AccountsPage() {
       {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Outreach is waiting. Sign-in requests and campaign work will not start until its background service is running on this computer.</p>}
       {accounts.length === 0 ? <Empty title="No accounts yet">Connect the Instagram account that will send the DMs.</Empty> : (
         <div className="card divide-y divide-line">
-          {accounts.map((a) => (
-            <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
+          {accounts.map((a) => {
+            const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running);
+            const signInTone = signIn.tone === "error" ? "border-bad bg-bad/5 text-bad" : signIn.tone === "attention" ? "border-warn bg-warn/5 text-warn" : "border-line bg-panel text-muted";
+            return <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div className="min-w-0">
+                <div className={`mb-3 max-w-2xl rounded-xl border p-3 ${signInTone}`} role={signIn.tone === "error" ? "alert" : "status"}>
+                  <p className="text-sm font-medium">{signIn.title}</p>
+                  <p className="mt-1 text-xs">{signIn.detail}</p>
+                </div>
                 <div className="font-medium break-words">@{a.handle} <span className={`badge ml-2 ${a.status === "active" ? "badge-ok" : a.status === "paused" ? "badge-warn" : "badge-bad"}`}>{a.status}</span></div>
                 <div className="mt-0.5 text-xs text-muted">
                   Today (UTC) {sentTodayForAccount(db, a.id, today)} of {dailyAllowance(a, today)} allowed{a.statusNote ? ` · ${a.statusNote}` : ""}
                 </div>
-                {activeJobExists(db, "open_login", null, a.id) && <p className="mt-2 text-sm text-muted">Login window requested · {loginWindowHint(worker.running)}</p>}
                 {a.status === "blocked" && <p className="mt-2 max-w-lg text-sm text-bad">Instagram showed a warning. Outreach stays stopped. Opening the login window does not clear this warning.</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -56,8 +63,8 @@ export default async function AccountsPage() {
                   <button className="btn" disabled={a.status === "blocked"}>{a.status === "blocked" ? "Stopped by Instagram" : a.status === "active" ? "Pause" : "Resume"}</button>
                 </ActionForm>
               </div>
-            </div>
-          ))}
+            </div>;
+          })}
         </div>
       )}
     </>

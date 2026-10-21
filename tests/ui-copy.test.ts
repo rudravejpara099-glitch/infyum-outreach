@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STAGES } from "@/lib/domain/stages";
-import { activityLabel, actorLabel, jobErrorLabel, jobTypeLabel, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
+import { activityLabel, actorLabel, jobErrorLabel, jobTypeLabel, loginJobSummary, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
 
 describe("plain-language UI copy", () => {
   it("covers only the current first-reply pipeline stages", () => {
@@ -32,6 +32,16 @@ describe("plain-language UI copy", () => {
   it("explains whether an Instagram sign-in request is waiting for background work", () => {
     expect(loginWindowHint(false)).toBe("It will open after Outreach’s background service starts on this computer.");
     expect(loginWindowHint(true)).toBe("Outreach is opening the sign-in window.");
+  });
+
+  it("shows the real sign-in window outcome without claiming the account is authenticated", () => {
+    expect(loginJobSummary(null, true)).toMatchObject({ title: "Sign-in status not checked", tone: "neutral" });
+    expect(loginJobSummary({ status: "queued", lastError: "" }, false)).toMatchObject({ title: "Sign-in window is waiting", tone: "waiting" });
+    expect(loginJobSummary({ status: "running", lastError: "" }, true)).toMatchObject({ title: "Opening sign-in window", tone: "waiting" });
+    const opened = loginJobSummary({ status: "done", lastError: "" }, true);
+    expect(opened.title).toBe("Sign-in window opened");
+    expect(opened.detail).toContain("does not confirm the account is signed in");
+    expect(loginJobSummary({ status: "failed", lastError: "" }, true)).toMatchObject({ title: "Could not open the sign-in window", tone: "error" });
   });
 
   it("shows failed task names and known login errors in plain language", () => {

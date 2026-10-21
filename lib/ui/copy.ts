@@ -91,6 +91,45 @@ export function loginWindowHint(workerRunning: boolean): string {
   return workerRunning ? "Outreach is opening the sign-in window." : "It will open after Outreach’s background service starts on this computer.";
 }
 
+export type LoginJobSummary = {
+  title: string;
+  detail: string;
+  tone: "neutral" | "waiting" | "attention" | "error";
+};
+
+/** Describes the sign-in window job only; it never treats a saved account as authenticated. */
+export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string } | null, workerRunning: boolean): LoginJobSummary {
+  if (!job) return {
+    title: "Sign-in status not checked",
+    detail: "Open the sign-in window if this account still needs Instagram access. Saving the account alone does not confirm sign-in.",
+    tone: "neutral",
+  };
+  if (job.status === "queued") return workerRunning ? {
+    title: "Sign-in window is waiting to open",
+    detail: "Outreach will open it shortly. Sign in to Instagram by hand when it appears.",
+    tone: "waiting",
+  } : {
+    title: "Sign-in window is waiting",
+    detail: loginWindowHint(false),
+    tone: "waiting",
+  };
+  if (job.status === "running") return {
+    title: "Opening sign-in window",
+    detail: "Sign in to Instagram by hand when the window appears. This step does not confirm sign-in.",
+    tone: "waiting",
+  };
+  if (job.status === "done") return {
+    title: "Sign-in window opened",
+    detail: "Complete sign-in in the Instagram window. Opening the window does not confirm the account is signed in.",
+    tone: "attention",
+  };
+  return {
+    title: "Could not open the sign-in window",
+    detail: jobErrorLabel("open_login", job.lastError) || "Try opening the sign-in window again.",
+    tone: "error",
+  };
+}
+
 const jobCopy: Record<string, string> = {
   find_leads: "Search for leads",
   open_login: "Open Instagram sign-in",
