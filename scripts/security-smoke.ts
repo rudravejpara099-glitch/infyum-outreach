@@ -5,10 +5,12 @@ import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { chromium } from "playwright";
 import { DEFAULT_SESSION_SECRET } from "@/lib/auth/production-secret";
 const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-production-"));
 const port = 3193, base = `http://127.0.0.1:${port}`;
 let server: ChildProcess | undefined;
+let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 async function stop(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
   const exited = new Promise<void>(resolve => child.once("exit", () => resolve()));
@@ -37,7 +39,34 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     assert(ready, "Configured production server could not serve its temporary setup page");
-    console.log("Security startup smoke passed: blank/default production secrets refused; an explicitly configured secret serves an isolated app. No worker, paid provider or outreach.");
-  } finally { if (server) await stop(server); rmSync(temp, { recursive: true, force: true }); }
+    browser = await chromium.launch();
+    const page = await browser.newPage();
+    const pageErrors: string[] = [];
+    page.on("pageerror", error => pageErrors.push(error.message));
+    const password = randomBytes(24).toString("hex");
+    await page.goto(`${base}/setup`);
+    await page.getByLabel("Your name").fill("Production Smoke");
+    await page.getByLabel("Email", { exact: true }).fill("production-smoke@example.test");
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    await page.waitForURL(`${base}/`);
+    assert(await page.locator(".app-shell").isVisible(), "Production setup must open the authenticated workspace");
+    const routes = ["/campaigns", "/campaigns/new", "/pipeline", "/approvals", "/inbox", "/accounts", "/activity", "/billing", "/settings"];
+    for (const route of routes) {
+      const response = await page.goto(`${base}${route}`);
+      assert.equal(response?.status(), 200, `Production route ${route} should load`);
+      assert(await page.locator(".app-shell").isVisible(), `Production route ${route} should remain authenticated`);
+    }
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page.waitForURL(`${base}/login`);
+    await page.goto(`${base}/settings`);
+    await page.waitForURL(`${base}/login`);
+    await page.getByLabel("Email", { exact: true }).fill("production-smoke@example.test");
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page.waitForURL(`${base}/`);
+    assert.equal(pageErrors.length, 0, `Production browser errors: ${pageErrors.join("; ")}`);
+    console.log("Production smoke passed: unsafe secrets refused; setup, protected routes, sign-out, signed-out redirect and sign-in work on the production server using a temporary database. No worker, provider, payment or outreach action ran.");
+  } finally { if (browser) await browser.close(); if (server) await stop(server); rmSync(temp, { recursive: true, force: true }); }
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

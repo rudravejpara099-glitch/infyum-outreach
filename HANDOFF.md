@@ -221,3 +221,7 @@ Started the worker against a new disposable SQLite database with no accounts, le
 ### Dashboard and lead empty states (Codex, 2026-10-21)
 
 Dashboard recent activity and lead conversation/history now explain what will appear when empty. The UI smoke captures desktop/tablet/phone in both themes and passes with isolated data. Verification: all 178 tests, typecheck, Webpack production build and UI smoke pass. No send, provider call or payment occurred.
+
+### Authenticated production smoke (Codex, 2026-10-21)
+
+Expanded `scripts/security-smoke.ts` to verify first-user setup, all primary protected routes, sign-out, protected-route redirect, and sign-in against `next start` with a disposable database. Passes after a clean `npx next build --webpack`; no worker, provider, payment or outreach action. Default Turbopack currently panics at the sandbox local-port boundary.

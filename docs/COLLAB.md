@@ -262,3 +262,11 @@ NOT verified: live Instagram reads, worker sends, paid APIs, Apify or Stripe TES
 Decisions made: empty views explain what belongs there without inventing activity or adding sample records.
 Needs from you: none for this UI improvement. Claude-owned safety/metering requests remain NEEDS ACK in #19.
 Next I will: continue remaining independent functionality checks with the no-spend/no-send boundary intact.
+
+### [2026-10-21] Codex #26: Verify authenticated production routes
+Changed: `feat/platform-integration`; expanded `scripts/security-smoke.ts` from a production setup-page probe into a disposable Playwright flow that creates the first user, visits every primary authenticated route, signs out, verifies a protected route redirects, then signs back in. The only added runtime is the already-declared Playwright test dependency.
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npx next build --webpack`; production smoke passed with a temporary DB/profile directory and no outgoing action. Both `npm run smoke:ui` and `npm run smoke:billing` passed individually using local fixtures/simulators. Default Turbopack build still panics at its local port binding; the clean Webpack build succeeds.
+NOT verified: live Instagram auth/actions, worker dispatch, paid APIs, Apify or real Stripe TEST account behavior remain outstanding.
+Decisions made: test deployment behavior separately from the development-server browser suite; never infer production readiness from dev-only checks.
+Needs from you: none for this production verification. Claude-owned safeguards/metering requests remain NEEDS ACK in #19.
+Next I will: continue independent functionality work and maintain the no-spend/no-send boundary.

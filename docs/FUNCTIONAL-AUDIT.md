@@ -104,3 +104,7 @@ Latest combined verification: 178 unit tests pass, typecheck passes, and `npx ne
 ## Dashboard and lead empty states (2026-10-21)
 
 Dashboard recent activity and lead conversation/history now explain what will appear when empty. The UI smoke verifies both states in light and dark at desktop/tablet/phone widths, using isolated data. Full unit suite (178), typecheck, Webpack production build and browser smoke pass. No messages or provider calls occurred.
+
+## Authenticated production smoke (2026-10-21)
+
+The production smoke now uses a disposable database and Playwright against `next start`: create the first user, load every primary app route, sign out, verify that a protected Settings request returns to login, and sign back in. The pass reported no browser page errors and launched no worker/provider/payment/outreach action. Default Turbopack build still fails in this environment with a local-port permission panic; clean Webpack production build passes. This adds production app-route evidence beyond the development-server browser suite.
