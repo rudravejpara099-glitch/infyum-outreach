@@ -128,4 +128,9 @@ INSERT INTO billing_model_rates(id,model,input_micros_per_million,output_micros_
 VALUES(100,'claude-sonnet-5-5',2000000,10000000,100000,NULL,1,'https://platform.claude.com/docs/en/about-claude/pricing','2026-10-22T00:00:00.000Z');
 `,
   },
+  {
+    id: 4,
+    name: "durable_apify_run_id",
+    sql: "ALTER TABLE billing_reservations ADD COLUMN provider_run_id TEXT;",
+  },
 ];

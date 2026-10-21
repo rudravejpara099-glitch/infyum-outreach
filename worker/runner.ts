@@ -20,7 +20,7 @@ import { afterSent, handleIncoming } from "@/lib/services/outreach";
 import { findLeadsForCampaign } from "@/lib/services/findLeads";
 import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import { payerFor } from "@/lib/billing/attribution";
-import type { ApifyClient } from "@/lib/leads/apify";
+import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
 export type Deps = {
@@ -31,7 +31,7 @@ export type Deps = {
   /** Human pacing (working hours, sessions, rests, gaps). Switched on by the real worker; tests leave it off. */
   humanPace?: { cfg?: Partial<PacingConfig>; rng?: Rng };
   /** Present only when APIFY_TOKEN is set. */
-  apify?: Pick<ApifyClient, "monthlyUsageUsd" | "runActor">;
+  apify?: ApifySearchClient;
 };
 
 const WARMUP_PIECES = 10;
@@ -153,7 +153,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
       const campaign = getCampaign(db, Number(job.payload.campaignId));
       if (!campaign || campaign.status !== "active") return;
       if (!deps.apify) throw new Error("APIFY_TOKEN is not set, so lead search cannot run");
-      await findLeadsForCampaign(db, deps.apify, Number(job.payload.campaignId));
+      await findLeadsForCampaign(db, deps.apify, Number(job.payload.campaignId), job.id);
       return;
     }
 
