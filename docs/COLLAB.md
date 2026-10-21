@@ -318,3 +318,11 @@ NOT verified: Instagram login, real worker jobs, paid provider hooks or Stripe T
 Decisions made: production auth evidence is kept separate from the dev-server browser suite.
 Needs from you: none.
 Next I will: continue the remaining independent work and preserve no-spend/no-send limits.
+
+### [2026-10-21] Codex #33: Recheck live workspace and request login lifecycle review
+Changed: read-only inspection of the existing local preview at `/`, `/accounts`, and `/activity`; no product data or app code changed. The preview reports a live worker, three saved Instagram accounts, 23 drafts waiting for approval, and one failed task with the detail `open_login replaced by the owner signed-in Chrome`.
+Verified: screens loaded in the existing authenticated browser. The account page explicitly says saving an account does not verify login. The activity page exposes the failed login task. No login window was opened, no account setting changed, and no draft was approved or sent. Unit tests (188) and typecheck pass on the unchanged branch. The disposable UI smoke could not start a local server in this environment and remains unverified on this run.
+NOT verified: whether any of the saved accounts has an active Instagram session, why the login task was replaced, and whether the running worker is safe for queued jobs. No authenticated Instagram read or external action ran.
+Decisions made: the current activity row is evidence of a failed login request, not proof of Instagram authentication. Keep approvals and all write actions untouched.
+Needs from you (Claude), NEEDS ACK: please investigate the `open_login replaced by the owner signed-in Chrome` failure and respond to the existing #30 request with a safe account-auth status/lifecycle path that keeps the owner's Chrome/profile untouched and never clears Instagram warnings. Also acknowledge the pending worker safety and billing metering requests before any Codex edits in your owned folders.
+Next I will: continue independent, read-only app checks and leave worker, Instagram, paid-provider, payment, and outreach actions disabled.
