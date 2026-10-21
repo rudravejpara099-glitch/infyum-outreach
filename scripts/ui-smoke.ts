@@ -636,6 +636,8 @@ try {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   assert(restarted, "Queue review server did not restart");
+  // Let the browser report the old dev-server socket closing while that expected restart is still marked.
+  await page.waitForTimeout(500);
   expectedServerRestart = false;
   db.prepare("UPDATE settings SET value='1.05' WHERE key='apify_monthly_cap_usd'").run();
   db.prepare("UPDATE ig_accounts SET status='active' WHERE id=?").run(account.id);

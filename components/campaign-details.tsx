@@ -18,11 +18,12 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
   const searchHint = campaign.status === "done" ? "This campaign is finished. Lead search is off." : campaign.status !== "active" ? "Start this campaign before searching for leads." : searchOn ? "Requires the worker and an Apify connection. Usage limits still apply." : "Search is off. Set a monthly cap in Settings first.";
   return <div className="campaign-disclosures">
     <DisclosureLinks />
-    <details className="disclosure" id="progress">
+    {/* Browsers may open a details element targeted by the URL fragment before React hydrates. */}
+    <details className="disclosure" id="progress" suppressHydrationWarning>
       <summary><Icon name="pipeline" /><span>Campaign progress<small>See leads at each stage</small></span><Icon name="chevron" /></summary>
       <div className="disclosure-content"><div className="stage-grid">{STAGES.map(stage => <Link key={stage} href={`/pipeline?campaign=${campaign.id}#${stage}`} title={stageCopy[stage].description}><span>{stageCopy[stage].label}</span><strong>{counts[stage] ?? 0}</strong></Link>)}</div><CampaignHistory days={history} timeZone={timeZone} /></div>
     </details>
-    <details className="disclosure" id="add-leads">
+    <details className="disclosure" id="add-leads" suppressHydrationWarning>
       <summary><Icon name="plus" /><span>Add leads<small>Paste handles, import a spreadsheet or search</small></span><Icon name="chevron" /></summary>
       {campaign.status === "done" ? <div className="disclosure-content"><p className="text-muted">This campaign is finished. You can review its leads and history, but cannot add more.</p></div> : <div className="disclosure-content add-leads-grid items-start">
         <ActionForm action={addLeads}>
@@ -44,11 +45,11 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
         </ActionForm>
       </div>}
     </details>
-    <details className="disclosure" id="leads">
+    <details className="disclosure" id="leads" suppressHydrationWarning>
       <summary><Icon name="accounts" /><span>Latest leads<small>{leads.length ? "Open a profile to see its history" : "Your campaign’s leads will appear here"}</small></span><Icon name="chevron" /></summary>
       <div className="disclosure-content">{leads.length === 0 ? <p className="text-muted">No leads yet. Add Instagram handles above to get started.</p> : <ul className="lead-list">{leads.map(l => <li key={l.id}><Link href={`/leads/${l.id}`}><span>@{l.handle}<small>{number(l.followers)} followers</small></span><span className={`badge ${STAGE_BADGE[l.stage]}`} title={stageCopy[l.stage].description}>{stageCopy[l.stage].label}</span><Icon name="chevron" size={16} /></Link></li>)}</ul>}</div>
     </details>
-    <details className="disclosure" id="settings">
+    <details className="disclosure" id="settings" suppressHydrationWarning>
       <summary><Icon name="settings" /><span>Campaign settings<small>Audience, sending accounts, approvals and follow-ups</small></span><Icon name="chevron" /></summary>
       <div className="disclosure-content"><CampaignForm campaign={campaign} accounts={accounts} selected={selected} /></div>
     </details>

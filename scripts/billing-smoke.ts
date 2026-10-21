@@ -83,6 +83,9 @@ async function main() {
     await page.getByRole("button", { name: "Start campaign", exact: true }).click();
     await page.getByRole("alert").filter({ hasText: "paused until the metered worker integration is reviewed" }).waitFor();
     assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(campaign.id) as { status: string }).status, "draft");
+    // Model an already-active campaign after its billing integration acknowledgement is removed.
+    db.prepare("UPDATE campaigns SET status='active' WHERE id=?").run(campaign.id);
+    await page.reload();
     await page.locator("#add-leads").evaluate((element: HTMLDetailsElement) => { element.open = true; });
     await page.getByRole("button", { name: "Queue lead search", exact: true }).click();
     await page.getByRole("alert").filter({ hasText: "paused until the metered worker integration is reviewed" }).waitFor();
