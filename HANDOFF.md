@@ -309,3 +309,11 @@ Finished campaigns now reject new lead imports, lead searches and message approv
 Verified: `npm test` passes (208 tests), `npm run typecheck`, `npx next build --webpack`, targeted ESLint and `git diff --check`. The disposable full browser smoke was attempted but stalled after its test server started and did not return responses; it was stopped and the server cleaned up. No Instagram, Claude, Apify or Stripe call ran; no message was sent and no money was spent.
 
 Still unverified: browser-level flow for the new controls, owner Instagram authentication, real Claude drafting, real Apify usage, Stripe TEST checkout, and the real worker. The local app remains the only target; no hosted deployment was attempted.
+
+### Final local end-to-end smoke (Codex, 2026-10-22)
+
+The full disposable browser smoke now passes through setup and sign-in, campaign creation, adding leads, campaign-scoped approval, account login-request feedback, campaign pause/resume/finish, worker status, settings and caps, DNC, responsive layouts, keyboard access, and theme behavior. Fixed the test fixture to create one sample account before the dashboard/account checks, and to set campaign state explicitly before lead-search and pause/resume checks. Added an opt-in `UI_SMOKE_SCREENSHOTS=0` setting to skip saving screenshots while retaining all browser assertions.
+
+Verified after these changes: all 208 tests pass, `npm run typecheck`, `npx next build --webpack`, targeted ESLint, `git diff --check`, and the complete disposable UI browser smoke. The UI smoke reports that no messages were sent. No Instagram, Claude, Apify, Stripe or other paid-provider calls ran; no money was spent.
+
+Still unverified: the owner's live Instagram sign-in/session, real Claude drafting, real Apify usage, Stripe TEST checkout, and live worker execution. These require owner sign-in or connected credentials and explicit approval for any live/paid operation. This local verification is not evidence that those integrations are connected, and no deployment was attempted.

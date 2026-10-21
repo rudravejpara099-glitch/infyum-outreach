@@ -5,7 +5,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { chromium } from "playwright";
+import { chromium, type Page } from "playwright";
 import { openDb } from "@/lib/db/core";
 import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { createOutgoing } from "@/lib/db/repos/messages";
@@ -19,6 +19,11 @@ async function stopServer(child: ChildProcess) {
   const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
   await exited;
   clearTimeout(timer);
+}
+
+async function screenshot(page: Page, options: Parameters<Page["screenshot"]>[0]) {
+  if (process.env.UI_SMOKE_SCREENSHOTS === "0") return;
+  await page.screenshot(options);
 }
 
 async function main() {
@@ -114,7 +119,7 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Dashboard activity empty state must fit on screen");
-    await page.screenshot({ path: path.join(screenshots, `dashboard-activity-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    await screenshot(page, { path: path.join(screenshots, `dashboard-activity-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   const pipelineResponse = await page.goto(`${base}/pipeline`);
   assert.equal(pipelineResponse?.status(), 200, "Pipeline should load successfully");
@@ -125,7 +130,7 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Pipeline empty state must fit on screen");
-    await page.screenshot({ path: path.join(screenshots, `pipeline-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    await screenshot(page, { path: path.join(screenshots, `pipeline-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   await page.goto(`${base}/pipeline?campaign=not-a-number`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
@@ -144,7 +149,7 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "History empty state must fit on screen");
-    await page.screenshot({ path: path.join(screenshots, `history-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    await screenshot(page, { path: path.join(screenshots, `history-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   await page.goto(`${base}/`);
   await page.goto(`${base}/campaigns/new`);
@@ -174,7 +179,7 @@ try {
   await page.goto(campaignUrl);
   await page.getByRole("button", { name: "Start campaign", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "Choose a sending account" }).waitFor();
-  await page.screenshot({ path: path.join(screenshots, "campaign-empty.png"), fullPage: true, caret: "initial" });
+  await screenshot(page, { path: path.join(screenshots, "campaign-empty.png"), fullPage: true, caret: "initial" });
   await page.getByRole("link", { name: "Add leads", exact: true }).click();
   assert(await page.locator("#add-leads").getAttribute("open") !== null, "In-page link must open the disclosure");
   await page.getByLabel("Instagram handles").fill("maya.coaches\ngrowthwithalex\nstudio.sarah");
@@ -192,13 +197,11 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Lead empty conversation/history must fit on screen");
-    await page.screenshot({ path: path.join(screenshots, `lead-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    await screenshot(page, { path: path.join(screenshots, `lead-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   await page.goto(campaignUrl);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
-  const senderId = (db.prepare("SELECT id FROM ig_accounts WHERE handle='review.account'").get() as { id: number }).id;
-  setCampaignAccounts(db, other.id, [senderId]); setCampaignStatus(db, other.id, "active", "ui-fixture");
   await page.goto(`${base}/campaigns/${other.id}#add-leads`);
   await page.locator('#add-leads').evaluate((element: HTMLDetailsElement) => { element.open = true; });
   const upload = page.getByLabel("Or choose a CSV file", { exact: true });
@@ -225,7 +228,7 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "CSV input must fit on screen");
-    await page.screenshot({ path: path.join(screenshots, `csv-import-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    await screenshot(page, { path: path.join(screenshots, `csv-import-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   removeDnc(db, "csv.blocked");
   await page.goto(campaignUrl);
@@ -254,7 +257,7 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Campaign chart must fit the screen");
-    await page.screenshot({ path: path.join(screenshots, `campaign-history-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    await screenshot(page, { path: path.join(screenshots, `campaign-history-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   db.transaction(() => {
     db.prepare("DELETE FROM activity WHERE lead_id=?").run(historyLead.id);
@@ -262,6 +265,18 @@ try {
     db.prepare("DELETE FROM leads WHERE id=?").run(historyLead.id);
     db.prepare("DELETE FROM campaigns WHERE id=?").run(historyCampaign.id);
   })();
+  await page.goto(campaignUrl);
+  await page.getByRole("heading", { name: "3 drafts need your review" }).waitFor();
+  await page.goto(`${base}/accounts`);
+  await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
+  await page.getByRole("button", { name: "Connect account", exact: true }).click();
+  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
+  const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
+  assert(account.profile_dir.startsWith(temp));
+  setCampaignAccounts(db, id, [account.id]);
+  db.prepare("UPDATE leads SET account_id=? WHERE campaign_id=?").run(account.id, id);
+  db.prepare("UPDATE messages SET account_id=? WHERE lead_id IN (SELECT id FROM leads WHERE campaign_id=?) AND direction='out'").run(account.id, id);
+  setCampaignAccounts(db, other.id, [account.id]); setCampaignStatus(db, other.id, "active", "ui-fixture");
   await page.goto(campaignUrl);
   await page.getByRole("heading", { name: "3 drafts need your review" }).waitFor();
 
@@ -285,7 +300,7 @@ try {
       });
       assert(contrast.every(ratio => ratio >= 4.5), `Text token contrast must meet 4.5:1 in ${mode}`);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Campaign overflow: ${mode} ${width}`);
-      await page.screenshot({ path: path.join(screenshots, `campaign-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+      await screenshot(page, { path: path.join(screenshots, `campaign-${mode}-${width}.png`), fullPage: true, caret: "initial" });
     }
   }
   await page.reload();
@@ -395,7 +410,7 @@ try {
   // Operational controls must change real rows and give honest feedback without a worker.
   await page.goto(`${base}/`);
   await page.getByRole("heading", { name: "Get started" }).waitFor();
-  await page.getByText("Add an account, then sign in by hand in the browser window.", { exact: true }).waitFor();
+  await page.getByText("1 account saved. Open its login window and sign in by hand.", { exact: true }).waitFor();
   await page.getByRole("link", { name: "Go to Campaigns", exact: true }).waitFor();
   await page.getByText("Outreach is waiting", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
@@ -443,6 +458,8 @@ try {
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Monthly lead-search limit saved" }).waitFor();
   assert.equal((db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string }).value, "1.05");
+  db.prepare("UPDATE ig_accounts SET status='active' WHERE id=?").run(account.id);
+  setCampaignStatus(db, id, "active", "ui-fixture");
   await page.goto(campaignUrl);
   await page.locator("#add-leads summary").click();
   await page.getByRole("button", { name: "Queue lead search", exact: true }).click();
@@ -453,6 +470,7 @@ try {
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Lead searches are switched off" }).waitFor();
   assert.equal((db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string }).value, "");
+  setCampaignStatus(db, id, "paused", "ui-fixture");
 
   const block = page.locator("section").filter({ has: page.getByRole("heading", { name: "Do not contact", exact: true }) });
   await block.getByLabel("Instagram handle").fill("@maya.coaches");
@@ -527,10 +545,6 @@ try {
   await page.goto(`${base}/accounts`);
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
-  const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
-  assert(account.profile_dir.startsWith(temp));
-  await page.getByRole("button", { name: "Connect account", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "already saved" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 1);
   await page.getByRole("button", { name: "Open login window", exact: true }).click();
@@ -544,7 +558,7 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Account login status must fit on screen");
-    await page.screenshot({ path: path.join(screenshots, `account-login-request-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    await screenshot(page, { path: path.join(screenshots, `account-login-request-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60_000).toISOString());
   await page.goto(`${base}/accounts`);
@@ -558,6 +572,7 @@ try {
   await page.getByRole("button", { name: "Set cap", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Daily limit saved" }).waitFor();
   assert.equal((db.prepare("SELECT daily_cap FROM ig_accounts WHERE id=?").get(account.id) as { daily_cap: number }).daily_cap, 20);
+  setCampaignStatus(db, id, "paused", "ui-fixture");
   await page.goto(campaignUrl);
   await page.getByRole("link", { name: "Edit audience", exact: true }).click();
   await page.getByLabel("Campaign name", { exact: true }).fill("US business coaches revised");
@@ -565,7 +580,7 @@ try {
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByRole("heading", { name: "US business coaches revised", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM campaign_accounts WHERE campaign_id=? AND account_id=?").get(id, account.id) as { n: number }).n, 1);
-  await page.getByRole("button", { name: "Start campaign", exact: true }).click();
+  await page.getByRole("button", { name: "Resume campaign", exact: true }).click();
   await page.getByRole("button", { name: "Pause campaign", exact: true }).waitFor().catch(async error => {
     console.log(JSON.stringify({ campaignControlFailure: true, url: page.url(), status: (db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, alerts: await page.getByRole("alert").allTextContents() })); throw error;
   });
@@ -594,7 +609,7 @@ try {
         await page.locator("h1").waitFor();
         if (route === "/approvals") assert(await page.locator("textarea").evaluateAll(elements => elements.every(el => el.scrollHeight <= el.clientHeight + 2)), "Draft text must be fully visible");
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Overflow: ${route} ${width} ${mode}`);
-        await page.screenshot({ path: path.join(screenshots, `${route === "/" ? "dashboard" : route.slice(1).replaceAll("/", "-")}-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+        await screenshot(page, { path: path.join(screenshots, `${route === "/" ? "dashboard" : route.slice(1).replaceAll("/", "-")}-${mode}-${width}.png`), fullPage: true, caret: "initial" });
       }
     }
   }
@@ -658,7 +673,7 @@ try {
     await page.getByRole("button", { name: `Use ${mode} appearance` }).click();
     for (const width of [1440, 1024, 390]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.screenshot({ path: path.join(screenshots, `login-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+      await screenshot(page, { path: path.join(screenshots, `login-${mode}-${width}.png`), fullPage: true, caret: "initial" });
     }
   }
   assert.equal((db.prepare("SELECT count(*) AS count FROM messages WHERE direction='out' AND status='sent'").get() as { count: number }).count, 0);
