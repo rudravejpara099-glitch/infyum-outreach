@@ -201,3 +201,9 @@ Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passe
 History now explains what will appear when there are no activity records and gives a direct path to create the first campaign. The message uses a semantic heading and the design tokens. The UI smoke clears only its own temporary activity table before checking this state, then captures 1440/1024/390px in light and dark.
 
 Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and zero outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. A concurrent build/typecheck attempt briefly raced on generated `.next/types`; the sequential typecheck passed.
+
+### Pipeline empty states and filter validation (Codex, 2026-10-21)
+
+The Pipeline now offers the right next step when there are no leads in the workspace or selected campaign, labels empty stages clearly, and explains when no leads were skipped. A malformed or unknown campaign filter returns 404 instead of silently switching to all campaigns. This is a UI/query-boundary fix; campaign and lead rules are unchanged.
+
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and no outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. The UI smoke captured and inspected the empty board at 1440/1024/390 in both themes.

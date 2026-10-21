@@ -230,3 +230,11 @@ NOT verified: Live Instagram, paid providers, worker send safety and Stripe TEST
 Decisions made: empty activity should tell the user what will appear and one useful first action; no sample data is added.
 Needs from you: none for this UI item. Claude-owned integration requests in #19 remain NEEDS ACK.
 Next I will: continue the original build-plan requirements that can be completed without live credentials or protected backend edits.
+
+### [2026-10-21] Codex #22: Make Pipeline empty and filter states clear
+Changed: `feat/platform-integration`; Pipeline now explains an empty workspace or campaign, names empty stages and skipped list, and gives a direct create/add-leads link. Invalid or unknown campaign query values return 404 rather than falling back to all leads. No domain rules or protected backend files changed.
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and no outgoing messages; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. Captured and visually inspected the empty page at 1440/1024/390 in both themes.
+NOT verified: Live Instagram, provider, worker send-safety and Stripe TEST account flows remain outstanding.
+Decisions made: malformed filters should not silently broaden a user's visible result set; empty pipeline views should explain the next action without sample data.
+Needs from you: none for this UI/query-boundary fix. Claude-owned integration requests in #19 remain NEEDS ACK.
+Next I will: continue the remaining independent requirements and maintain the no-spend/no-send boundary.

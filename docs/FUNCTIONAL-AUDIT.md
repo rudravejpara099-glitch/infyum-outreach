@@ -32,6 +32,7 @@ The owner requests the whole app working, without intermediate questions. Comple
 | Design | Operational screens inspected in both themes at narrow/wide; full browser loop checks overflow/reduced motion/focus | Verified for changed UI; not proof of live integrations |
 | Dashboard onboarding | Three-step setup checklist reflects saved account count, worker heartbeat and leads; explicitly says that saving an account does not confirm Instagram sign-in | Browser smoke verified empty-workspace copy and navigation; live account sign-in remains unverified |
 | History empty state | No-activity page explains what appears here and links to campaign creation; uses a semantic heading | Browser smoke verified at 1440/1024/390 in light and dark; history with data remains covered by the existing populated table flow |
+| Pipeline empty and invalid-filter states | Workspace and campaign empty views provide next actions; empty stages/skipped list are explicit; malformed or unknown campaign filters return 404 | Disposable browser flow verifies empty workspace and campaign, zero skipped, malformed query, and light/dark 1440/1024/390 layouts |
 | Production compilation | `npx next build --webpack` passed after the default Turbopack build hit the sandbox's local port-binding restriction | Verified with Webpack; Turbopack path not verified in this sandbox |
 
 ## Backend requests already posted

@@ -67,6 +67,20 @@ try {
   const db = openDb(dbPath);
   db.prepare("DELETE FROM activity").run(); // Keep the disposable fixture genuinely empty for the history state check.
   await page.goto(`${base}/`);
+  const pipelineResponse = await page.goto(`${base}/pipeline`);
+  assert.equal(pipelineResponse?.status(), 200, "Pipeline should load successfully");
+  await page.getByText("No leads yet", { exact: true }).waitFor();
+  await page.getByText("Create a campaign and add leads to see their progress here.", { exact: true }).waitFor();
+  await page.getByRole("link", { name: "Create a campaign", exact: true }).waitFor();
+  for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Pipeline empty state must fit on screen");
+    await page.screenshot({ path: path.join(screenshots, `pipeline-empty-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+  }
+  await page.goto(`${base}/pipeline?campaign=not-a-number`);
+  await page.getByRole("heading", { name: "404", exact: true }).waitFor();
+  await page.goto(`${base}/`);
   await page.getByRole("link", { name: "Overview", exact: true }).waitFor();
   await page.getByRole("link", { name: "Lead progress", exact: true }).waitFor();
   await page.getByRole("link", { name: "Review messages", exact: true }).waitFor();
@@ -95,6 +109,12 @@ try {
   await page.waitForURL(/\/campaigns\/\d+$/);
   const campaignUrl = page.url();
   const id = Number(new URL(campaignUrl).pathname.split("/").pop());
+  await page.goto(`${base}/pipeline?campaign=${id}`);
+  await page.getByText("No leads in this campaign yet", { exact: true }).waitFor();
+  await page.getByRole("link", { name: "Add leads to this campaign", exact: true }).waitFor();
+  await page.locator("summary").filter({ hasText: "Skipped (0) and why" }).click();
+  await page.getByText("No skipped leads.", { exact: true }).waitFor();
+  await page.goto(campaignUrl);
   await page.getByRole("heading", { name: "You’re all caught up" }).waitFor();
   await page.getByRole("button", { name: "Start campaign", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "Choose a sending account" }).waitFor();
