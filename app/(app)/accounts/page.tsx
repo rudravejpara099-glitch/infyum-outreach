@@ -8,6 +8,7 @@ import { listAccounts } from "@/lib/db/repos/accounts";
 import { sentTodayForAccount } from "@/lib/db/repos/messages";
 import { dailyAllowance } from "@/lib/domain/limits";
 import { todayIso } from "@/lib/format";
+import { loginWindowHint } from "@/lib/ui/copy";
 import { Empty, PageHeader } from "@/components/ui";
 import { changeCap, changeStatus, connectAccount, reopenLogin } from "./actions";
 
@@ -39,7 +40,7 @@ export default async function AccountsPage() {
                 <div className="mt-0.5 text-xs text-muted">
                   Today (UTC) {sentTodayForAccount(db, a.id, today)} of {dailyAllowance(a, today)} allowed{a.statusNote ? ` · ${a.statusNote}` : ""}
                 </div>
-                {activeJobExists(db, "open_login", null, a.id) && <p className="mt-2 text-sm text-muted">Login window requested · {worker.running ? "waiting for the worker" : "worker not running"}</p>}
+                {activeJobExists(db, "open_login", null, a.id) && <p className="mt-2 text-sm text-muted">Login window requested · {loginWindowHint(worker.running)}</p>}
                 {a.status === "blocked" && <p className="mt-2 max-w-lg text-sm text-bad">Instagram showed a warning. Outreach stays stopped. Opening the login window does not clear this warning.</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">

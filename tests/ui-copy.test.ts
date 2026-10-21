@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STAGES } from "@/lib/domain/stages";
-import { activityLabel, actorLabel, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
+import { activityLabel, actorLabel, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
 
 describe("plain-language UI copy", () => {
   it("covers only the current first-reply pipeline stages", () => {
@@ -27,5 +27,10 @@ describe("plain-language UI copy", () => {
     expect(activityLabel("unknown.internal.event")).toBe("Activity recorded");
     expect(actorLabel("worker")).toBe("Outreach assistant");
     expect(actorLabel("rudra@example.test")).toBe("rudra@example.test");
+  });
+
+  it("explains whether a login request is waiting for or being handled by the worker", () => {
+    expect(loginWindowHint(false)).toBe("Waiting for the worker to start.");
+    expect(loginWindowHint(true)).toBe("The worker is handling this request.");
   });
 });

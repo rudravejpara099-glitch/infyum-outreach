@@ -487,6 +487,19 @@ try {
   await page.getByRole("button", { name: "Open login window", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "worker is not running" }).last().waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login' AND account_id=?").get(account.id) as { n: number }).n, 1);
+  await page.getByText("Login window requested · Waiting for the worker to start.", { exact: true }).waitFor();
+  db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
+  await page.reload();
+  await page.getByText("Login window requested · The worker is handling this request.", { exact: true }).waitFor();
+  for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Account login status must fit on screen");
+    await page.screenshot({ path: path.join(screenshots, `account-login-request-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+  }
+  db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60_000).toISOString());
+  await page.goto(`${base}/accounts`);
+  await page.getByText("Login window requested · Waiting for the worker to start.", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.getByRole("button", { name: "Resume", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "paused");

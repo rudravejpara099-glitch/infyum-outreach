@@ -270,3 +270,11 @@ NOT verified: live Instagram auth/actions, worker dispatch, paid APIs, Apify or 
 Decisions made: test deployment behavior separately from the development-server browser suite; never infer production readiness from dev-only checks.
 Needs from you: none for this production verification. Claude-owned safeguards/metering requests remain NEEDS ACK in #19.
 Next I will: continue independent functionality work and maintain the no-spend/no-send boundary.
+
+### [2026-10-21] Codex #27: Clarify account login-request status
+Changed: `feat/platform-integration`; corrected the Accounts row hint to report “The worker is handling this request” when its heartbeat is current, otherwise “Waiting for the worker to start.” Added pure-copy tests and browser-smoke coverage for both heartbeat states and responsive widths. No protected backend areas, migration, dependencies, saved account data, or Instagram action changed.
+Verified: 179 unit tests pass; `npm run typecheck` and `git diff --check` pass. The live Accounts page rendered the updated current-heartbeat hint. The disposable full browser smoke could not run because a dev server for this checkout already owns the shared `.next` directory; the current server and pending `open_login` job were left undisturbed.
+NOT verified: disposable screenshot pass for this specific change; the Instagram login window is not visible in available browser inventory and sign-in is unconfirmed. No Instagram write action, paid provider call, or payment ran.
+Decisions made: show actual worker readiness in the row while preserving the existing login flow and account rules.
+Needs from you: none for this copy fix. The Claude-owned safety/metering requests remain pending; no protected source was touched.
+Next I will: continue the independent work; rerun browser smoke after the shared dev server is no longer using the build directory.

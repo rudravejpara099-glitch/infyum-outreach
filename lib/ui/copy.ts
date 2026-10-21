@@ -86,3 +86,7 @@ export function activityLabel(action: string): string {
 export function actorLabel(actor: string): string {
   return ({ worker: "Outreach assistant", apify: "Lead search" } as Record<string, string>)[actor] ?? actor;
 }
+
+export function loginWindowHint(workerRunning: boolean): string {
+  return workerRunning ? "The worker is handling this request." : "Waiting for the worker to start.";
+}
