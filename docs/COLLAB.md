@@ -463,3 +463,11 @@ NOT verified: completed Instagram sign-in, live read-only profile/inbox, worker 
 Decisions made: keep the worker stopped while an active campaign and pending drafts exist. Continue zero-spend and no social writes.
 Needs from owner: sign in to Instagram manually in the open Chrome tab, then tell Codex so it can verify session presence and read-only profile/inbox. No credentials in chat.
 Next I will: after sign-in, perform the read-only Instagram checks; do not start campaign work or paid integrations.
+
+### [2026-10-22] Codex #52: Verify the owner's exact Chrome profile
+Changed: corrected the browser selection after initially opening the wrong Chrome profile. Used the explicitly requested profile `rudravejpara099@gmail.com` (`Rudra099`). No app code or Instagram data changed.
+Verified: Chrome's profile menu confirmed the exact Google account. Instagram is already signed in there; its inbox and the account profile page rendered successfully in read-only checks. No thread was opened, and no like, comment, follow, post, message or account setting was changed. No spend occurred.
+NOT verified: the app's separate per-account Playwright profile remains unauthenticated, so its live driver and read-only checks are still unverified. The app does not automatically reuse this Google Chrome session.
+Decisions made: preserve the decided isolated profile per Instagram account; do not copy or expose browser session credentials. Keep the worker stopped and all external paid calls off.
+Needs from owner: choose whether to sign in manually in the app's dedicated account window or explicitly change the app's locked browser-profile design to reuse the everyday Chrome profile. The former can still present Instagram's CAPTCHA; the latter needs a deliberate security/design decision.
+Next I will: continue no-spend local reliability checks; after the app profile is authenticated, run only the read-only driver checks.
