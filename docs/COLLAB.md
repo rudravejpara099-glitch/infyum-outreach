@@ -425,3 +425,11 @@ NOT verified: a live Instagram session, read-only Instagram profile/inbox calls,
 Decisions made: no spending and no outreach actions. Claude Code quota is not used by the app's current AI path; real AI drafting requires a separately configured paid Anthropic API and therefore stays off. Opening a sign-in window alone is not proof of authentication.
 Needs from owner: in Accounts, open the sign-in window for one account and sign in by hand, then refresh. Do not send credentials here. This is the only action needed before I can verify the live read-only Instagram connection.
 Next I will: verify session status without reading or logging the cookie value, then test only read-only Instagram profile and inbox steps. Keep worker, AI, Apify, payments and all Instagram writes off.
+
+### [2026-10-22] Codex #47: Isolate Instagram sign-in from the owner's Chrome
+Changed: `worker/instagram.ts` now launches the installed Playwright Chromium rather than the owner's Chrome channel, preserving one visible persistent profile per Instagram account. Added a focused test that verifies headed launch uses the account profile and omits Chrome channel selection.
+Verified: focused launch test; `npm test` = 229 passing; `npm run typecheck`; isolated Webpack production build; full disposable UI smoke; `git diff --check`. No worker campaign work, paid call, payment, or Instagram write ran.
+NOT verified: successful actual login-window launch or real Instagram session. The owner workspace's History has a failed sign-in task with the message that the existing Chrome session replaced the Instagram window. After the launcher fix, the in-app browser did not show a new result/window, so the current app-browser click cannot prove the new process started. The separate Playwright Chromium binary is installed.
+Decisions made: keep the existing Chrome profile separate from each account's persistent Instagram profile. Keep all outreach actions disabled.
+Needs from owner: in Accounts, click Open login window for one account. If the window appears, sign in by hand. If it does not, tell me the exact message shown on the page; do not send credentials.
+Next I will: verify the login-only window and then run read-only profile/inbox checks. Do not start the general worker or use paid providers.

@@ -365,3 +365,11 @@ Rechecked the current branch after the Apify changes. `git pull --ff-only` could
 The local app was already listening on port 3100; a duplicate launch exited because that server was present. Browser inspection confirmed the Accounts page loads and shows three saved Instagram accounts, each with sign-in still unconfirmed. No worker was started. The app's actual live Instagram session, read-only profile/inbox behavior, real Anthropic generation, Apify, Stripe TEST and live worker are still unverified. No spend or Instagram action occurred. The worker must remain stopped while an active campaign and approval queue exist.
 
 Owner next step: open one account's sign-in window from Accounts and sign in by hand; do not send credentials in chat. After that, verify session presence without exposing the cookie value and run only the read-only Instagram checks. Real AI generation remains off because it uses the separately metered Anthropic API; Claude Code quota is not a substitute. Apify and payment calls remain off under the no-spend request.
+
+### Instagram sign-in browser isolation (Codex, 2026-10-22)
+
+The Accounts page's History showed the earlier failure `Your existing Chrome session replaced the Instagram sign-in window.` The driver was explicitly launching the owner's installed Chrome channel, so login now uses the already-installed bundled Playwright Chromium with the account's own persistent profile directory. A focused test checks the headed profile launch and absence of a Chrome channel option.
+
+Verified: focused test, 229 unit tests, typecheck, isolated Webpack production build, full disposable UI smoke, and diff check pass. The full UI smoke uses temporary data; no worker or Instagram action runs there. No spend occurred.
+
+Still unverified: actual login-window launch and session persistence. Attempting the Accounts action from the current in-app browser did not visibly update its status or show a new Chromium window, so that interaction does not prove the changed launcher ran. The existing app server/browser state may be stale. Ask the owner to click Open login window in Accounts and sign in by hand if it appears; if it does not, capture the page's exact feedback and investigate the live server/action boundary. Do not start the general worker.

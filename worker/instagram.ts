@@ -14,7 +14,9 @@ export class PlaywrightInstagram implements InstagramDriver {
   private async context(account: IgAccount): Promise<BrowserContext> {
     const existing = this.contexts.get(account.id);
     if (existing) return existing;
-    const ctx = await chromium.launchPersistentContext(account.profileDir, { channel: "chrome", headless: false, ignoreDefaultArgs: ["--enable-automation"], chromiumSandbox: true, viewport: { width: 1280, height: 900 }, locale: "en-US" });
+    // Use Playwright's bundled Chromium, not the owner's already-running Chrome app. A
+    // Chrome channel launch can be routed into the owner's single-instance session.
+    const ctx = await chromium.launchPersistentContext(account.profileDir, { headless: false, ignoreDefaultArgs: ["--enable-automation"], chromiumSandbox: true, viewport: { width: 1280, height: 900 }, locale: "en-US" });
     ctx.on("close", () => this.contexts.delete(account.id));
     this.contexts.set(account.id, ctx);
     return ctx;
