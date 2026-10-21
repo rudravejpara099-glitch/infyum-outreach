@@ -122,10 +122,62 @@ try {
   await page.waitForURL(`${base}/approvals?campaign=${id}`);
   assert.equal(await page.locator("article").count(), 3);
   assert.equal(await page.getByText("@another.campaign", { exact: true }).count(), 0);
-  await page.locator("article").first().getByRole("button", { name: "Approve and queue", exact: true }).click();
+  const firstDraft = page.locator("article").first();
+  const originalSecondPart = await firstDraft.locator("textarea").nth(1).inputValue();
+  await firstDraft.locator("textarea").nth(1).fill("An edited draft with an unapproved link https://example.test");
+  await firstDraft.getByRole("button", { name: "Approve and queue", exact: true }).click();
+  await firstDraft.getByRole("alert").filter({ hasText: "portfolio link" }).waitFor();
+  assert.equal(await page.locator("article").count(), 3);
+  assert.equal(await firstDraft.locator("textarea").nth(1).inputValue(), "An edited draft with an unapproved link https://example.test");
+  await firstDraft.locator("textarea").nth(1).fill(originalSecondPart);
+  const firstMessageId = Number((await firstDraft.getAttribute("id"))!.replace("message-", ""));
+  const firstLeadId = (db.prepare("SELECT lead_id FROM messages WHERE id=?").get(firstMessageId) as { lead_id: number }).lead_id;
+  db.prepare("UPDATE leads SET stage='replied' WHERE id=?").run(firstLeadId);
+  await firstDraft.getByRole("button", { name: "Approve and queue", exact: true }).click();
+  await firstDraft.getByRole("alert").filter({ hasText: "lead has replied" }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM messages WHERE id=?").get(firstMessageId) as { status: string }).status, "pending_approval");
+  db.prepare("UPDATE leads SET stage='found' WHERE id=?").run(firstLeadId);
+  await firstDraft.getByRole("button", { name: "Approve and queue", exact: true }).click();
   await page.waitForFunction(() => document.querySelectorAll("article").length === 2);
   await page.goto(campaignUrl);
   await page.getByRole("heading", { name: "2 drafts need your review" }).waitFor();
+  await page.goto(`${base}/approvals?campaign=${id}`);
+  const rejectedMessageId = Number((await page.locator("article").first().getAttribute("id"))!.replace("message-", ""));
+  await page.locator("article").first().getByRole("button", { name: "Reject", exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll("article").length === 1);
+  assert.equal((db.prepare("SELECT status FROM messages WHERE id=?").get(rejectedMessageId) as { status: string }).status, "rejected");
+  const retiredLead = addLead(db, { handle: "retired.reply.fixture", campaignId: id }, "ui-fixture").lead;
+  const retired = createOutgoing(db, { leadId: retiredLead.id, accountId: null, kind: "reply", parts: ["Retired reply fixture"], campaign: { approvalRequired: true } }, "ui-fixture");
+  await page.reload();
+  const retiredArticle = page.locator(`#message-${retired.id}`);
+  assert(await retiredArticle.getByRole("button", { name: "Approve and queue" }).isDisabled());
+  await retiredArticle.getByRole("button", { name: "Approve and queue" }).evaluate((el: HTMLButtonElement) => { el.disabled = false; });
+  await retiredArticle.getByRole("button", { name: "Approve and queue" }).click();
+  await retiredArticle.getByRole("alert").filter({ hasText: "app stops at the first reply" }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM messages WHERE id=?").get(retired.id) as { status: string }).status, "pending_approval");
+  await retiredArticle.getByRole("button", { name: "Reject", exact: true }).click();
+  await retiredArticle.waitFor({ state: "detached" });
+
+  await page.goto(`${base}/leads/${unrelated.id}`);
+  await page.getByLabel("Notes", { exact: true }).fill("Review notes saved through the real page.");
+  await page.getByRole("button", { name: "Save notes", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Notes saved" }).waitFor();
+  assert.equal((db.prepare("SELECT notes FROM leads WHERE id=?").get(unrelated.id) as { notes: string }).notes, "Review notes saved through the real page.");
+  const stageForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Qualified", exact: true }) });
+  await stageForm.locator('input[name="to"]').evaluate((el: HTMLInputElement) => { el.value = "dm_sent"; });
+  await stageForm.getByRole("button").click();
+  await stageForm.getByRole("alert").filter({ hasText: "stage change is not available" }).waitFor();
+  assert.equal((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage, "found");
+  await page.reload();
+  await page.locator('form').filter({ has: page.locator('input[name="to"][value="qualified"]') }).getByRole("button").click();
+  await page.locator(".badge").filter({ hasText: /^Qualified$/ }).waitFor();
+  assert.equal((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage, "qualified");
+  await page.getByLabel("Reason (optional)", { exact: true }).fill("Read-only fixture stop");
+  await page.getByRole("button", { name: "Never contact again", exact: true }).click();
+  await page.getByText("Do not contact", { exact: true }).waitFor();
+  assert(db.prepare("SELECT handle FROM do_not_contact WHERE handle='another.campaign'").get());
+  await page.goto(`${base}/leads/not-a-number`);
+  await page.getByRole("heading", { name: "404", exact: true }).waitFor();
 
   // Operational controls must change real rows and give honest feedback without a worker.
   await page.goto(`${base}/`);
@@ -138,6 +190,9 @@ try {
   await page.getByText("Worker not running", { exact: true }).waitFor();
 
   await page.goto(`${base}/settings`);
+  await page.getByRole("listitem").filter({ hasText: "@another.campaign" }).getByRole("button", { name: "Remove", exact: true }).click();
+  await page.getByText("Nobody blocked.", { exact: true }).waitFor();
+  assert(["closed", "skipped"].includes((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage));
   await page.getByLabel("Time zone", { exact: true }).fill("Mars/Olympus");
   await page.getByRole("button", { name: "Save time zone" }).click();
   await page.getByRole("alert").filter({ hasText: "Choose a valid time zone" }).waitFor();
@@ -217,10 +272,10 @@ try {
   await blockedForm.getByRole("alert").filter({ hasText: "stays stopped" }).waitFor();
   assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "blocked");
 
-  const routes = ["/", "/campaigns", "/campaigns/new", "/pipeline", "/approvals", "/inbox", "/accounts", "/activity", "/settings"];
+  const routes = ["/", "/campaigns", "/campaigns/new", "/pipeline", "/approvals", "/inbox", "/accounts", "/activity", "/settings", `/leads/${unrelated.id}`];
   for (const mode of ["dark", "light"] as const) {
     await page.getByRole("button", { name: `Use ${mode} appearance` }).click();
-    for (const width of [1440, 390]) {
+    for (const width of [1440, 1024, 390]) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
       for (const route of routes) {
         await page.goto(`${base}${route}`);
@@ -248,7 +303,7 @@ try {
   await page.waitForURL(`${base}/login`);
   for (const mode of ["light", "dark"]) {
     await page.getByRole("button", { name: `Use ${mode} appearance` }).click();
-    for (const width of [1440, 390]) {
+    for (const width of [1440, 1024, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.screenshot({ path: path.join(screenshots, `login-${mode}-${width}.png`), fullPage: true, caret: "initial" });
     }

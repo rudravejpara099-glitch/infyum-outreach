@@ -9,7 +9,7 @@ import { approve, reject } from "./actions";
 import { z } from "zod";
 import { notFound } from "next/navigation";
 import { getCampaign } from "@/lib/db/repos/campaigns";
-import { SubmitButton } from "@/components/submit-button";
+import { ActionForm } from "@/components/action-form";
 
 export const dynamic = "force-dynamic";
 
@@ -40,14 +40,14 @@ export default async function Approvals({ searchParams }: PageProps<"/approvals"
                   {m.approvalReasons.map((r) => <span key={r} className="badge badge-warn">{r}</span>)}
                   <span className="ml-auto text-xs text-muted">{ago(m.createdAt)}</span>
                 </div>
-                <form action={approve} className="flex flex-col gap-2">
+                <ActionForm action={approve} className="flex flex-col gap-2">
                   <input type="hidden" name="id" value={m.id} />
-                  {m.parts.map((p, i) => <div key={i}><label className="label" htmlFor={`part-${m.id}-${i}`}>Message {i + 1}</label><textarea id={`part-${m.id}-${i}`} name="part" defaultValue={p} rows={Math.max(3, Math.ceil(p.length / 70))} className="input draft-input" /></div>)}
+                  {m.parts.map((p, i) => <div key={i}><label className="label" htmlFor={`part-${m.id}-${i}`}>Message {i + 1}</label><textarea id={`part-${m.id}-${i}`} name="part" defaultValue={p} rows={Math.max(3, Math.ceil(p.length / 70))} className="input draft-input" required maxLength={600} /></div>)}
                   <div className="flex gap-2">
-                    <SubmitButton primary>Approve and queue</SubmitButton>
-                    <button formAction={reject} className="btn btn-danger">Reject</button>
+                    <button className="btn btn-primary" disabled={m.kind === "reply"}>Approve and queue</button>
                   </div>
-                </form>
+                </ActionForm>
+                <ActionForm action={reject} className="mt-2 w-fit"><input type="hidden" name="id" value={m.id} /><button className="btn btn-danger">Reject</button></ActionForm>
               </article>
             );
           })}

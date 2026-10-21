@@ -8,8 +8,10 @@ The owner requests the whole app working, without intermediate questions. Comple
 |---|---|---|
 | Setup, login/error retention, protected routes | Expanded disposable browser suite; teammate created through Settings then signed in from a separate browser context | Verified locally |
 | Create campaign, audience defaults, add leads, campaign review links/counts | Browser suite with real temporary SQLite rows | Verified locally; malformed input and broader editing still need audit |
-| Approvals | Browser suite approves one real fixture draft, worker stays off | Queue UI verified; manual edit validation/retired replies need further audit |
+| Approvals | Browser rejects edited disallowed link, approval after reply and forged retired-reply approval; valid approval/rejection persist | Verified locally at the action boundary; already-approved worker jobs still need final send guard |
 | Team time zone | New authenticated save action validates supported IANA zones/UTC and aliases; browser persists Asia/Kolkata and rejects invalid zone | Verified locally; worker already reads setting for pacing |
+| Lead notes/stages/stop | Browser persists notes, refuses forged illegal transition, accepts legal transition, invokes DNC and returns 404 for malformed ID | Verified locally |
+| Shared standalone configuration | Official @next/env loaded in shared lib/config before config values; isolated processes prove .env loading/override precedence/test isolation; real standalone import reports configured DB/profile match | Verified without starting worker |
 | Daily counters and timestamp persistence | Unchanged main baseline fails after calendar date changed: worker uses injected Oct 20; markSent uses SQLite Oct 21 | Failing, Claude ACK/fix requested in board #6 |
 | Dashboard worker status | Real workerStatus query, manual check and visible-page refresh; browser flips live/stale heartbeat rows | Verified locally; does not start worker |
 | Account controls | Browser creates saved account/profile path in temp directory, deduplicates account/login requests, saves cap, pauses/resumes; forged blocked resume rejected server-side | Verified locally; account save is not verified Instagram auth |
@@ -27,14 +29,14 @@ The owner requests the whole app working, without intermediate questions. Comple
 
 ## Backend requests already posted
 
-Board Codex #6 requests injected-clock persistence/daily rollover, safe retry helper, time-zone counter boundaries and billing integration. Additional evidence for Claude: `guard` only detects login URL; a logged-out public profile at `/instagram/` still passes. Followers/following lists without search are treated as false, so inability to check a relationship is indistinguishable from confirmed absence. `send` also needs a final first-reply/stage/kind guard, and restart retries must not blindly repeat a partially sent three-part DM or warm-up. These are existing locked rules, not new product decisions. No protected backend file was changed by Codex.
+Board Codex #6 requests injected-clock persistence/daily rollover, safe retry helper, time-zone counter boundaries and billing integration. Additional evidence for Claude: `guard` only detects login URL; a logged-out public profile at `/instagram/` still passes. Followers/following lists without search are treated as false, so inability to check a relationship is indistinguishable from confirmed absence. `send` also needs a final first-reply/stage/kind guard, and restart retries must not blindly repeat a partially sent three-part DM or warm-up. A minimal unapplied clock patch is in docs/patches/clock-consistency.patch (`git apply --check` passes); it remains a proposal pending Claude ACK, not a tested backend implementation. These are existing locked rules, not new product decisions. No protected backend file was changed by Codex.
 
 ## Verification commands
 
-- `npm test`: 79 passed / 1 failed, same pre-existing runner daily-limit clock failure as initial unchanged baseline (initial 72/1, seven new tests now pass).
+- `npm test`: 82 passed / 1 failed, same pre-existing runner daily-limit clock failure as initial unchanged baseline (initial 72/1, ten new tests now pass).
 - `npm run typecheck`: passed after removing ignored dev route types left by switching from billing branch.
 - `npx next build`: passed.
-- `npm run smoke:ui`: expanded suite passed with temporary database and profiles, no worker, no provider calls and zero outgoing messages. Includes actual Settings/account actions, teammate sign-in, forged blocked-resume rejection and scoped CSV. Browser console/page errors asserted empty. Screenshots use caret:initial because screenshot-injected caret hiding before React hydration caused a test-harness warning; corrected and rerun cleanly.
+- `npm run smoke:ui`: expanded suite passed with temporary database and profiles, no worker, no provider calls and zero outgoing messages. Includes actual Settings/account/lead actions, teammate sign-in, forged blocked-resume/illegal-stage/stale-approval/retired-reply rejection, valid approval/rejection and scoped CSV. Screenshots now cover 1440/1024/390px for every checked route in both themes. Browser console/page errors asserted empty. Screenshots use caret:initial because screenshot-injected caret hiding before React hydration caused a test-harness warning; corrected and rerun cleanly.
 - Changed-file ESLint: passed. Full lint retains main’s existing prefer-const and unused-parameter findings.
 
 No saved data was modified by the audit. Presence-only private configuration checks and read-only database counts were used; no secret/password/card data was printed or copied. The actual read-only browser updated its own existing profile cache and was closed. Shared preview remains stopped. The full goal stays active; this table is not a claim that the whole app is finished.

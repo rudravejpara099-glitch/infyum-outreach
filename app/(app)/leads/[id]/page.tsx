@@ -9,6 +9,7 @@ import { isDnc } from "@/lib/db/repos/dnc";
 import { getCampaign } from "@/lib/db/repos/campaigns";
 import { STAGES, STAGE_LABEL, canMove } from "@/lib/domain/stages";
 import { ago, number, STAGE_BADGE } from "@/lib/format";
+import { ActionForm } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
 import { changeStage, doNotContact, saveNotes } from "../actions";
 
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   await requireUser();
   const { id } = await params;
+  if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
   const db = getDb();
   const lead = getLead(db, Number(id));
   if (!lead) notFound();
@@ -61,19 +63,19 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             <section><h2 className="mb-2 text-base font-semibold">Move to</h2>
               <div className="flex flex-wrap gap-2">
                 {options.map((s) => (
-                  <form key={s} action={changeStage}><input type="hidden" name="id" value={lead.id} /><input type="hidden" name="to" value={s} /><button className="btn">{STAGE_LABEL[s]}</button></form>
+                  <ActionForm key={s} action={changeStage}><input type="hidden" name="id" value={lead.id} /><input type="hidden" name="to" value={s} /><button className="btn">{STAGE_LABEL[s]}</button></ActionForm>
                 ))}
               </div>
             </section>
           )}
           <section><h2 className="mb-2 text-base font-semibold">Notes</h2>
-            <form action={saveNotes} className="flex flex-col gap-2"><input type="hidden" name="id" value={lead.id} />
-              <textarea name="notes" rows={5} defaultValue={lead.notes} className="input" aria-label="Notes" /><button className="btn">Save notes</button></form></section>
+            <ActionForm action={saveNotes} className="flex flex-col gap-2"><input type="hidden" name="id" value={lead.id} />
+              <textarea name="notes" rows={5} defaultValue={lead.notes} className="input" aria-label="Notes" /><button className="btn">Save notes</button></ActionForm></section>
           {!isDnc(db, lead.handle) && (
             <section><h2 className="mb-2 text-base font-semibold">Stop contact</h2>
-              <form action={doNotContact} className="flex flex-col gap-2"><input type="hidden" name="id" value={lead.id} />
-                <input name="reason" placeholder="Reason (optional)" className="input" aria-label="Reason" />
-                <button className="btn btn-danger">Never contact again</button></form></section>
+              <ActionForm action={doNotContact} className="flex flex-col gap-2"><input type="hidden" name="id" value={lead.id} />
+                <label className="label" htmlFor="stopReason">Reason (optional)</label><input id="stopReason" name="reason" maxLength={500} className="input" />
+                <button className="btn btn-danger">Never contact again</button></ActionForm></section>
           )}
         </aside>
       </div>

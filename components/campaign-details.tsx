@@ -41,7 +41,7 @@ export function CampaignDetails({ campaign, accounts, selected, counts, leads, s
       <div className="disclosure-content">{leads.length === 0 ? <p className="text-muted">No leads yet. Add Instagram handles above to get started.</p> : <ul className="lead-list">{leads.map(l => <li key={l.id}><Link href={`/leads/${l.id}`}><span>@{l.handle}<small>{number(l.followers)} followers</small></span><span className={`badge ${STAGE_BADGE[l.stage]}`}>{STAGE_LABEL[l.stage]}</span><Icon name="chevron" size={16} /></Link></li>)}</ul>}</div>
     </details>
     <details className="disclosure" id="settings">
-      <summary><Icon name="settings" /><span>Campaign settings<small>Audience, sending accounts, approvals and booking link</small></span><Icon name="chevron" /></summary>
+      <summary><Icon name="settings" /><span>Campaign settings<small>Audience, sending accounts, approvals and follow-ups</small></span><Icon name="chevron" /></summary>
       <div className="disclosure-content"><CampaignForm campaign={campaign} accounts={accounts} selected={selected} /></div>
     </details>
   </div>;

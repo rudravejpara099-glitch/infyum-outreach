@@ -1,4 +1,9 @@
 import path from "node:path";
+import { loadEnvConfig } from "@next/env";
+
+// CLI worker/backup/import processes need the same files and precedence as Next.
+// The loader preserves explicit environment overrides and skips .env.local in tests.
+loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 
 // All environment-dependent settings live here, nowhere else.
 export const config = {
