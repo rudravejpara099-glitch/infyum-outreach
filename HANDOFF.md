@@ -399,3 +399,11 @@ The Instagram driver previously recognized logouts only from `/accounts/login` U
 Verified: focused parser and mocked-driver regression tests; `npm test` = 230 passing; `npm run typecheck`; `npx next build --webpack`; targeted ESLint; `git diff --check`. No Instagram page was accessed by this fix; no worker, social write, paid API, Apify run, payment, or message ran.
 
 Still unverified: current Instagram login/session, live profile and inbox reads, and the actual text/layout Instagram displays for the login overlay. The owner must complete sign-in by hand before live read-only checks. Paid services remain off under the no-spend instruction.
+
+### Local recovery and no-spend verification (Codex, 2026-10-22)
+
+The local app had stopped, so the existing `127.0.0.1:3100` address was unavailable. Restarted the Next development server at that address; the Accounts route responds and redirects to login as expected. The user's existing Google Chrome profile was opened to Instagram, which showed the login screen and the owner's email as a saved passkey option. No passkey, password, or CAPTCHA was used.
+
+Fresh checks passed: 230 unit tests, typecheck, Webpack production build, the disposable UI browser smoke, fake-processor billing smoke, and production authentication/protected-route smoke. The three browser/server smokes used disposable data; the billing smoke used a local simulator. No worker, live Instagram action, Anthropic, Apify, Stripe, or payment ran, and no money was spent. `git pull --ff-only` could not reach GitHub because DNS could not resolve `github.com`.
+
+Still unverified: Instagram login/session persistence, live read-only profile/inbox, live worker execution, and real provider/payment integrations. The general worker remains stopped because the owner's workspace has an active campaign and pending drafts; starting it could trigger outreach. The app is available locally; the owner may need to refresh the existing browser tab. Next: owner completes Instagram sign-in manually in the open Chrome tab, then Codex checks only session presence and read-only profile/inbox behavior.

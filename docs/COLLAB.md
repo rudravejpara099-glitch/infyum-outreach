@@ -455,3 +455,11 @@ Verified: `npm test` = 230 passing; `npm run typecheck`; `npx next build --webpa
 NOT verified: actual login-modal copy/layout on a signed-out live Instagram profile; hand sign-in and authenticated read-only profile/inbox remain pending.
 Needs from owner: complete CAPTCHA and hand sign-in in the open Instagram window, then say done; no credentials in chat. No spending.
 Next I will: after the hand sign-in, confirm only session presence and try read-only profile/inbox. Keep all outreach and paid calls off.
+
+### [2026-10-22] Codex #51: Restore local app and rerun no-spend checks
+Changed: no application code or owner data changed. Restarted the local app at `127.0.0.1:3100` so the owner can refresh the existing tab. Kept the campaign worker stopped.
+Verified: `git pull --ff-only` was attempted but GitHub DNS failed. `npm test` = 230 passing; `npm run typecheck`; `npx next build --webpack`; `UI_SMOKE_SCREENSHOTS=0 npm run smoke:ui`; `UI_SMOKE_SCREENSHOTS=0 npm run smoke:billing`; and `node --import tsx scripts/security-smoke.ts` all passed. Browser, billing, and security checks used temporary databases; billing used only the local fake processor. Instagram in the owner's Chrome profile shows the login page (email offered as saved passkey); no CAPTCHA was attempted. No worker, paid API, Apify, Stripe, message, or social action ran.
+NOT verified: completed Instagram sign-in, live read-only profile/inbox, worker execution, real Anthropic/Apify/Stripe integration, or whether the local app tab has refreshed in the UI.
+Decisions made: keep the worker stopped while an active campaign and pending drafts exist. Continue zero-spend and no social writes.
+Needs from owner: sign in to Instagram manually in the open Chrome tab, then tell Codex so it can verify session presence and read-only profile/inbox. No credentials in chat.
+Next I will: after sign-in, perform the read-only Instagram checks; do not start campaign work or paid integrations.
