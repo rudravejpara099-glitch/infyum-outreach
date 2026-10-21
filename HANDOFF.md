@@ -187,3 +187,11 @@ Branch `feat/platform-integration` combines the existing readiness branch and te
 Checks: `npm test` = 178 passed; `npm run typecheck`; `npx next build --webpack`; `node --import tsx scripts/ui-smoke.ts`; `node --import tsx scripts/billing-smoke.ts`; targeted lint and diff checks pass. Default Turbopack build fails with the sandbox internal-port EPERM; Webpack production build succeeds. Both browser suites use temporary databases and local simulator only.
 
 Still unverified: Claude-owned paid AI/Apify/worker metering and runtime safety hooks, team-zone daily counters, read-only authenticated Instagram behavior, real CLI draft generation and real Stripe TEST webhook/fee reconciliation. No worker, paid provider, payment or outgoing message ran. Do not mark the SaaS complete until these are verified and remaining owner-only account setup is complete.
+
+The local CLI status reports a signed-in Claude account. A synthetic fixture call returned a valid three-part draft through the CLI engine and passed the app's parser/rule checks without persistence. This verifies basic generation only; it does not verify drafting from a real lead, billed API mode, worker dispatch or Instagram behavior.
+
+### Dashboard setup checklist (Codex, 2026-10-21)
+
+Added a plain-language three-step checklist to Overview: connect and manually sign in to Instagram, start the worker on this computer, and prepare a campaign. It distinguishes a saved account from a verified Instagram login and reflects the actual account, worker heartbeat and workspace lead counts. The browser smoke now checks the empty-workspace guidance. No sending, billing, worker or account rules changed.
+
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with a disposable database and zero messages sent; `npx next build --webpack`; targeted ESLint and `git diff --check` passed. The first sandbox attempt could not create the test runner's local socket; retrying with local-server permission passed.

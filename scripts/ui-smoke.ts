@@ -292,6 +292,9 @@ try {
 
   // Operational controls must change real rows and give honest feedback without a worker.
   await page.goto(`${base}/`);
+  await page.getByRole("heading", { name: "Get started" }).waitFor();
+  await page.getByText("Add an account, then sign in by hand in the browser window.", { exact: true }).waitFor();
+  await page.getByRole("link", { name: "Go to Campaigns", exact: true }).waitFor();
   await page.getByText("Worker not running", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.getByRole("button", { name: "Check worker status" }).click();

@@ -25,6 +25,30 @@ export default async function Dashboard() {
   return (
     <>
       <PageHeader title="Overview" sub="What is happening across your campaigns." />
+      <section className="card mb-4 p-5" aria-labelledby="getting-started-title">
+        <h2 id="getting-started-title" className="text-base font-semibold">Get started</h2>
+        <p className="mt-1 text-sm text-muted">A few steps get your workspace ready. Saving an Instagram account does not confirm that you are signed in.</p>
+        <ol className="mt-4 grid gap-3 md:grid-cols-3">
+          <li className="rounded-2xl border border-line bg-bg p-4">
+            <p className="text-xs font-medium text-muted">STEP 1</p>
+            <p className="mt-1 font-medium">Connect Instagram</p>
+            <p className="mt-1 text-sm text-muted">{d.accounts.length ? `${d.accounts.length} account${d.accounts.length === 1 ? "" : "s"} saved. Open its login window and sign in by hand.` : "Add an account, then sign in by hand in the browser window."}</p>
+            <Link href="/accounts" className="mt-3 inline-block text-sm text-accent underline">Go to Accounts</Link>
+          </li>
+          <li className="rounded-2xl border border-line bg-bg p-4">
+            <p className="text-xs font-medium text-muted">STEP 2</p>
+            <p className="mt-1 font-medium">Start the background work</p>
+            <p className="mt-1 text-sm text-muted">{worker.running ? "It is running on this computer." : "Saved tasks wait until the worker is started on this computer."}</p>
+            <Link href="/accounts" className="mt-3 inline-block text-sm text-accent underline">See account setup</Link>
+          </li>
+          <li className="rounded-2xl border border-line bg-bg p-4">
+            <p className="text-xs font-medium text-muted">STEP 3</p>
+            <p className="mt-1 font-medium">Prepare a campaign</p>
+            <p className="mt-1 text-sm text-muted">{d.totalLeads ? `${number(d.totalLeads)} lead${d.totalLeads === 1 ? "" : "s"} in your workspace.` : "Choose who to reach and add a few leads to begin."}</p>
+            <Link href="/campaigns" className="mt-3 inline-block text-sm text-accent underline">Go to Campaigns</Link>
+          </li>
+        </ol>
+      </section>
       <section className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Worker status">
         <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{worker.running ? "Worker running" : "Worker not running"}</span>
           <p className="mt-2 text-sm text-muted">{worker.running ? "The background worker is checking for tasks. Account hours, approvals and limits still apply." : "Saved tasks are waiting. The background worker needs to be started on this computer."}</p>

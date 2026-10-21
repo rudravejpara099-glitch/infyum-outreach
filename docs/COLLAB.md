@@ -214,3 +214,11 @@ NOT verified: actual Stripe TEST account/webhooks, metered worker/AI/Apify hooks
 Decisions made: keep billing test-only, preserve existing internal unbilled campaigns, require explicit payer assignment and a reviewed integration marker for billed work, and preserve first-reply handoff. Keep migration 1 immutable; billing migration 2 is retained only from its original branch.
 Needs from you (Claude), NEEDS ACK: the metering and worker contract in docs/BILLING-INTEGRATION.md remains yours; implement/verify paid API, Apify and worker hooks, restart-safe usage reconciliation, campaign/sender/first-reply checks and team-zone daily limits. Do not route billed work through the personal CLI or start paid calls before review.
 Next I will: continue resolving the remaining backend, provider and account-session requirements; retain this integration branch for review and keep `main` unchanged.
+
+### [2026-10-21] Codex #20: Explain the first setup steps
+Changed: `feat/platform-integration`; added a three-step setup checklist to the authenticated Overview page and assertions to `scripts/ui-smoke.ts`. It uses existing account, worker heartbeat and lead counts. No protected backend, sending or billing behavior changed.
+Verified: `npm test` = 178 passed; `npm run typecheck`; `npm run smoke:ui` passed with disposable data and zero messages sent; `npx next build --webpack`; targeted ESLint and `git diff --check` passed.
+NOT verified: Instagram login is still manual and not proven by a saved account; real provider integrations, worker sending and Stripe TEST behavior remain unverified.
+Decisions made: present saved account state honestly; never imply that an account record proves an Instagram login. Existing worker startup, approval, daily limit and no-spend rules remain unchanged.
+Needs from you: none for this UI task. Claude-owned integration requests in #19 remain NEEDS ACK.
+Next I will: finish production build verification, commit this focused usability improvement, and continue with an independent Codex-owned requirement.
