@@ -111,3 +111,7 @@ Dashboard recent activity and lead conversation/history now explain what will ap
 ## Authenticated production smoke (2026-10-21)
 
 The production smoke now uses a disposable database and Playwright against `next start`: create the first user, load every primary app route, sign out, verify that a protected Settings request returns to login, and sign back in. The pass reported no browser page errors and launched no worker/provider/payment/outreach action. Default Turbopack build still fails in this environment with a local-port permission panic; clean Webpack production build passes. This adds production app-route evidence beyond the development-server browser suite.
+
+## Plain-language failed-task details (2026-10-21)
+
+Activity now translates known task codes into everyday labels and rewrites the confirmed `open_login`/Chrome-replacement error into a clear explanation. Unknown task types receive a neutral fallback. Focused copy tests pass; latest full suite is 189 tests, typecheck and an isolated production Webpack build pass. The authenticated preview's accessibility tree confirms the new text. The disposable browser smoke remains unable to start because the sandbox denied its localhost listener. This does not address the underlying login-window lifecycle or establish that Instagram is signed in.

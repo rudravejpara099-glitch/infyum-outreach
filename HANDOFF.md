@@ -257,3 +257,7 @@ The default production build previously needed Google Fonts network access. Swit
 ### UI smoke startup diagnostics (Codex, 2026-10-21)
 
 The UI smoke runner now captures only the child server's stderr on failure, limits it to 4 KB, and redacts its temporary session secret, directory and fixture Apify token. A current run shows the environment error: the sandbox denies listening on `127.0.0.1:3190`. The smoke test therefore still cannot execute here; it cleaned up its temporary database/build/config and no persistent app data changed. `npm test` (188), `npm run typecheck`, and `git diff --check` pass. No provider, payment, worker, or outbound Instagram action ran.
+
+### Activity task error copy (Codex, 2026-10-21)
+
+Activity now displays everyday labels for known background tasks instead of internal task codes. The observed sign-in-window replacement error has a plain-language explanation; unknown task types use a neutral fallback. Focused tests cover known labels, fallback, and the mapped sign-in error. This changes presentation only and does not retry or reopen Instagram. Latest verification after the change: `npm test` = 189 passing, `npm run typecheck` and an isolated `npx next build --webpack` pass. The authenticated preview displays the new text in its accessibility tree. The disposable browser smoke still cannot start because the sandbox denies its localhost bind. No worker, profile, payment, provider, or Instagram action ran.

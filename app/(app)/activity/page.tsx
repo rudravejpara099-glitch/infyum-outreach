@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth/dal";
 import { listActivity } from "@/lib/db/repos/activity";
 import { listJobs } from "@/lib/db/repos/jobs";
 import { ago } from "@/lib/format";
-import { activityLabel, actorLabel } from "@/lib/ui/copy";
+import { activityLabel, actorLabel, jobErrorLabel, jobTypeLabel } from "@/lib/ui/copy";
 import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function Activity() {
       {failed.length > 0 && (
         <section className="card mb-6 border-bad p-4">
           <h2 className="mb-2 font-semibold text-bad">Failed tasks</h2>
-          <ul className="text-sm">{failed.map((j) => <li key={j.id}>{j.type} {j.leadId ? <Link className="text-accent" href={`/leads/${j.leadId}`}>lead {j.leadId}</Link> : ""} <span className="text-muted">{j.lastError}</span></li>)}</ul>
+          <ul className="text-sm">{failed.map((j) => <li key={j.id}>{jobTypeLabel(j.type)} {j.leadId ? <Link className="text-accent" href={`/leads/${j.leadId}`}>lead {j.leadId}</Link> : ""} <span className="text-muted">{jobErrorLabel(j.type, j.lastError)}</span></li>)}</ul>
         </section>
       )}
       {rows.length === 0 ? <section className="card p-6 text-center" aria-labelledby="history-empty-title">

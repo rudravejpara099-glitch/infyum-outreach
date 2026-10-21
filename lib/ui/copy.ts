@@ -90,3 +90,26 @@ export function actorLabel(actor: string): string {
 export function loginWindowHint(workerRunning: boolean): string {
   return workerRunning ? "The worker is handling this request." : "Waiting for the worker to start.";
 }
+
+const jobCopy: Record<string, string> = {
+  find_leads: "Search for leads",
+  open_login: "Open Instagram sign-in",
+  qualify: "Check a lead",
+  warmup: "Engage with a lead",
+  draft_dm: "Write a first message",
+  draft_followup: "Write a follow-up",
+  draft_reply: "Older reply task",
+  send: "Send a message",
+  check_inbox: "Check Instagram replies",
+};
+
+export function jobTypeLabel(type: string): string {
+  return jobCopy[type] ?? "Background task";
+}
+
+export function jobErrorLabel(type: string, error: string): string {
+  if (type === "open_login" && /replaced by the owner signed-in Chrome/i.test(error)) {
+    return "Your existing Chrome session replaced the Instagram sign-in window.";
+  }
+  return error;
+}

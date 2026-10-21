@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STAGES } from "@/lib/domain/stages";
-import { activityLabel, actorLabel, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
+import { activityLabel, actorLabel, jobErrorLabel, jobTypeLabel, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
 
 describe("plain-language UI copy", () => {
   it("covers only the current first-reply pipeline stages", () => {
@@ -32,5 +32,13 @@ describe("plain-language UI copy", () => {
   it("explains whether a login request is waiting for or being handled by the worker", () => {
     expect(loginWindowHint(false)).toBe("Waiting for the worker to start.");
     expect(loginWindowHint(true)).toBe("The worker is handling this request.");
+  });
+
+  it("shows failed task names and known login errors in plain language", () => {
+    expect(jobTypeLabel("open_login")).toBe("Open Instagram sign-in");
+    expect(jobTypeLabel("send")).toBe("Send a message");
+    expect(jobTypeLabel("unknown_task")).toBe("Background task");
+    expect(jobErrorLabel("open_login", "replaced by the owner signed-in Chrome")).toBe("Your existing Chrome session replaced the Instagram sign-in window.");
+    expect(jobErrorLabel("send", "Instagram was unavailable")).toBe("Instagram was unavailable");
   });
 });
