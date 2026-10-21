@@ -115,3 +115,7 @@ The production smoke now uses a disposable database and Playwright against `next
 ## Plain-language failed-task details (2026-10-21)
 
 Activity now translates known task codes into everyday labels and rewrites the confirmed `open_login`/Chrome-replacement error into a clear explanation. Unknown task types receive a neutral fallback. Focused copy tests pass; latest full suite is 189 tests, typecheck and an isolated production Webpack build pass. The authenticated preview's accessibility tree confirms the new text. The disposable browser smoke remains unable to start because the sandbox denied its localhost listener. This does not address the underlying login-window lifecycle or establish that Instagram is signed in.
+
+## Latest CLI auth check (2026-10-21)
+
+The latest local, read-only `claude auth status --json` returned `loggedIn=false`. Older historical notes about a signed-in CLI and synthetic draft are not evidence of current authentication. No prompt or generation was run. Real internal CLI drafting remains unverified until the owner signs in; paid API, Apify and payment calls remain off.

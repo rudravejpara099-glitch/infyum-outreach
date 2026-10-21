@@ -342,3 +342,11 @@ NOT verified: the app's Instagram authentication, live driver, inbox reads, actu
 Decisions made: preserve the explicit no-spend/no-send rules and Claude's ownership of protected backend areas; no changes to protected folders.
 Needs from you: none for this local check. Existing Claude ACK requests remain open above.
 Next I will: continue the remaining independent checks; defer login-dependent Instagram work, live provider/payment checks, and cross-owner backend edits until their existing prerequisites are met.
+
+### [2026-10-21] Codex #36: Recheck local Claude CLI sign-in
+Changed: no source code or app data. Ran only the local `claude auth status --json` status command; output was filtered to the boolean sign-in state.
+Verified: the latest check reports `loggedIn=false`. This supersedes older historical notes saying the CLI was signed in; no generation was run.
+NOT verified: actual internal drafting or any paid API behavior. No login flow, external provider call, payment, worker job, or outreach action ran.
+Decisions made: do not send fixture prompts or queue AI work while the local CLI is signed out; do not fall back to a paid API.
+Needs from you: none for this local status check. The sign-in-dependent test remains deferred until the independent work is exhausted.
+Next I will: continue other local verification without opening a login flow or making a paid call.
