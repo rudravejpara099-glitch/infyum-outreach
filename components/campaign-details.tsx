@@ -7,15 +7,17 @@ import { Icon } from "./icon";
 import { ActionForm } from "./action-form";
 import { DisclosureLinks } from "./disclosure-links";
 import { addLeads, findLeads } from "@/app/(app)/campaigns/actions";
+import { CampaignHistory } from "./campaign-history";
+import type { CampaignDay } from "@/lib/queries/campaign-history";
 
-export function CampaignDetails({ campaign, accounts, selected, counts, leads, searchOn }: {
-  campaign: Campaign; accounts: IgAccount[]; selected: number[]; counts: Record<string, number>; leads: Lead[]; searchOn: boolean;
+export function CampaignDetails({ campaign, accounts, selected, counts, leads, searchOn, history, timeZone }: {
+  campaign: Campaign; accounts: IgAccount[]; selected: number[]; counts: Record<string, number>; leads: Lead[]; searchOn: boolean; history: CampaignDay[]; timeZone: string;
 }) {
   return <div className="campaign-disclosures">
     <DisclosureLinks />
     <details className="disclosure" id="progress">
       <summary><Icon name="pipeline" /><span>Campaign progress<small>See leads at each stage</small></span><Icon name="chevron" /></summary>
-      <div className="disclosure-content stage-grid">{STAGES.map(stage => <Link key={stage} href={`/pipeline?campaign=${campaign.id}#${stage}`}><span>{STAGE_LABEL[stage]}</span><strong>{counts[stage] ?? 0}</strong></Link>)}</div>
+      <div className="disclosure-content"><div className="stage-grid">{STAGES.map(stage => <Link key={stage} href={`/pipeline?campaign=${campaign.id}#${stage}`}><span>{STAGE_LABEL[stage]}</span><strong>{counts[stage] ?? 0}</strong></Link>)}</div><CampaignHistory days={history} timeZone={timeZone} /></div>
     </details>
     <details className="disclosure" id="add-leads">
       <summary><Icon name="plus" /><span>Add leads<small>Paste handles, import a spreadsheet or search</small></span><Icon name="chevron" /></summary>

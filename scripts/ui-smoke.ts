@@ -123,10 +123,38 @@ try {
   removeDnc(db, "csv.blocked");
   await page.goto(campaignUrl);
   for (const lead of listLeads(db, { campaignId: id })) {
+    db.prepare("UPDATE leads SET stage='warmed' WHERE id=?").run(lead.id);
     createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"], campaign: { approvalRequired: true } }, "ui-fixture");
   }
   const unrelated = addLead(db, { handle: "another.campaign", campaignId: other.id }, "ui-fixture").lead;
   createOutgoing(db, { leadId: unrelated.id, accountId: null, kind: "dm", parts: ["Other campaign draft"], campaign: { approvalRequired: true } }, "ui-fixture");
+  // Only fixture rows are inserted for chart rendering, then removed before zero-send checks.
+  const historyCampaign = createCampaign(db, { name: "Campaign history review", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+  const historyLead = addLead(db, { handle: "chart.fixture", campaignId: historyCampaign.id }, "ui-fixture").lead;
+  await page.goto(`${base}/campaigns/${historyCampaign.id}#progress`);
+  await page.locator('#progress').evaluate((element: HTMLDetailsElement) => { element.open = true; });
+  await page.getByText("No sends or first replies recorded in this period.", { exact: false }).waitFor();
+  const historyMessage = createOutgoing(db, { leadId: historyLead.id, accountId: null, kind: "dm", parts: ["Chart fixture only"], campaign: { approvalRequired: true } }, "ui-fixture");
+  db.prepare("UPDATE messages SET status='sent',sent_at=? WHERE id=?").run(new Date(Date.now() - 60_000).toISOString(), historyMessage.id);
+  for (let index = 0; index < 2; index++) db.prepare("INSERT INTO activity(ts,actor,action,lead_id) VALUES (?,'ui-fixture','lead.handoff',?)").run(new Date(Date.now() - 60_000).toISOString(), historyLead.id);
+  await page.reload();
+  await page.locator('#progress').evaluate((element: HTMLDetailsElement) => { element.open = true; });
+  await page.getByText("1 message sent · 1 first reply.", { exact: false }).waitFor();
+  await page.locator('.campaign-history summary').click();
+  assert.equal(await page.locator('.campaign-history tbody tr').count(), 14);
+  assert.equal(await page.getByRole("img", { name: /Daily activity over the last 14 days/ }).count(), 1);
+  for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Campaign chart must fit the screen");
+    await page.screenshot({ path: path.join(screenshots, `campaign-history-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+  }
+  db.transaction(() => {
+    db.prepare("DELETE FROM activity WHERE lead_id=?").run(historyLead.id);
+    db.prepare("DELETE FROM messages WHERE lead_id=?").run(historyLead.id);
+    db.prepare("DELETE FROM leads WHERE id=?").run(historyLead.id);
+    db.prepare("DELETE FROM campaigns WHERE id=?").run(historyCampaign.id);
+  })();
   await page.goto(campaignUrl);
   await page.getByRole("heading", { name: "3 drafts need your review" }).waitFor();
 
@@ -188,6 +216,10 @@ try {
   assert.equal((db.prepare("SELECT status FROM messages WHERE id=?").get(firstMessageId) as { status: string }).status, "pending_approval");
   db.prepare("UPDATE leads SET stage='found' WHERE id=?").run(firstLeadId);
   await firstDraft.getByRole("button", { name: "Approve and queue", exact: true }).click();
+  await firstDraft.getByRole("alert").filter({ hasText: "completed checks and warm-up" }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM messages WHERE id=?").get(firstMessageId) as { status: string }).status, "pending_approval");
+  db.prepare("UPDATE leads SET stage='warmed' WHERE id=?").run(firstLeadId);
+  await firstDraft.getByRole("button", { name: "Approve and queue", exact: true }).click();
   await page.waitForFunction(() => document.querySelectorAll("article").length === 2);
   await page.goto(campaignUrl);
   await page.getByRole("heading", { name: "2 drafts need your review" }).waitFor();
@@ -207,6 +239,28 @@ try {
   assert.equal((db.prepare("SELECT status FROM messages WHERE id=?").get(retired.id) as { status: string }).status, "pending_approval");
   await retiredArticle.getByRole("button", { name: "Reject", exact: true }).click();
   await retiredArticle.waitFor({ state: "detached" });
+  const bulkDraft = page.locator("article").first();
+  const bulkId = Number((await bulkDraft.getAttribute("id"))!.replace("message-", ""));
+  const bulkLead = (db.prepare("SELECT lead_id FROM messages WHERE id=?").get(bulkId) as { lead_id: number }).lead_id;
+  const bulkEdit = "Your coaching workshop describes a thoughtful weekly planning process.";
+  await bulkDraft.locator("textarea").first().fill(bulkEdit);
+  await bulkDraft.getByRole("checkbox").check();
+  await page.getByLabel("I’ve reviewed every selected draft", { exact: true }).check();
+  db.prepare("UPDATE leads SET stage='found' WHERE id=?").run(bulkLead);
+  await page.getByRole("button", { name: "Approve selected and queue", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "completed checks and warm-up" }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM messages WHERE id=?").get(bulkId) as { status: string }).status, "pending_approval");
+  db.prepare("UPDATE leads SET stage='warmed' WHERE id=?").run(bulkLead);
+  await bulkDraft.getByRole("checkbox").check();
+  await page.getByLabel("I’ve reviewed every selected draft", { exact: true }).check();
+  await page.getByRole("button", { name: "Approve selected and queue", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: /approved and queued|This draft|Select 1 to 100/ }).waitFor();
+  const bulkFeedback = await page.getByRole("status").allTextContents();
+  assert(bulkFeedback.some(message => message.includes("approved and queued")), `Eligible bulk approval should succeed: ${bulkFeedback.join(" | ")}`);
+  await page.getByText("Nothing waiting", { exact: true }).waitFor({ timeout: 5000 }).catch(async () => { await page.reload(); await page.getByText("Nothing waiting", { exact: true }).waitFor(); });
+  assert.equal(await page.locator("article").count(), 0, "The selected draft should leave the review queue after approval");
+  const bulkSaved = db.prepare("SELECT status,parts FROM messages WHERE id=?").get(bulkId) as { status: string; parts: string };
+  assert.equal(bulkSaved.status, "approved"); assert.equal(JSON.parse(bulkSaved.parts)[0], bulkEdit);
 
   await page.goto(`${base}/leads/${unrelated.id}`);
   await page.getByLabel("Notes", { exact: true }).fill("Review notes saved through the real page.");
@@ -428,6 +482,7 @@ try {
   await page.goto(`${base}/approvals?campaign=invalid`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
   await page.goto(`${base}/settings`);
+  assert.equal(await page.getByRole("link", { name: "https://portfolio.infyum.com/sales-funnel", exact: true }).getAttribute("href"), "https://portfolio.infyum.com/sales-funnel");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.waitForURL(`${base}/login`);
   assert.equal((await context.request.get(`${base}/activity/export`, { maxRedirects: 0 })).status(), 307);

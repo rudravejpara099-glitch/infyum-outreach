@@ -6,6 +6,8 @@ import { canMove, isStage } from "@/lib/domain/stages";
 import { getLead, moveStage, setNotes } from "@/lib/db/repos/leads";
 import { markDoNotContact } from "@/lib/services/outreach";
 import type { ActionResult } from "@/lib/ui/action-result";
+import { isDnc } from "@/lib/db/repos/dnc";
+import { getCampaign } from "@/lib/db/repos/campaigns";
 const validId = (id: number) => Number.isSafeInteger(id) && id > 0;
 function refresh(id: number) { revalidatePath(`/leads/${id}`); revalidatePath("/pipeline"); revalidatePath("/"); }
 
@@ -17,8 +19,14 @@ export async function changeStage(form: FormData): Promise<ActionResult> {
     const lead = getLead(db, id);
     if (!lead) return { error: "This lead could not be found. Refresh the page." };
     if (!canMove(lead.stage, to)) return { error: "This stage change is not available. Refresh the page to see the current options." };
+    if (to === "found") {
+      if (isDnc(db, lead.handle)) return { error: "This handle is on Do not contact. Checks cannot be restarted." };
+      if (!lead.campaignId || !getCampaign(db, lead.campaignId)) return { error: "This lead needs a campaign before checks can restart." };
+      const contacted = db.prepare("SELECT 1 FROM messages WHERE lead_id=? AND (direction='in' OR status='sent') UNION ALL SELECT 1 FROM activity WHERE lead_id=? AND action='lead.handoff' LIMIT 1").get(id, id);
+      if (contacted) return { error: "Previously contacted leads cannot be restarted. Their conversation history stays intact." };
+    }
     moveStage(db, id, to, user.email, String(form.get("note") ?? ""));
-    return { message: "Lead stage updated." };
+    return { message: to === "found" ? "Ready for fresh checks. They run when the campaign is active and the worker is running." : "Lead stage updated." };
   }).immediate();
   refresh(id); return result;
 }

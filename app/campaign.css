@@ -80,3 +80,20 @@
   .disclosure summary { padding:13px; gap:10px; }
   .disclosure-content { padding:16px; }
 }
+
+.campaign-history { margin-top:24px; padding-top:20px; border-top:1px solid var(--line); }
+.campaign-history h3 { font-size:14px; font-weight:600; }
+.history-legend, .history-legend span { display:flex; align-items:center; gap:8px; }
+.history-legend { flex-wrap:wrap; gap:18px; font-size:11px; color:var(--muted); margin-bottom:16px; }
+.history-legend i { width:10px; height:10px; border-radius:2px; }
+.history-sent { background:var(--accent); }
+.history-replies { background:var(--ok); }
+.history-bars { display:grid; grid-template-columns:repeat(14,minmax(0,1fr)); gap:5px; padding-top:8px; }
+.history-day { min-width:0; }
+.history-pair { height:120px; display:flex; align-items:end; justify-content:center; gap:2px; border-bottom:1px solid var(--line); }
+.history-pair i { display:block; width:38%; max-width:18px; border-radius:3px 3px 0 0; }
+.history-day small { display:block; height:30px; padding-top:6px; font-size:9px; color:var(--muted); white-space:nowrap; }
+.history-day:last-child small { text-align:right; }
+.campaign-history details summary { padding:8px 0; font-size:12px; }
+.campaign-history th, .campaign-history td { padding:9px 6px; text-align:left; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.campaign-history th { font-weight:500; }

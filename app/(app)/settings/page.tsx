@@ -6,6 +6,7 @@ import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
 import { addTeammate, blockHandle, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
+import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,18 @@ export default async function Settings() {
   const dnc = listDnc(db);
   const users = db.prepare("SELECT name, email FROM users ORDER BY id").all() as { name: string; email: string }[];
   const cap = getSetting(db, "apify_monthly_cap_usd");
+  const portfolioLink = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
   const zone = getSetting(db, "team_timezone") ?? "America/New_York";
   const zones = [...new Set([...supportedTimeZones(), zone])].sort();
   return (
     <>
       <PageHeader title="Settings" />
       <div className="grid max-w-3xl gap-6">
+        <section className="card p-5">
+          <h2 className="text-base font-semibold">Link in first messages</h2>
+          <p className="mb-3 mt-1 text-muted">The app includes this link in the second part of every first-contact message. This setting is managed for the whole team.</p>
+          <a className="text-link break-all" href={portfolioLink} target="_blank" rel="noreferrer">{portfolioLink}</a>
+        </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Lead search (Apify)</h2>
           <p className="mb-3 mt-1 text-muted">{cap ? `Monthly limit: $${cap}. The app stops searching before it goes over.` : "Switched off. Set a monthly limit in dollars to turn it on. Leave the limit empty or use 0 to keep searches off."}</p>

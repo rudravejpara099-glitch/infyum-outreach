@@ -8,6 +8,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createFirstUser } from "@/lib/auth/first-user";
 import { consumeLoginAttempt, clearLoginAttempts } from "@/lib/auth/login-throttle";
 import { createSession, destroySession } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/dal";
 
 type State = { error?: string } | undefined;
 
@@ -42,6 +43,7 @@ export async function setup(_: State, form: FormData): Promise<State> {
 }
 
 export async function logout() {
+  await requireUser();
   await destroySession();
   redirect("/login");
 }

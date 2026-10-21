@@ -63,9 +63,10 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             <section><h2 className="mb-2 text-base font-semibold">Move to</h2>
               <div className="flex flex-wrap gap-2">
                 {options.map((s) => (
-                  <ActionForm key={s} action={changeStage}><input type="hidden" name="id" value={lead.id} /><input type="hidden" name="to" value={s} /><button className="btn">{STAGE_LABEL[s]}</button></ActionForm>
+                  <ActionForm key={s} action={changeStage}><input type="hidden" name="id" value={lead.id} /><input type="hidden" name="to" value={s} /><button className="btn" disabled={s === "found" && isDnc(db, lead.handle)}>{s === "found" ? "Re-run checks" : STAGE_LABEL[s]}</button></ActionForm>
                 ))}
               </div>
+              {lead.stage === "skipped" && <p className="mt-2 text-sm text-muted">Re-run checks after correcting the reason this lead was skipped. Requires an active campaign and a running worker. Do-not-contact and previously contacted leads stay stopped.</p>}
             </section>
           )}
           <section><h2 className="mb-2 text-base font-semibold">Notes</h2>

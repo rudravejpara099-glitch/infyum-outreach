@@ -10,6 +10,7 @@ import { z } from "zod";
 import { notFound } from "next/navigation";
 import { getCampaign } from "@/lib/db/repos/campaigns";
 import { ActionForm } from "@/components/action-form";
+import { BulkApproval } from "@/components/bulk-approval";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function Approvals({ searchParams }: PageProps<"/approvals"
       <PageHeader title="Approvals" sub="Read it, change it if you want, then approve. Nothing here is sent until you do." />
       {campaign && <p className="mb-5 text-muted">{campaign.name} <span aria-hidden="true">·</span> <Link href="/approvals" className="text-accent">View all campaigns</Link></p>}
       {pending.length === 100 && <p className="mb-5 text-muted">Showing the first 100 waiting drafts, oldest first.</p>}
+      <BulkApproval empty={pending.length === 0} />
       {pending.length === 0 ? <Empty title="Nothing waiting">New messages that need your OK appear here.</Empty> : (
         <div className="flex flex-col gap-4">
           {pending.map((m) => {
@@ -40,6 +42,7 @@ export default async function Approvals({ searchParams }: PageProps<"/approvals"
                   {m.approvalReasons.map((r) => <span key={r} className="badge badge-warn">{r}</span>)}
                   <span className="ml-auto text-xs text-muted">{ago(m.createdAt)}</span>
                 </div>
+                {m.kind !== "reply" && m.kind !== "incoming" && <label className="mb-4 flex items-center gap-2 text-sm"><input type="checkbox" name="selected" value={m.id} form="bulk-approval" disabled={m.approvalReasons.some(reason => reason !== "Campaign requires approval")} />Select @{lead.handle} for group approval</label>}
                 <ActionForm action={approve} className="flex flex-col gap-2">
                   <input type="hidden" name="id" value={m.id} />
                   {m.parts.map((p, i) => <div key={i}><label className="label" htmlFor={`part-${m.id}-${i}`}>Message {i + 1}</label><textarea id={`part-${m.id}-${i}`} name="part" defaultValue={p} rows={Math.max(3, Math.ceil(p.length / 70))} className="input draft-input" required maxLength={600} /></div>)}
