@@ -1,3 +1,4 @@
+import { billingSchema, billingImmutability } from "@/lib/billing/schema";
 // Append-only. Never edit a migration that has shipped: add a new one.
 export const migrations: { id: number; name: string; sql: string }[] = [
   {
@@ -118,4 +119,5 @@ CREATE TABLE settings (
 );
 `,
   },
+  { id: 2, name: "billing_at_cost", sql: billingSchema + billingImmutability },
 ];

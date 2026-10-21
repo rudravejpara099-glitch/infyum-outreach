@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/inbox", label: navigationCopy["/inbox"], icon: "inbox" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
   { href: "/activity", label: navigationCopy["/activity"], icon: "activity" },
+  { href: "/billing", label: "Usage and billing", icon: "billing" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 
