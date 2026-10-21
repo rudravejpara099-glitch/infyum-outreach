@@ -487,3 +487,11 @@ NOT verified: the app's authenticated Accounts page in this browser, an app-side
 Decisions made: keep the app local, worker stopped, and spend/outbound activity at zero. Do not copy or expose browser cookies.
 Needs from owner: the app can reuse the signed-in Chrome only after you approve Chrome's “Allow remote debugging” setting, which permits trusted apps to read browser data and control pages. Otherwise the app needs a hand sign-in in its separate Instagram window, where Instagram previously showed a CAPTCHA. Do not send credentials in chat.
 Next I will: after the Chrome-access choice or app-side sign-in, verify session presence and run only the read-only Instagram checks; keep all paid services and outreach actions off.
+
+### [2026-10-22] Codex #55: Use the owner's signed-in Chrome for a read-only check
+Changed: the owner explicitly approved using the signed-in Chrome profile and allowed Chrome's remote-debugging consent dialog. No app source or account data changed. The outreach worker, paid services, and social writes remained off.
+Verified: the exact Chrome profile `Rudra099` has an authenticated Instagram session. The owner profile page displays controls such as Edit Profile; an Instagram Messages tab is open. No message thread or private message content was inspected, no cookie/session value was read or copied, and no like, comment, follow, or message action occurred.
+NOT verified: the app's separate per-account Playwright profile or app-side profile/inbox reads. Direct Playwright CDP was rejected by this Chrome version; the documented auto-connect route uses Chrome DevTools MCP and requires a per-session consent dialog. This agent bridge is not yet an app integration.
+Decisions made: honor the owner's Chrome-access approval for read-only verification. Keep the worker stopped and paid calls off. Do not say the app is connected until its own driver passes read-only checks; do not copy or expose browser session credentials.
+Needs from owner: none for this read-only confirmation.
+Next I will: assess a supported local app integration for the approved Chrome connection; leave the isolated app profile unverified and keep all outreach actions disabled until that succeeds.
