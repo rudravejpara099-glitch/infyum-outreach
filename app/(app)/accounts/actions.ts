@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
-import { createAccount, getAccount, setAccountCap, setAccountStatus } from "@/lib/db/repos/accounts";
+import { createAccount, getAccount, setAccountBrowserMode, setAccountCap, setAccountStatus } from "@/lib/db/repos/accounts";
 import { enqueue } from "@/lib/db/repos/jobs";
 import { normHandle } from "@/lib/db/repos/dnc";
 import { workerStatus } from "@/lib/queries/worker-status";
@@ -61,7 +61,7 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   const backgroundRunning = process.env.OUTREACH_SMOKE_MODE === "1" || workerStatus(db, new Date()).running;
   let accountId = 0, request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
   db.transaction(() => {
-    const account = createAccount(db, { handle, profileDir: path.join(config.profilesDir, handle), dailyCap: parsed.data.dailyCap }, user.email);
+    const account = createAccount(db, { handle, profileDir: path.join(config.profilesDir, handle), dailyCap: parsed.data.dailyCap, browserMode: parsed.data.browserMode }, user.email);
     accountId = account.id;
     request = requestLogin(db, account.id, backgroundRunning);
   }).immediate();
@@ -71,6 +71,31 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   revalidatePath("/accounts");
   if (!started) return { error: "The account was saved, but its sign-in window could not open. Try again from the account below." };
   return { message: smoke ? "Account saved. The browser check uses a queued sign-in request." : "Instagram is opening in a separate window. Sign in there, then refresh this page to see the connection status." };
+}
+export async function useSignedInChrome(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const parsed = accountIdSchema.safeParse(form.get("id"));
+  const account = parsed.success ? getAccount(getDb(), parsed.data) : null;
+  if (!account) return { error: "Account not found. Refresh this page." };
+  const db = getDb();
+  setAccountBrowserMode(db, account.id, "chrome_read_only", user.email);
+  const backgroundRunning = process.env.OUTREACH_SMOKE_MODE === "1" || workerStatus(db, new Date()).running;
+  let request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
+  db.transaction(() => { request = requestLogin(db, account.id, backgroundRunning); }).immediate();
+  const started = !request.launch || startLoginWindow(account.id, request.jobId);
+  if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
+  revalidatePath("/accounts");
+  if (!started) return { error: "Chrome connection was selected, but the check could not start. Try again." };
+  return { message: "Chrome connection selected. If Chrome asks to share access, choose Allow. The app will only read Instagram; campaign actions remain disabled." };
+}
+export async function useSeparateSignIn(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const parsed = accountIdSchema.safeParse(form.get("id"));
+  const account = parsed.success ? getAccount(getDb(), parsed.data) : null;
+  if (!account) return { error: "Account not found. Refresh this page." };
+  setAccountBrowserMode(getDb(), account.id, "isolated", user.email);
+  revalidatePath("/accounts");
+  return { message: "This account will use its separate sign-in window again." };
 }
 export async function reopenLogin(form: FormData): Promise<ActionResult> {
   await requireUser();

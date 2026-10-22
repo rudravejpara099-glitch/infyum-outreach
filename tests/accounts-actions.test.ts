@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { createAccount } from "@/lib/db/repos/accounts";
+import { createAccount, getAccount } from "@/lib/db/repos/accounts";
 import { enqueue } from "@/lib/db/repos/jobs";
-import { connectAccount, reopenLogin } from "@/app/(app)/accounts/actions";
+import { connectAccount, reopenLogin, useSeparateSignIn, useSignedInChrome } from "@/app/(app)/accounts/actions";
 
 const state = vi.hoisted(() => ({ db: null as Db | null }));
 vi.mock("@/lib/db", () => ({ getDb: () => state.db }));
@@ -41,5 +41,18 @@ describe("Instagram sign-in actions", () => {
     expect(result.message).toMatch(/already opening/i);
     expect(spawn).not.toHaveBeenCalled();
     expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login'").get()).toEqual({ n: 1 });
+  });
+
+  it("lets an existing account opt into signed-in Chrome and switch back", async () => {
+    const account = createAccount(db, { handle: "review.account", profileDir: "/tmp/review.account" }, "test");
+    const form = new FormData(); form.set("id", String(account.id));
+    const result = await useSignedInChrome(form);
+    expect(result.message).toMatch(/campaign actions remain disabled/i);
+    expect(getAccount(db, account.id)?.browserMode).toBe("chrome_read_only");
+    expect(spawn).toHaveBeenCalledTimes(1);
+
+    const switched = await useSeparateSignIn(form);
+    expect(switched.message).toMatch(/separate sign-in window/i);
+    expect(getAccount(db, account.id)?.browserMode).toBe("isolated");
   });
 });

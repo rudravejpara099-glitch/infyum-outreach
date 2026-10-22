@@ -37,6 +37,7 @@ export type IgAccount = {
   handle: string;
   label: string;
   profileDir: string;
+  browserMode: "isolated" | "chrome_read_only";
   dailyCap: number;
   rampStart: string;
   status: "active" | "paused" | "blocked";

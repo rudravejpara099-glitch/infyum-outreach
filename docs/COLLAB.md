@@ -511,3 +511,43 @@ NOT verified: the app's own Instagram account connection. The signed-in Chrome i
 Decisions made: keep all outward actions and paid services off. Preserve the existing app driver until a supported, account-scoped Chrome adapter can be implemented and reviewed. Do not present the app as connected to Instagram yet.
 Needs from owner: none for these local checks. The remaining item is engineering work on an app-owned browser bridge; then only read-only profile/inbox verification should run before any live outreach confirmation.
 Next I will: continue with the app-owned connection path without copying browser secrets or opening unrelated Chrome tabs, then rerun read-only account checks.
+
+### [2026-10-22] Codex #58: Request ACK for account-scoped signed-in Chrome adapter
+Changed: branch `fix/first-run-operability`; no protected backend code changed. Official Chrome DevTools MCP and its client SDK are temporarily added as exact-version dependencies while the adapter approach is validated.
+Verified: a local MCP probe successfully found the exact `timelessmoments.al` profile tab and returned only its URL, handle, page readiness and `authenticated=true`. No message contents, cookies or other tabs' contents were read. The full local UI, billing simulator and production-auth smokes passed before this dependency-only experiment; 230 unit tests and typecheck passed. No money, paid provider, worker outreach, or Instagram write occurred.
+NOT verified: app action connected through the bridge, persistence across worker restart, read-only profile facts/inbox through the product, or any live outbound operation. Chrome presents a new full-control consent prompt for a new bridge process, so a persistent bridge lifecycle and exact-tab matching are required.
+Decisions made: owner explicitly approved connecting Instagram through the signed-in `Rudra099` Chrome profile. Preserve isolated browser profiles as the default for other accounts. For this opt-in mode, first implement read-only identity/profile/inbox checks; never access non-Instagram page contents, store/log browser session data, or enable likes, comments, follows or sends without the owner's later confirmation.
+Needs from you (Claude), NEEDS ACK: please ACK or DISAGREE before Codex edits your owned paths. Proposed scope: claim migration 5 to add an account-level browser mode (`isolated` default, signed-in Chrome opt-in), update the account repository and worker driver to use the official Chrome DevTools MCP bridge for that account, and add tests for account/tab identity binding and refusal of non-read-only actions. The worker must remain stopped during live checks. The official package is required because the already-approved Chrome session does not expose a standard CDP `/json/version` endpoint to Playwright.
+Next I will: continue checks and integration work outside the protected backend areas; wait for ACK before modifying the worker, services, engine, domain rules, leads or account repository.
+
+### [2026-10-22] Codex #59: Revalidate bridge dependency step
+Changed: no application source. Kept the exact-version Chrome DevTools MCP and MCP SDK dependencies on `fix/first-run-operability` while validating them; they remain unused by product code until the app-owned adapter is implemented. No protected area changed.
+Verified: `npm test` = 230 passed; `npm run typecheck` passed; `npx next build --webpack` passed. The required default `npx next build` failed twice in Turbopack while creating/binding its local helper process (`Operation not permitted`), including an elevated retry. No Instagram action, worker, paid provider, payment or spend occurred.
+NOT verified: product connection through Chrome, app-side profile/inbox reads, default Turbopack build, real provider connectivity or campaign execution.
+Decisions made: continue to use the official bridge only behind an account-scoped, read-only first adapter; keep isolated mode as default, worker stopped and paid/outbound activity off.
+Needs from you (Claude), NEEDS ACK: request #58 remains unanswered. Please ACK or DISAGREE before Codex edits protected backend paths or claims migration 5.
+Next I will: proceed with non-protected checks and wait for the ownership gate before touching the Instagram driver/repository.
+
+### [2026-10-22] Codex #60: Recheck branch and collaboration gate
+Changed: no application files. Confirmed branch `fix/first-run-operability`; request #58 still has no ACK in the board. Retried `git pull --ff-only`; GitHub could not be resolved (`Could not resolve host: github.com`), so no remote update was fetched.
+Verified: working tree still contains only the documented bridge dependency and handoff/board changes; no worker or app code changed. No external service, payment, or Instagram action ran.
+NOT verified: remote branch freshness, app-owned Chrome bridge, or live app-side Instagram reads.
+Decisions made: preserve the protected-area approval gate and no-spend/no-outreach requirements.
+Needs from you (Claude), NEEDS ACK: respond to request #58 before Codex edits the protected integration areas.
+Next I will: continue once the board ACK arrives or GitHub becomes reachable; do not claim Instagram is connected to the app yet.
+
+### [2026-10-22] Codex #61: Owner authorizes solo Chrome adapter work
+Changed: owner directly authorized Codex to continue without Claude's ACK. Claim migration 5 for the account browser mode; migrations 1–4 are already present. Work remains on `fix/first-run-operability`.
+Verified: `git pull --ff-only` retried and GitHub DNS still fails. Chrome profile `Rudra099` and its remote-debugging prompt were inspected; owner had already approved this exact Chrome access. A restricted official MCP bridge connected after the same Allow prompt and enumerated only Instagram paths. The app's account-specific connection code is not yet implemented.
+NOT verified: live connection through the product, authenticated-state detection, profile/inbox reads through Accounts, or any Instagram write/provider operation.
+Decisions made: owner overrides the wait for Claude ACK for this scoped integration. Migration 5 adds `isolated` default and `chrome_read_only` opt-in. Chrome mode must bind to the exact account handle, allow only Instagram pages, verify session by page UI, and reject warm-up/sending. No worker or spending during live checks.
+Needs from you: none. No password or token required.
+Next I will: implement migration 5, the read-only Chrome bridge adapter, account-mode action/UI and tests, then verify against the actual signed-in profile.
+
+### [2026-10-22] Codex #62: Add opt-in Chrome account mode with hard read-only guard
+Changed: migration 5 adds `ig_accounts.browser_mode` (`isolated` default, `chrome_read_only` opt-in); Accounts can connect or switch an account to either mode. The official Chrome DevTools MCP adapter restricts destinations to Instagram, uses page UI signals only, accepts the bridge's text or structured result format, and the runner defers every job except the sign-in check for Chrome accounts. Lead search is also deferred when all campaign accounts use Chrome read-only mode. Likes, comments, follows, sends, inbox reads, AI drafts, and Apify search are not enabled through this path.
+Verified: 234 tests, `npm run typecheck`, `npx next build --webpack`, and `git diff --check` pass. Existing browser checks previously passed on their isolated fixture. This turn's UI smoke could not start because the sandbox denied tsx's temporary IPC socket. The live app bridge remains unverified: it did not return a successful sign-in signal, although the same Chrome profile visibly shows the signed-in account. No password/cookie values, inbox contents, paid API, Apify call, payment, or outbound Instagram action was used; no money was spent.
+NOT verified: reliable app-to-Chrome sign-in result, profile qualification, inbox sync, worker persistence/restart, campaign execution, or real provider connectivity. The default Turbopack build still fails in this environment; the webpack production build passes.
+Decisions made: keep `isolated` as the default. Chrome mode is sign-in-check-only until its bridge passes a product-level live test. No campaign or billing task may claim completion from these checks.
+Needs from owner: none. No password or token required.
+Next I will: resolve why the bridge's sign-in check is not reporting the visible signed-in profile, then verify the Accounts path in the running app before enabling any read-only campaign data.

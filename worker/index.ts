@@ -7,7 +7,7 @@ import { defaultEngine } from "@/lib/engine";
 import { ApifyClient } from "@/lib/leads/apify";
 import { humanDelayMs } from "@/lib/domain/pacing";
 import { beat } from "@/lib/queries/worker-status";
-import { PlaywrightInstagram } from "./instagram";
+import { AccountInstagramDriver } from "./instagram-driver";
 import { currentLanes, planWork, runOne, type Deps } from "./runner";
 
 const db = openDb(config.dbPath);
@@ -15,7 +15,7 @@ const requeued = requeueStuck(db);
 if (requeued) console.log(`Re-queued ${requeued} unfinished job(s).`);
 
 const deps: Deps = {
-  db, engine: defaultEngine(), driver: new PlaywrightInstagram(), now: () => new Date(),
+  db, engine: defaultEngine(), driver: new AccountInstagramDriver(), now: () => new Date(),
   apify: process.env.APIFY_TOKEN ? new ApifyClient({ token: process.env.APIFY_TOKEN }) : undefined,
   humanPace: {},                                  // working hours, sessions, rests, gaps (lib/domain/pacing.ts)
   pace: () => new Promise((r) => setTimeout(r, humanDelayMs("beforeSend", Math.random))), // gaps between sends come from the pacing gate

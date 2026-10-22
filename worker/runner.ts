@@ -20,6 +20,7 @@ import { afterSent, handleIncoming } from "@/lib/services/outreach";
 import { findLeadsForCampaign } from "@/lib/services/findLeads";
 import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import { payerFor } from "@/lib/billing/attribution";
+import { browserModeAllowsJob, browserModeAllowsLeadSearch } from "@/lib/domain/browser-mode";
 import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
@@ -123,6 +124,22 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
 async function process(deps: Deps, job: Job): Promise<void> {
   const { db, driver, engine } = deps;
   const account = job.accountId ? getAccount(db, job.accountId) : null;
+  // The signed-in Chrome integration is deliberately read-only. Enforce this
+  // before job dispatch as a second boundary in addition to the driver methods.
+  if (account && !browserModeAllowsJob(account.browserMode, job.type)) {
+    deferJob(db, job, 60);
+    return;
+  }
+  if (job.type === "find_leads") {
+    const campaignId = Number(job.payload.campaignId);
+    const modes = Number.isSafeInteger(campaignId) && campaignId > 0
+      ? campaignAccountIds(db, campaignId).map((id) => getAccount(db, id)?.browserMode).filter((mode): mode is NonNullable<typeof mode> => Boolean(mode))
+      : [];
+    if (modes.length > 0 && !browserModeAllowsLeadSearch(modes)) {
+      deferJob(db, job, 60);
+      return;
+    }
+  }
   if (job.accountId && account?.status !== "active" && job.type !== "open_login") {
     deferJob(db, job, 60); // paused or blocked: wait until the team resumes it
     return;
