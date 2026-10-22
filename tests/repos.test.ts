@@ -4,7 +4,7 @@ import { addLead, getLead, moveStage, dueFollowups, countByStage } from "@/lib/d
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { createAccount } from "@/lib/db/repos/accounts";
 import { createOutgoing, approveMessage, listMessages, sentTodayForAccount, recentSentTexts, markSent } from "@/lib/db/repos/messages";
-import { claimNext, enqueue, failJob, completeJob, requeueStuck } from "@/lib/db/repos/jobs";
+import { claimNext, enqueue, failJob, completeJob, requeueStuck, rescheduleQueuedReadOnlyJobs } from "@/lib/db/repos/jobs";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { afterSent, handleIncoming, markDoNotContact } from "@/lib/services/outreach";
 import { listActivity } from "@/lib/db/repos/activity";
@@ -196,6 +196,28 @@ describe("incoming messages", () => {
 });
 
 describe("jobs", () => {
+  it("rechecks only future queued read-only work after a team clock change", () => {
+    enqueue(db, { type: "qualify" });
+    enqueue(db, { type: "check_inbox" });
+    enqueue(db, { type: "send" });
+    enqueue(db, { type: "warmup" });
+    enqueue(db, { type: "qualify" });
+    enqueue(db, { type: "check_inbox" });
+    db.prepare("UPDATE jobs SET run_after='2026-10-23 13:42:00'").run();
+    db.prepare("UPDATE jobs SET status='running' WHERE id=6").run();
+
+    expect(rescheduleQueuedReadOnlyJobs(db, new Date("2026-10-22T12:04:00Z"))).toBe(3);
+    const jobs = db.prepare("SELECT id,type,status,run_after FROM jobs ORDER BY id").all();
+    expect(jobs).toEqual([
+      { id: 1, type: "qualify", status: "queued", run_after: "2026-10-22 12:04:00" },
+      { id: 2, type: "check_inbox", status: "queued", run_after: "2026-10-22 12:04:00" },
+      { id: 3, type: "send", status: "queued", run_after: "2026-10-23 13:42:00" },
+      { id: 4, type: "warmup", status: "queued", run_after: "2026-10-23 13:42:00" },
+      { id: 5, type: "qualify", status: "queued", run_after: "2026-10-22 12:04:00" },
+      { id: 6, type: "check_inbox", status: "running", run_after: "2026-10-23 13:42:00" },
+    ]);
+  });
+
   it("claims once, retries with backoff, then fails for good", () => {
     enqueue(db, { type: "x" });
     const j1 = claimNext(db)!;

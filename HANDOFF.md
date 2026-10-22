@@ -27,11 +27,11 @@ Business rules the code must keep:
 ## Current live-workspace status (2026-10-22)
 
 - Active campaign #4 is approval-on and assigned to `@timelessmoments.al` through the owner's signed-in Chrome profile. The app previously confirmed the Chrome session; this mode allows read-only qualification and approved sending but blocks warm-up likes/comments/follows.
-- The local worker is running (PID recorded in its lease). It has two read-only lead checks (one for the moved test prospect) and one inbox check queued for the account's allowed work window, beginning 13:42 UTC / 7:12 PM India time. Do not change the saved schedule or turn on warm-up/social writes.
+- Team time zone is saved as Asia/Kolkata. The local worker is running and has two read-only lead checks (one for the moved test prospect) and one inbox check queued for 12:59:50 UTC / 6:29 PM India time, after its normal break. Settings now rechecks queued read-only work when the team time zone is saved; the worker still applies all hours and account pacing gates. Do not turn on warm-up/social writes.
 - Campaign #4 now contains 3 leads: two skipped and one untouched `@richcreditrepair` lead (17,400 saved followers, credit-repair niche) awaiting read-only qualification. Country and campaign fit are not verified until that check completes. The UI shows 23 messages pending approval, 0 DMs sent today, and 65 sent in the last seven days.
 - The dashboard now explains the next scheduled task and labels five historical failed sign-in attempts instead of showing a generic failure warning. Those attempts are historical; `@timelessmoments.al` is connected through Chrome.
 - Anthropic API, Apify, and Stripe TEST credentials are not configured. No paid API, Apify run, payment, Instagram message, like, comment or follow has been made; no money was spent.
-- Latest local verification: 306 unit tests, typecheck, lint, Webpack production build, UI smoke, and local billing simulator pass. PR #13 is open/draft on `fix/first-run-operability`, latest commit `54783cb`; GitHub reports no status checks. These checks do not prove live qualification, DM sending, reply sync, paid provider calls or hosted operation.
+- Latest local verification: 308 unit tests, typecheck, lint, Webpack production build, UI smoke, and local billing simulator pass. PR #13 is open/draft on `fix/first-run-operability`; latest time-zone scheduling changes are not committed yet. GitHub reports no status checks. These checks do not prove live qualification, DM sending, reply sync, paid provider calls or hosted operation.
 
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
@@ -48,7 +48,7 @@ NOT verified (these need the owner's account/provider setup):
 3. `lib/leads/apify.ts` is tested only with canned data. First real run: confirm the actor id (`apify~instagram-search-scraper` by default, overridable via setting `apify_actor`), its input fields (`search`, `searchType`, `resultsLimit`) and output field names (`username`, followers).
 
 ## Next tasks, in order
-1. Keep the worker running and inspect the live qualification result after 13:42 UTC / 7:12 PM India time. The queued job is read-only; do not accelerate it past its permitted account hours.
+1. Keep the worker running and inspect the live qualification result after 12:59:50 UTC / 6:29 PM India time. The queued jobs are read-only; do not accelerate them past their permitted account hours.
 2. If the lead qualifies, continue only with user-reviewed manual warm-up/drafting. Approval remains ON; no real DM can be sent until the exact draft is approved in the app.
 3. Keep paid AI, Apify, and Stripe calls off. The local billing simulator is the no-spend check; no live provider credentials are configured.
 4. PR #13 remains open/draft with no automated checks. Do not merge or commit to main. Hosting and multi-company accounts remain deferred.
@@ -723,6 +723,14 @@ NOT verified: live qualification of a campaign #4 lead, a real Instagram send, r
 Decisions made: use the owner's existing Chrome profile for campaign DMs, keep approval ON, keep the worker stopped, and do not spend money or send any message during the verification.
 Needs from Rudra: no sign-in help is needed now. Add a suitable lead to campaign #4 when ready; then review and explicitly confirm before the first real send. Paid integrations are optional.
 Next I will: update PR #13 with this verification and keep the local app ready for the owner's test.
+
+### Team time-zone queue recovery (Codex, 2026-10-22)
+
+Saving Asia/Kolkata in Settings now rechecks only future queued `qualify` and `check_inbox` jobs, so a changed team work window is applied without waiting for their stale prior schedule. The worker still applies the normal work window, breaks, and account pacing; send, warm-up, paid-provider, and running jobs are untouched. On the owner workspace, saving the zone re-evaluated the two lead checks and one inbox check. The live worker deferred all three to 12:59:50 UTC / 6:29 PM India time, after its normal break. No database job time was manually edited.
+
+Verification: 308 tests pass; typecheck, lint, Webpack production build, isolated UI smoke, local billing simulator, and `git diff --check` pass. The authenticated dashboard shows Outreach running, the next read-only check at 6:29 PM team time, 23 messages awaiting approval, and zero DMs sent today. No social write, paid API call, payment, or spend occurred. The changes are still uncommitted on `fix/first-run-operability`; PR #13 remains open/draft. The actual lead qualification and reply sync have not run yet and remain to be observed after the scheduled window.
+
+Decisions remain: first-inbound-reply is the product handoff; approval stays on; do not spend or send during this verification. The worker should remain running until the queued read-only result is checked.
 
 ### [2026-10-22] Codex #105: Start and verify the local background service
 

@@ -123,3 +123,10 @@ export function deferJobUntil(db: Db, job: Job, until: Date): void {
   db.prepare("UPDATE jobs SET status='queued', attempts = attempts - 1, run_after = ? WHERE id = ?")
     .run(until.toISOString().replace("T", " ").slice(0, 19), job.id);
 }
+
+/** Recheck queued read-only work against the new team clock; the worker still enforces all pacing gates. */
+export function rescheduleQueuedReadOnlyJobs(db: Db, now = new Date()): number {
+  const due = now.toISOString().replace("T", " ").slice(0, 19);
+  return db.prepare(`UPDATE jobs SET run_after=?
+    WHERE status='queued' AND type IN ('qualify','check_inbox') AND run_after>?`).run(due, due).changes;
+}
