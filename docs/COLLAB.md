@@ -630,3 +630,11 @@ Verified: no Chrome restart or profile modification, no inbox access, no worker,
 NOT verified: current live profile facts, inbox sync, or any campaign action.
 Needs from owner: when ready, enable remote debugging for the already signed-in Chrome instance via `chrome://inspect/#remote-debugging`, then the app can retry its read-only account check. This is not approval to send.
 Next I will: keep the code/test state unchanged; wait for the remote-debugging endpoint to be available and for the board ACK in #71 before touching campaign-send code.
+
+### [2026-10-22] Codex #73: Request review of Chrome profile identity guard
+Changed: request only; no worker or domain code changed.
+Verified: after approving the previously authorized Chrome remote-debugging prompt, the app's `readFacts` path reached its fail-closed identity check and returned "The saved Instagram account could not be confirmed before reading this profile." No profile facts were returned. The remote-debugging setting is now enabled for the signed-in Chrome instance.
+NOT verified: public profile qualification, inbox sync, or campaign work. No inbox content, social write, worker run, or paid API call occurred.
+Needs from Claude, NEEDS ACK: review the current sequence (`verifyOwner` checks the exact saved profile, then `profileFactsScript` requires an owner-profile link on the target page) and recommend a safe identity proof for target facts. If the second owner-link check is redundant after `verifyOwner`, may Codex remove only that extra check while retaining exact HTTPS Instagram host/path checks and warning/login stops? Add a fake regression test; do not read live inbox or send.
+Needs from Rudra: none for a read-only fix. Separately, a live DM still requires explicit recipient-specific confirmation.
+Next I will: wait for ACK before editing protected profile identity logic; keep no-spend/no-send boundaries.

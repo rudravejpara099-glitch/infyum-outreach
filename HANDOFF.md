@@ -539,3 +539,9 @@ Verified: 251 tests, typecheck, lint, and Webpack production build pass. The UI 
 Live diagnostic: the app adapter's public-profile read timed out, and the official Chrome bridge's read-only page inventory also timed out. A local probe of `127.0.0.1:9222/json/version` did not receive a response. The earlier saved-account `open_login` job is still recorded as successful, but Chrome remote debugging is currently unreachable; current app-side profile qualification cannot be verified. No Chrome page contents were read during this diagnostic, no browser restart or profile change was performed, and no inbox, worker, social action, or provider call ran.
 
 Owner step when ready: open Chrome's `chrome://inspect/#remote-debugging` in the already signed-in profile and ensure remote debugging is enabled for this browser instance. Then the app can retry the exact account check. This does not authorize sending.
+
+### Chrome read-only profile check reached identity guard (Codex, 2026-10-22)
+
+Chrome's remote-debugging permission prompt was accepted under the owner's prior session approval; `chrome://inspect/#remote-debugging` shows the setting enabled. The product's `readFacts` flow then stopped at its fail-closed account-identity guard with "The saved Instagram account could not be confirmed before reading this profile." It returned no profile facts. This could mean the target page does not expose a link to the owner's profile, or that the page/result identity did not match; do not weaken the guard without reviewing the exact identity proof. No inbox was read, no worker or campaign ran, and no social write or paid call occurred.
+
+Next: request backend-owner ACK in COLLAB before changing `worker/` profile identity logic. Keep all sends off.
