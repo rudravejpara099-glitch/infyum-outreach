@@ -24,14 +24,14 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
-## Current live-workspace status (2026-10-22)
+## Current live-workspace status (2026-10-22, refreshed)
 
-- Active campaign #4 is approval-on and assigned to `@timelessmoments.al` through the owner's signed-in Chrome profile. The app previously confirmed the Chrome session; this mode allows read-only qualification and approved sending but blocks warm-up likes/comments/follows.
-- Team time zone is saved as Asia/Kolkata. The local worker is running and has two read-only lead checks (one for the moved test prospect) and one inbox check queued for 12:59:50 UTC / 6:29 PM India time, after its normal break. Settings now rechecks queued read-only work when the team time zone is saved; the worker still applies all hours and account pacing gates. Do not turn on warm-up/social writes.
-- Campaign #4 now contains 3 leads: two skipped and one untouched `@richcreditrepair` lead (17,400 saved followers, credit-repair niche) awaiting read-only qualification. Country and campaign fit are not verified until that check completes. The UI shows 23 messages pending approval, 0 DMs sent today, and 65 sent in the last seven days.
-- The dashboard now explains the next scheduled task and labels five historical failed sign-in attempts instead of showing a generic failure warning. Those attempts are historical; `@timelessmoments.al` is connected through Chrome.
-- Anthropic API, Apify, and Stripe TEST credentials are not configured. No paid API, Apify run, payment, Instagram message, like, comment or follow has been made; no money was spent.
-- Latest local verification: 308 unit tests, typecheck, lint, Webpack production build, UI smoke, and local billing simulator pass. PR #13 is open/draft on `fix/first-run-operability`; latest time-zone scheduling changes are not committed yet. GitHub reports no status checks. These checks do not prove live qualification, DM sending, reply sync, paid provider calls or hosted operation.
+- Active campaign #4 is approval-on and assigned to connected `@timelessmoments.al` in the owner's signed-in Chrome. The Accounts page confirms that session. Chrome mode supports read-only qualification and approved sending, while warm-up likes/comments/follows remain blocked.
+- The local Outreach service is running. Its next read-only inbox check for account #2 is scheduled for tomorrow at 9:42 AM Asia/Kolkata. Do not accelerate it past account hours or pacing.
+- Campaign #4 has 3 leads and all are skipped; there is no eligible lead for a new live campaign send. The dashboard shows 23 drafts awaiting review, 0 approved outgoing messages, and 0 DMs sent today.
+- The app's live read-only inbox job completed, cleared two earlier inbox failures, and showed “Reply check succeeded.” Five older sign-in attempts remain in activity; the connected account is not blocked by them.
+- Settings confirms Anthropic is not connected and Apify is not configured; its monthly cap is unset. Paid work remains off. Real Stripe TEST credentials are not configured.
+- Latest checks: 317 unit tests, typecheck, lint, Webpack production build, isolated UI smoke, local billing smoke, and diff check passed. The UI and billing smokes use temporary data/fake payments. PR #13 is open/draft on `fix/first-run-operability`, with no GitHub status checks. These checks do not prove repeatability, a new live send/reply, paid-provider connectivity, or hosted operation.
 
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
@@ -48,10 +48,10 @@ NOT verified (these need the owner's account/provider setup):
 3. `lib/leads/apify.ts` is tested only with canned data. First real run: confirm the actor id (`apify~instagram-search-scraper` by default, overridable via setting `apify_actor`), its input fields (`search`, `searchType`, `resultsLimit`) and output field names (`username`, followers).
 
 ## Next tasks, in order
-1. Keep the worker running and inspect the live qualification result after 12:59:50 UTC / 6:29 PM India time. The queued jobs are read-only; do not accelerate them past their permitted account hours.
-2. If the lead qualifies, continue only with user-reviewed manual warm-up/drafting. Approval remains ON; no real DM can be sent until the exact draft is approved in the app.
-3. Keep paid AI, Apify, and Stripe calls off. The local billing simulator is the no-spend check; no live provider credentials are configured.
-4. PR #13 remains open/draft with no automated checks. Do not merge or commit to main. Hosting and multi-company accounts remain deferred.
+1. Leave the worker running with approval ON and inspect its scheduled read-only inbox check; do not accelerate it beyond account hours or pacing.
+2. Campaign #4 has no eligible prospect now. A new send/reply test needs an eligible lead, human review, and the exact message approved in the app. Do not send, like, comment, follow, or warm up without the owner's explicit confirmation.
+3. Keep Anthropic, Apify, and Stripe calls off under the no-spend instruction. Settings shows Anthropic/Apify are not connected and no Apify cap is saved. Do not request secrets in chat.
+4. Keep PR #13 open/draft; do not merge or commit to main. Hosting and multi-company accounts remain deferred.
 
 ## Working rules
 - Change a rule in `lib/domain/` first, run `npm test`, then look at the screen. Add a test for every rule you change.
@@ -868,6 +868,6 @@ NOT verified: repeatability across Chrome restarts or multiple incoming replies;
 
 Needs from Rudra: no help is needed for the verified read-only flow. Paid-provider credentials and explicit authorization are required only for paid AI/lead-search checks; keep credentials out of chat.
 
-Committed as `63c615a` on `fix/first-run-operability`, pushed to the open draft PR #13. The repository is clean and the local app and read-only reply checker are running.
+Changes are committed and pushed on `fix/first-run-operability` to the open draft PR #13. The repository is clean; the local app and read-only reply checker are running.
 
 To verify the rest of the SaaS connections: the owner must configure Anthropic and Apify credentials locally and explicitly authorize a paid test call; no secrets belong in chat. A new send-and-reply test needs a newly eligible prospect, message review, and in-app approval. Real Stripe TEST and hosted operation remain unverified and are not required for this no-spend read-only check.
