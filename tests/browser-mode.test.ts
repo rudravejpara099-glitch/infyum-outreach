@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { posix, win32 } from "node:path";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch, loginCheckFailure } from "@/lib/domain/browser-mode";
-import { bindInstagramPage, chromeMcpArgs, chromeUserDataDir, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
+import { bindInstagramPage, chromeMcpArgs, chromeUserDataDir, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, isInstagramInboxUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
 import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 
@@ -41,6 +41,10 @@ describe("signed-in Chrome mode", () => {
     expect(isAllowedInstagramUrl("https://instagram.com/owner/")).toBe(true);
     expect(isAllowedInstagramUrl("https://m.instagram.com/owner/")).toBe(false);
     expect(isAllowedInstagramUrl("http://instagram.com/owner/")).toBe(false);
+    expect(isInstagramInboxUrl("https://www.instagram.com/direct/inbox/")).toBe(true);
+    expect(isInstagramInboxUrl("https://www.instagram.com/direct/t/123_Ab-/")).toBe(true);
+    expect(isInstagramInboxUrl("https://www.instagram.com/direct/requests/")).toBe(false);
+    expect(isInstagramInboxUrl("https://attacker.example/direct/inbox/")).toBe(false);
   });
 
   it("parses only the bridge's JSON result and tolerates either MCP result format", () => {
