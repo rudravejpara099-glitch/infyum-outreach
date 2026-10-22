@@ -86,6 +86,24 @@ describe("Chrome read-only data adapter", () => {
     expect(result).toMatchObject({ allowed: true, followerText: "17.4K followers", relation: "follow" });
   });
 
+  it("fails closed when the nearest profile container has conflicting relationship controls", async () => {
+    const parent = {
+      querySelectorAll: () => [
+        { innerText: "Follow", getAttribute: () => null },
+        { innerText: "Following", getAttribute: () => null },
+      ],
+      parentElement: null,
+    };
+    const header = { innerText: "17.4K followers", parentElement: parent, querySelector: () => null, querySelectorAll: () => [] };
+    const result = await runFastScript(profileFactsScript("target"), { protocol: "https:", hostname: "www.instagram.com", pathname: "/target/" }, {
+      body: { innerText: "17.4K followers" },
+      querySelector: (selector: string) => selector === "header" ? header : null,
+      querySelectorAll: () => [],
+    });
+    expect(result).toMatchObject({ allowed: true, relation: "" });
+    expect(() => profileFactsFromToolResult(mcpJson(result))).toThrow("clear connection status");
+  });
+
   it("waits for the About dialog before reading the public account country", async () => {
     let aboutClicked = false;
     let dialogChecks = 0;

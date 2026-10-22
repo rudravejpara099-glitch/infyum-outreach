@@ -33,8 +33,10 @@ export function profileFactsScript(targetHandle: string): string {
     let relation = '';
     let relationScope = header;
     for (let depth = 0; relationScope && depth < 3 && !relation; depth++, relationScope = relationScope.parentElement) {
-      relation = Array.from(relationScope.querySelectorAll('button,[role=button]')).map((e) =>
-        (e.getAttribute('aria-label') || e.innerText || '').trim().toLowerCase()).find((s) => /^(follow|follow back|following|requested)$/.test(s)) ?? '';
+      const relations = Array.from(new Set(Array.from(relationScope.querySelectorAll('button,[role=button]')).map((e) =>
+        (e.getAttribute('aria-label') || e.innerText || '').trim().toLowerCase()).filter((s) => /^(follow|follow back|following|requested)$/.test(s))));
+      if (relations.length === 1) relation = relations[0];
+      else if (relations.length > 1) break;
     }
     let country = null;
     let dialog = Array.from(document.querySelectorAll('[role=dialog]')).find((item) => /Account based in/i.test(item.innerText || ''));
