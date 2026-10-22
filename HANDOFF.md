@@ -622,3 +622,9 @@ The saved team IANA time zone now governs new accounts' warm-up start date, the 
 Verified: `npm test` = 284 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; and `npm run smoke:ui` pass. A runner regression proves that a queued send waits when the local day is already at its cap even though UTC has passed midnight. The UI smoke uses a disposable database/browser and sent no messages. No worker, Instagram write, paid service or payment ran, and no owner database mutation occurred; no money was spent.
 
 Still unverified: live campaign send/cap enforcement, paid provider integrations and durable reply sync. Campaign #4 still has no lead for a campaign qualification check. A real test DM needs the owner's explicit approval; paid calls remain off under the no-spend instruction.
+
+### Queued-send campaign guard regression (Codex, 2026-10-22)
+
+The worker already rechecks campaign status and sender assignment immediately before Instagram dispatch. Added regression tests proving an approved queued send remains unsent if the campaign is paused or its sender is removed during the final pacing wait. Updated `docs/FUNCTIONAL-AUDIT.md` to replace its stale claim that this guard was missing.
+
+Verified: `npm test` = 286 passed; `npm run typecheck`, `npm run lint`, `npx next build --webpack`, and `git diff --check` pass. Test-only addition; no worker, Instagram action, provider, payment, or owner database was touched.

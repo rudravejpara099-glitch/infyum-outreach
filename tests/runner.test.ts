@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
 import { createAccount, getAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
-import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
+import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages, markSent } from "@/lib/db/repos/messages";
 import { enqueue } from "@/lib/db/repos/jobs";
@@ -126,6 +126,34 @@ describe("worker pipeline", () => {
     expect(getMessage(db, message.id)?.status).toBe("approved");
     expect(approvedQueue(db)).toHaveLength(0);
     expect((db.prepare("SELECT status FROM jobs WHERE type='send'").get() as { status: string }).status).toBe("done");
+  });
+  it("does not send when the campaign is paused during the final send wait", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "paused-during-wait", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    deps.pace = async () => { setCampaignStatus(db, camp.id, "paused", "t"); };
+
+    await runOne(deps);
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("approved");
+  });
+  it("does not send when its account is removed from the campaign during the final wait", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "sender-removed", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    deps.pace = async () => { setCampaignAccounts(db, camp.id, []); };
+
+    await runOne(deps);
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("approved");
   });
   it("does not send a queued approved DM once the prospect writes first", async () => {
     const { acct, camp } = setup(true);

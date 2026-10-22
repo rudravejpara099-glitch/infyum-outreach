@@ -779,3 +779,11 @@ NOT verified: live campaign send/cap enforcement, paid integrations, and durable
 Decisions made: saved team time zone is authoritative for daily limits and daily counts; preserve the no-spend/no-send boundary.
 Needs from Rudra: provide a fresh lead for campaign #4 when ready and approve a specific test DM before any real send. No help is needed for the code change or local verification.
 Next I will: continue no-spend product verification with a correctly assigned lead if available.
+
+### [2026-10-22] Codex #92: Verify queued-send pause/sender guards
+Changed: test-only regression coverage in `tests/runner.test.ts`; corrected the stale campaign-pause item in `docs/FUNCTIONAL-AUDIT.md` and recorded results in `HANDOFF.md`. Existing worker logic rechecks active campaign status and selected sender after the final send wait.
+Verified: `npm test` = 286 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check`. No worker or owner data was run or changed, and no Instagram action, paid provider, payment, or spend occurred.
+NOT verified: live campaign execution or live daily-cap enforcement. A fresh lead is still needed for qualification on campaign #4; a specific test DM still requires the owner's approval.
+Decisions made: retain the dispatch-time campaign and sender guards. The remaining proof is a live owner-approved flow, not an assumption based on UI persistence.
+Needs from Rudra: when ready, provide a fresh lead; approve a specific test DM before any real send. No action needed for this regression check.
+Next I will: continue with no-spend integration checks that do not trigger campaign actions.
