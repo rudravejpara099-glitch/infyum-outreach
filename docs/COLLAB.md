@@ -746,3 +746,12 @@ NOT verified: why the old sign-in tasks failed, a long-running worker, campaign 
 Decisions made: do not alter main, start the worker or treat historical sign-in failures as a current connection failure. The verified account is saved to campaign #4; approval is on.
 Needs from owner: review/merge PR #13 before expecting its branch-only worker controls in the running main checkout; supply leads for a no-cost campaign test and separately approve any real campaign actions.
 Next I will: keep PR #13 reviewable and continue only with checks that do not start campaign work or spend money.
+
+### [2026-10-22] Codex #88: Refresh the local app after production build
+
+Changed: gracefully restarted only the Next.js server at `127.0.0.1:3100` after building the current `fix/first-run-operability` branch. Opened a new app tab. The Instagram worker stayed stopped. Corrected the live-state note in `HANDOFF.md`.
+Verified: read-only process inspection showed port 3100 served from the current feature worktree (not a separate main checkout); the server had started before the latest `.next` build. After restart, the authenticated Overview shows the `Start Outreach` control and the explicit warning that starting may process approved work, including DMs. The campaign readiness blocker is absent: active campaign #4 has approval on and its selected sender `@rudravejpara03012008` is active/isolated. Worker UI says stopped, last seen 15 hours ago. No worker was started, and no message or social action occurred.
+NOT verified: long-running worker operation, any paid provider, live lead qualification, or a live send. The worker start control is intentionally untouched pending explicit approval.
+Decisions made: the previous #87 attribution to a separate main checkout was incorrect; the immediate cause was a stale server process/build in the current feature worktree. Use the refreshed app now on port 3100. Keep the worker stopped.
+Needs from owner: an explicit go-ahead before starting the worker, since it may process approved outreach tasks. No extra account sign-in is currently needed.
+Next I will: keep no-spend/no-send checks in place and wait before starting campaign work.
