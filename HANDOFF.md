@@ -24,7 +24,15 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
-## State of the code (7+ commits, `npm test` = 52 passing, `npx next build` passes)
+## Current live-workspace status (2026-10-22)
+
+- The owner’s active campaign is assigned to the verified, campaign-capable Instagram account `@rudravejpara03012008`. The account is connected in Accounts, campaign approval is ON, and the campaign currently has zero leads.
+- The worker is stopped. Do not start it without the owner’s explicit go-ahead because it can perform campaign actions. No messages, likes, comments, follows, paid API calls, Apify runs or payments were made in this check.
+- Settings reports Anthropic AI writing and Apify search are not configured; both remain off. The local Claude Code CLI is installed, but its sign-in status could not be confirmed. Stripe test credentials are also absent. Use manual lead import for no-cost testing; do not claim live AI/search/payment connectivity.
+- Latest local verification: 277 unit tests, typecheck, `smoke:ui`, and `smoke:billing` passed. These prove local app flows and the fake billing simulator, not live worker/provider/payment execution.
+- For paid AI, follow the owner-approved at-cost billing decision in `docs/BILLING.md`: use a separately metered Anthropic API, never the owner’s personal Claude subscription. The older Claude CLI note below is historical and is not a way to bypass billing.
+
+## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
 - `lib/domain/*` rules (stages, qualify, limits, similarity, approval, sensitive, autoreply)
 - `lib/db/*` SQLite (better-sqlite3), append-only migrations in `lib/db/migrations.ts`, one repo file per table in `lib/db/repos/`
@@ -39,12 +47,11 @@ NOT verified (these need the owner's account/provider setup):
 3. `lib/leads/apify.ts` is tested only with canned data. First real run: confirm the actor id (`apify~instagram-search-scraper` by default, overridable via setting `apify_actor`), its input fields (`search`, `searchType`, `resultsLimit`) and output field names (`username`, followers).
 
 ## Next tasks, in order
-1. The owner signs in to one Instagram account through Accounts; verify the session and read-only profile/inbox steps, then correct any driver selectors. Do not run like, comment, follow or send actions without separate confirmation.
-2. Complete the paid AI API path: configure a separate Anthropic API key, independently review metering/restart safeguards, then run only a separately approved test request. Never use the personal Claude Code subscription.
-3. Test Apify with authoritative usage and the existing monthly cap only after separate spending approval. Finish the missing metered Apify worker hooks first.
-4. Test Stripe using test credentials and the fake local simulator; keep live payments off.
-5. Run the full worker flow with approval ON only after read-only and billing checks pass and the owner confirms the specific live test.
-6. Later: hosting on a server and multi-company accounts remain deferred.
+1. Owner-provided local setup: campaign `test 1 at 10:26PM 21OCT` is assigned to the verified campaign-capable account, but has zero leads. Import a small owner-provided list manually for no-cost checking.
+2. Keep the worker stopped until the owner explicitly approves starting campaign processing. Approval remains ON; any actual send, like, comment or follow still requires separate confirmation.
+3. Paid AI and Apify are disconnected and off. Because the owner said not to spend money, do not configure or call them in this check. If the owner later wants those integrations tested, use their separate approval and test-only limits.
+4. The fake Stripe simulator passed; no Stripe TEST account is configured. No live payment is authorized.
+5. Hosting and multi-company accounts remain deferred.
 
 ## Working rules
 - Change a rule in `lib/domain/` first, run `npm test`, then look at the screen. Add a test for every rule you change.

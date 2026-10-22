@@ -728,3 +728,12 @@ NOT verified: owner-authenticated dashboard rendering, real account sending, lon
 Decisions made: retain the current stopped/running labels as the source for worker-status UI checks.
 Needs from you: live end-to-end operation still needs a campaign-capable sender account. Separate approval is needed before any real social write or paid provider call.
 Next I will: report the passing no-spend checks and the remaining live connection help clearly; keep PR #13 draft.
+
+### [2026-10-22] Codex #86: Recheck live campaign readiness after account setup
+
+Changed: owner-facing local app configuration only. On the signed-in app at `127.0.0.1:3100`, assigned active campaign #4 to the verified campaign-capable account `@rudravejpara03012008`. Kept “Ask me before anything is sent” enabled. Updated `HANDOFF.md` with the current setup and verification status; no application source code or migrations changed.
+Verified: Accounts reports the isolated account sign-in as connected; campaign #4 now selects that account, remains approval-on, and shows 0 leads. Settings reports Anthropic and Apify are not connected; both remain off. Stripe test credentials are absent. Claude Code is installed, but a read-only auth-status check timed out, so CLI sign-in is unconfirmed. `npm test` = 277 passed, `npm run typecheck`, `npm run smoke:ui`, and `npm run smoke:billing` passed. The latter uses a local fake simulator, not Stripe. No worker, paid provider call, payment, Instagram inbox read, or social action ran; no money was spent.
+NOT verified: lead qualification for this campaign, worker execution, AI drafting, Apify search, Stripe TEST account behavior, or any live send. The active campaign has no leads and the worker remains stopped.
+Decisions made: keep approval ON; preserve the campaign-capable isolated account; do not start the worker without the owner’s explicit go-ahead; do not use paid providers while the owner’s no-spend instruction is in force.
+Needs from owner: provide a small lead list for no-cost manual import and explicitly approve campaign processing when ready. Paid integrations need separate authorization before any provider call.
+Next I will: keep working only on no-spend verification that cannot trigger campaign actions; do not claim the full app is live-ready.
