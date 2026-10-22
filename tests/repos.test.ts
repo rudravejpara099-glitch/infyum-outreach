@@ -236,6 +236,12 @@ describe("jobs", () => {
     expect(requeueStuck(db)).toBe(1);
     const j = claimNext(db)!; completeJob(db, j.id);
   });
+  it("clears an old error after a retried job completes", () => {
+    const id = enqueue(db, { type: "check_inbox" });
+    db.prepare("UPDATE jobs SET last_error='old failure' WHERE id=?").run(id);
+    completeJob(db, id);
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE id=?").get(id)).toEqual({ status: "done", last_error: "" });
+  });
   it("holds interrupted warm-up and paid jobs instead of replaying them", () => {
     for (const type of ["warmup", "find_leads", "draft_dm", "draft_followup", "open_login"])
       db.prepare("INSERT INTO jobs (type,status) VALUES (?,'running')").run(type);

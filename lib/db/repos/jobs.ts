@@ -39,7 +39,7 @@ export function claimNext(db: Db, types?: string[], lane?: Lane, mayClaim?: () =
   })();
 }
 export function completeJob(db: Db, id: number): void {
-  db.prepare("UPDATE jobs SET status='done' WHERE id = ?").run(id);
+  db.prepare("UPDATE jobs SET status='done', last_error='' WHERE id = ?").run(id);
 }
 /** Retries up to three times with growing delays, then gives up and keeps the error. */
 export function failJob(db: Db, job: Job, error: string): void {

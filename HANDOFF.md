@@ -831,3 +831,14 @@ Follow-up evidence: the worker's first #113 retry still failed before reading, w
 Focused adapter/driver tests: 21 passed. Full test/typecheck/lint/build and live worker verification after this update are pending. Owner DB still has one queued read-only inbox task and zero approved outgoing messages; active campaign approval remains ON. No sends or spend.
 
 Next I will: run full checks, load this update into the worker, and inspect its next allowed inbox attempt.
+### [2026-10-22] Codex #115: Verify read-only inbox job completion
+
+Changed on `fix/first-run-operability` / PR #13: a successful `completeJob` now clears an earlier retry error, so the saved job state matches its final result. Added a repository regression test. No migration or dependency.
+
+Verified: after confirming campaign approval ON, zero approved outgoing messages, exactly one queued `check_inbox`, and no running jobs, I rescheduled that read-only task with the existing `rescheduleQueuedReadOnlyJobs` helper. I then ran the app's `runOne` processing path against the existing owner DB and signed-in Chrome driver, with only that account lane selected; the injected AI engine throws if called. The job completed as `done` and the inbox reader returned zero newly stored incoming messages. Cleared the stale failure using the updated repository helper. No DM, like, follow, comment, paid provider call, or spend. `npm test` = 316 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check` passed.
+
+NOT verified: receipt/persistence of a new reply (there was no new incoming message during this job), sustained automatic worker operation, an outbound DM, paid AI/Apify/Stripe, or hosted operation. The recurring background service is stopped; starting it can also trigger paid qualification or lead-search tasks, so it remains off under the no-paid-call instruction. The standalone read-only Chrome driver had earlier returned a thread, but that does not prove a new reply was stored by this run.
+
+Decisions remain: approval ON; stop at the prospect's first reply; no warm-up, outbound send, or paid call without the existing explicit approvals.
+
+Next: push these documentation and stale-error changes to the existing PR #13 branch. Keep the recurring worker stopped and report the verification boundary plainly.
