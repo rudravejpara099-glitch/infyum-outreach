@@ -763,3 +763,11 @@ NOT verified: live qualification for a lead in campaign #4, long-running worker 
 Decisions made: do not bulk-assign the legacy leads without evidence of the sender account. Keep approval on, the worker stopped, and all spending/outbound activity off until separately authorized.
 Needs from Rudra: either identify the sender account for the legacy DM records or provide one fresh test lead for campaign #4; explicitly approve a specific DM before any live send. No paid provider keys or calls are needed for the no-spend test path.
 Next I will: continue the no-spend workflow with a correctly assigned fresh lead once provided; keep all real sends and paid provider calls off until separately authorized.
+
+### [2026-10-22] Codex #90: Complete local production and lint checks
+Changed: no application source or owner data. Extended the current verification note in `HANDOFF.md` with lint and production-auth results.
+Verified: `npm run lint` passes. `node --import tsx scripts/security-smoke.ts` passes against a temporary database: production refuses unsafe secrets, setup/sign-in work, protected routes require a session, and sign-out redirects correctly. The smoke started no worker/provider and performed no outreach or payment. The preceding #89 entry records the current 277-test, typecheck, production build, UI smoke, billing simulator and read-only account-profile results.
+NOT verified: an actual lead in campaign #4, live worker execution, durable reply sync, any live message, or paid providers/payments. The local app and database remain unchanged; no money was spent.
+Decisions made: retain campaign approval and no-spend/no-send requirements. Do not claim complete SaaS operation from local simulations and read-only profile access.
+Needs from Rudra: identify the sender account for the unassigned historical messages or provide a fresh test lead, then explicitly approve a specific test DM.
+Next I will: continue with the no-spend path after the lead/account context is available; keep live campaign processing stopped.
