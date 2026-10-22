@@ -120,12 +120,16 @@ describe("worker pipeline", () => {
     const { acct } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
     const { lead } = addLead(db, { handle: "known-lead", stage: "dm_sent" }, "t");
+    const oldCheck = enqueue(db, { type: "check_inbox", accountId: acct.id });
+    db.prepare("UPDATE jobs SET status='failed',last_error='old timeout' WHERE id=?").run(oldCheck);
     driver.inbox = [{ handle: "known-lead", text: "Can you explain the funnel?" }];
     enqueue(db, { type: "check_inbox", accountId: acct.id });
     await runOne(deps);
     expect(driver.inboxReads).toBe(1);
     expect(getLead(db, lead.id)?.stage).toBe("replied");
     expect(listMessages(db, { leadId: lead.id }).some((message) => message.direction === "in" && message.parts.join(" ").includes("explain the funnel"))).toBe(true);
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE id=?").get(oldCheck)).toEqual({ status: "done", last_error: "" });
+    expect(db.prepare("SELECT action,detail FROM activity WHERE action='inbox.checked'").get()).toEqual({ action: "inbox.checked", detail: "1 new reply handed off." });
     expect(driver.sent).toHaveLength(0);
   });
 

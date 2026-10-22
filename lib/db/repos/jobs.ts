@@ -41,6 +41,11 @@ export function claimNext(db: Db, types?: string[], lane?: Lane, mayClaim?: () =
 export function completeJob(db: Db, id: number): void {
   db.prepare("UPDATE jobs SET status='done', last_error='' WHERE id = ?").run(id);
 }
+/** A later successful inbox read supersedes earlier terminal failures for the same account. */
+export function resolveSupersededInboxJobs(db: Db, accountId: number): number {
+  return db.prepare(`UPDATE jobs SET status='done', last_error=''
+    WHERE type='check_inbox' AND account_id=? AND status='failed'`).run(accountId).changes;
+}
 /** Retries up to three times with growing delays, then gives up and keeps the error. */
 export function failJob(db: Db, job: Job, error: string): void {
   if (job.attempts >= MAX_ATTEMPTS) {

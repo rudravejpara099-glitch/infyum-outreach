@@ -4,7 +4,7 @@ import { addLead, getLead, moveStage, dueFollowups, countByStage } from "@/lib/d
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { createAccount } from "@/lib/db/repos/accounts";
 import { createOutgoing, approveMessage, listMessages, sentTodayForAccount, recentSentTexts, markSent } from "@/lib/db/repos/messages";
-import { claimNext, enqueue, failJob, completeJob, requeueStuck, rescheduleQueuedReadOnlyJobs } from "@/lib/db/repos/jobs";
+import { claimNext, enqueue, failJob, completeJob, requeueStuck, resolveSupersededInboxJobs, rescheduleQueuedReadOnlyJobs } from "@/lib/db/repos/jobs";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { afterSent, handleIncoming, markDoNotContact } from "@/lib/services/outreach";
 import { listActivity } from "@/lib/db/repos/activity";
@@ -241,6 +241,18 @@ describe("jobs", () => {
     db.prepare("UPDATE jobs SET last_error='old failure' WHERE id=?").run(id);
     completeJob(db, id);
     expect(db.prepare("SELECT status,last_error FROM jobs WHERE id=?").get(id)).toEqual({ status: "done", last_error: "" });
+  });
+  it("only resolves failed inbox checks for the account that later succeeded", () => {
+    const { acct } = seed();
+    const otherAccount = createAccount(db, { handle: "@Other", profileDir: "/tmp/other" }, "t");
+    const same = enqueue(db, { type: "check_inbox", accountId: acct.id });
+    const other = enqueue(db, { type: "check_inbox", accountId: otherAccount.id });
+    const qualify = enqueue(db, { type: "qualify", accountId: acct.id });
+    for (const id of [same, other, qualify]) db.prepare("UPDATE jobs SET status='failed',last_error='old failure' WHERE id=?").run(id);
+    expect(resolveSupersededInboxJobs(db, acct.id)).toBe(1);
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE id=?").get(same)).toEqual({ status: "done", last_error: "" });
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE id=?").get(other)).toEqual({ status: "failed", last_error: "old failure" });
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE id=?").get(qualify)).toEqual({ status: "failed", last_error: "old failure" });
   });
   it("holds interrupted warm-up and paid jobs instead of replaying them", () => {
     for (const type of ["warmup", "find_leads", "draft_dm", "draft_followup", "open_login"])

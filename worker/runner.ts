@@ -9,7 +9,7 @@ import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, type Lane } from "@/lib/db/repos/jobs";
+import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, resolveSupersededInboxJobs, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
@@ -280,9 +280,17 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
     case "check_inbox": {
       if (!account) return;
+      let handoffs = 0;
       for (const incoming of await driver.readInbox(account)) {
         const known = findLeadByHandle(db, incoming.handle);
-        if (known) handleIncoming(db, known.id, incoming.text); // strangers who message us are ignored
+        if (known && handleIncoming(db, known.id, incoming.text).counted) handoffs++;
+      }
+      const superseded = resolveSupersededInboxJobs(db, account.id);
+      if (superseded || handoffs) {
+        const detail = handoffs
+          ? `${handoffs} new ${handoffs === 1 ? "reply" : "replies"} handed off.`
+          : `This successful check cleared ${superseded} earlier inbox ${superseded === 1 ? "error" : "errors"}.`;
+        logActivity(db, "worker", "inbox.checked", { accountId: account.id, detail });
       }
       return;
     }

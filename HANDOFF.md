@@ -853,3 +853,19 @@ Remaining connection gap: Settings shows Anthropic AI “not connected on this c
 NOT verified: a newly received reply stored in the latest run, repeatability across multiple real prospects, real AI/Apify/Stripe TEST connections, sustained operation over time, or hosting. The one live lead that completed the flow is historical; the campaign's three existing leads are all skipped, so no new live send can be prepared from campaign #4 now.
 
 Next: keep the worker running with campaign approvals ON and paid work off. Full paid integrations require the owner to configure provider credentials in the local environment and explicitly authorize any actual paid call; no secret should be sent in chat. A real outbound test needs a valid eligible prospect, an AI connection or reviewed draft, and the owner's message approval in the app.
+
+### 2026-10-22: Recover and verify the signed-in Chrome inbox check
+
+Changed on `fix/first-run-operability` / PR #13: the Instagram connector reads only Chrome's local `DevToolsActivePort` metadata and uses its validated WebSocket address when present. It remains restricted to Instagram URLs; missing metadata falls back to the existing profile auto-connect path. Invalid addresses are rejected. The worker now clears older failed inbox checks for the same account after a later successful read and records a success notice without message content. Added parser, repository, runner, and UI-copy tests; no migrations or dependencies.
+
+Verified against the real signed-in Chrome profile: a read-only MCP check connected and listed five Instagram tabs, including the saved `timelessmoments.al` account. Then one already-queued `check_inbox` task completed through the real worker `runOne` path using the updated connector. It cleared two old inbox failures, logged a content-free success notice, and produced zero recent sends. The app dashboard now shows five older sign-in attempts needing attention (down from seven background task errors) and the new success activity. Campaign #4 remains approval-ON; there are zero approved outgoing messages. No paid call, message send, like, follow, comment, or spend.
+
+Validation: `npm test` = 317 passed; `npm run lint`, `npm run typecheck`, `npx next build --webpack`, and `git diff --check` passed. Restarted the production app at `http://127.0.0.1:3100`; the refreshed Overview visibly labels the activity “Reply check succeeded” and shows the five remaining sign-in attempts.
+
+Current state: local app is running at `http://127.0.0.1:3100`; Outreach worker is stopped after the isolated check. Twenty-three messages await human approval. The current campaign has no newly eligible leads. Do not start the worker during a CEO demo unless all pending messages are reviewed; approval is ON but approving a message queues a real send.
+
+NOT verified: repeatability across Chrome restarts or multiple incoming replies; a new outbound campaign DM; paid Anthropic, Apify, or real Stripe TEST connectivity; hosted operation. No paid credentials were available and no spending was authorized.
+
+Needs from Rudra: no help is needed for the verified read-only flow. Paid-provider credentials and explicit authorization are required only for paid AI/lead-search checks; keep credentials out of chat.
+
+Next: commit the verified changes on `fix/first-run-operability` and push them to PR #13.

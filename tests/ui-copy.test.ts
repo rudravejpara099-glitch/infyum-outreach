@@ -23,6 +23,7 @@ describe("plain-language UI copy", () => {
   it("hides internal event and actor identifiers from history labels", () => {
     expect(activityLabel("lead.handoff")).toBe("Lead replied; conversation handed over");
     expect(activityLabel("message.sent.dm")).toBe("First message sent");
+    expect(activityLabel("inbox.checked")).toBe("Reply check succeeded");
     expect(activityLabel("pace.after_send")).toBe("Work break scheduled");
     expect(activityLabel("unknown.internal.event")).toBe("Activity recorded");
     expect(actorLabel("worker")).toBe("Outreach assistant");

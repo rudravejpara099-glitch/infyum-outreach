@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { dirname, join, win32 } from "node:path";
 import { homedir } from "node:os";
 import { createRequire } from "node:module";
@@ -14,6 +15,7 @@ const CHROME_REQUEST_TIMEOUT_MS = 60_000;
 export function ensureChromeToolSucceeded<T extends ToolTextResult>(result: T, fallback: string): T {
   if (!result.isError) return result;
   const details = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
+  if (/EPERM|operation not permitted/i.test(details)) throw new Error("macOS blocked access to Chrome's local debugging file. Reopen the signed-in Chrome profile and retry the connection.");
   if (/403|remote debugging|DevToolsActivePort|could not connect to Chrome/i.test(details)) throw new Error("Chrome remote debugging permission was denied.");
   throw new Error(fallback);
 }
@@ -36,8 +38,20 @@ export function chromeUserDataDir(platform: NodeJS.Platform = process.platform, 
   if (platform === "win32") return pathJoin(localAppData, "Google", "Chrome", "User Data");
   return pathJoin(home, ".config", "google-chrome");
 }
-export function chromeMcpArgs(bin: string, userDataDir = chromeUserDataDir()): string[] {
-  return [bin, "--auto-connect", "--channel=stable", "--user-data-dir", userDataDir, "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+export function chromeEndpointFromActivePort(contents: string): string | null {
+  const [rawPort, path] = contents.trim().split(/\r?\n/);
+  const port = Number(rawPort);
+  if (!/^\d+$/.test(rawPort ?? "") || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+  if (!/^\/devtools\/browser\/[A-Za-z0-9_-]+$/.test(path ?? "")) return null;
+  return `ws://127.0.0.1:${port}${path}`;
+}
+export function chromeMcpArgs(bin: string, userDataDir = chromeUserDataDir(), activePortContents?: string): string[] {
+  const endpoint = activePortContents === undefined ? null : chromeEndpointFromActivePort(activePortContents);
+  if (activePortContents !== undefined && !endpoint) throw new Error("Chrome's local debugging address is invalid.");
+  const connectionArgs = endpoint
+    ? [`--ws-endpoint=${endpoint}`]
+    : ["--auto-connect", "--channel=stable", "--user-data-dir", userDataDir];
+  return [bin, ...connectionArgs, "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
 }
 export function isAllowedInstagramUrl(value: string): boolean {
   try {
@@ -80,9 +94,16 @@ export class ChromeInstagram implements InstagramDriver {
     if (this.client) return this.client;
     const entry = createRequire(import.meta.url).resolve("chrome-devtools-mcp");
     const bin = join(dirname(entry), "bin", "chrome-devtools-mcp.js");
+    const userDataDir = chromeUserDataDir();
+    let activePortContents: string | undefined;
+    try {
+      activePortContents = readFileSync(join(userDataDir, "DevToolsActivePort"), "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw new Error("macOS blocked access to Chrome's local debugging file.");
+    }
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: chromeMcpArgs(bin),
+      args: chromeMcpArgs(bin, userDataDir, activePortContents),
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", CI: "1", CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1" },
       stderr: "ignore",
     });

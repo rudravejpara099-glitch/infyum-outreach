@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { posix, win32 } from "node:path";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch, loginCheckFailure } from "@/lib/domain/browser-mode";
-import { bindInstagramPage, chromeMcpArgs, chromeUserDataDir, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, isInstagramInboxUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
+import { bindInstagramPage, chromeEndpointFromActivePort, chromeMcpArgs, chromeUserDataDir, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, isInstagramInboxUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
 import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 
@@ -59,6 +59,11 @@ describe("signed-in Chrome mode", () => {
       .toThrow("Chrome could not verify sign-in.");
     expect(() => ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "403 at /Users/private/profile" }] }, "fallback"))
       .toThrow("Chrome remote debugging permission was denied.");
+    let chromeAccessError = "";
+    try { ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "EPERM: operation not permitted, open '/Users/private/Library/Application Support/Google/Chrome/DevToolsActivePort'" }] }, "fallback"); }
+    catch (error) { chromeAccessError = error instanceof Error ? error.message : String(error); }
+    expect(chromeAccessError).toContain("Reopen the signed-in Chrome profile");
+    expect(chromeAccessError).not.toContain("/Users/private");
     expect(ensureChromeToolSucceeded({ content: [{ type: "text", text: "ok" }] }, "fallback")).toEqual({ content: [{ type: "text", text: "ok" }] });
     expect(loginStateFromToolResult({ content: [{ type: "text", text: "```json\n{\"allowed\":true,\"loggedIn\":false}\n```" }] })).toEqual({ text: "", loggedIn: false });
     expect(() => loginStateFromToolResult({ content: [{ type: "text", text: "no status returned" }] })).toThrow("no Instagram sign-in status");
@@ -73,16 +78,22 @@ describe("signed-in Chrome mode", () => {
     expect(() => instagramLoginCheckScript("https://attacker.example")).toThrow("Invalid Instagram handle");
   });
 
-  it("uses Chrome auto-connect with the explicit signed-in profile path", () => {
+  it("uses Chrome's temporary WebSocket address when available and otherwise auto-connects to the selected profile", () => {
     const profilePath = "/test/chrome-profile";
-    const args = chromeMcpArgs("chrome-devtools-mcp.js", profilePath);
-    expect(args).toContain("--auto-connect");
-    expect(args).toContain("--channel=stable");
-    expect(args[args.indexOf("--user-data-dir") + 1]).toBe(profilePath);
-    expect(args).not.toContain("--browser-url");
+    const activePort = "43821\n/devtools/browser/abc-123\n";
+    expect(chromeEndpointFromActivePort(activePort)).toBe("ws://127.0.0.1:43821/devtools/browser/abc-123");
+    expect(chromeEndpointFromActivePort("0\n/devtools/browser/abc\n")).toBeNull();
+    expect(chromeEndpointFromActivePort("9222\n/../../private\n")).toBeNull();
+    const args = chromeMcpArgs("chrome-devtools-mcp.js", profilePath, activePort);
+    expect(args).toContain("--ws-endpoint=ws://127.0.0.1:43821/devtools/browser/abc-123");
+    expect(args).not.toContain("--auto-connect");
+    expect(args).not.toContain("--user-data-dir");
     expect(args).toContain("--allowed-url-pattern=https://www.instagram.com/*");
     expect(args).toContain("--allowed-url-pattern=https://instagram.com/*");
+    expect(() => chromeMcpArgs("chrome-devtools-mcp.js", profilePath, "9222\n/invalid\n")).toThrow("local debugging address is invalid");
     const defaultArgs = chromeMcpArgs("chrome-devtools-mcp.js");
+    expect(defaultArgs).toContain("--auto-connect");
+    expect(defaultArgs).toContain("--channel=stable");
     expect(defaultArgs[defaultArgs.indexOf("--user-data-dir") + 1]).toBe(chromeUserDataDir());
     expect(chromeUserDataDir("darwin", "/Users/test")).toBe(posix.join("/Users/test", "Library", "Application Support", "Google", "Chrome"));
     expect(chromeUserDataDir("linux", "/home/test")).toBe(posix.join("/home/test", ".config", "google-chrome"));

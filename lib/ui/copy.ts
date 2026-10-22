@@ -55,6 +55,7 @@ const activityCopy: Record<string, string> = {
   "message.pending_approval": "Message ready for review",
   "message.approved": "Message approved and queued",
   "message.received": "Message received",
+  "inbox.checked": "Reply check succeeded",
   "message.approved_by_human": "Message approved by a team member",
   "message.rejected": "Message not approved",
   "message.failed": "Message couldn’t be sent",
