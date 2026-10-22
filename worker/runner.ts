@@ -17,10 +17,12 @@ import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
 import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
 import { afterSent, handleIncoming } from "@/lib/services/outreach";
+import { workerControl } from "@/lib/services/worker-lifecycle";
 import { findLeadsForCampaign } from "@/lib/services/findLeads";
 import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import { payerFor } from "@/lib/billing/attribution";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch } from "@/lib/domain/browser-mode";
+import { canSendAtStage } from "@/lib/domain/stages";
 import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
@@ -33,6 +35,8 @@ export type Deps = {
   humanPace?: { cfg?: Partial<PacingConfig>; rng?: Rng };
   /** Present only when APIFY_TOKEN is set. */
   apify?: ApifySearchClient;
+  /** Checked atomically with job claim when a live local worker owns the lease. */
+  mayClaim?: () => boolean;
 };
 
 const WARMUP_PIECES = 10;
@@ -62,16 +66,21 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
     }
   }
   for (const m of approvedQueue(db)) {
+    const lead = getLead(db, m.leadId);
+    if (!lead || !canSendAtStage(lead.stage, m.kind)) continue;
     if (!activeJobExists(db, "send", m.leadId) ) enqueue(db, { type: "send", leadId: m.leadId, accountId: m.accountId, payload: { messageId: m.id } });
   }
-  for (const c of active) {
-    for (const accountId of campaignAccountIds(db, c.id)) {
-      const key = `inbox_checked_${accountId}`;
-      const last = Number(getSetting(db, key) ?? 0);
-      if (now().getTime() - last >= INBOX_EVERY_MINUTES * 60_000 && !activeJobExists(db, "check_inbox", null, accountId)) {
-        enqueue(db, { type: "check_inbox", accountId });
-        setSetting(db, key, String(now().getTime()));
-      }
+  const inboxAccounts = new Set(active.flatMap((c) => campaignAccountIds(db, c.id)));
+  // A paused campaign can still receive the reply we were waiting for.
+  for (const row of db.prepare("SELECT DISTINCT account_id FROM leads WHERE stage='dm_sent' AND account_id IS NOT NULL").all() as { account_id: number }[]) {
+    inboxAccounts.add(row.account_id);
+  }
+  for (const accountId of inboxAccounts) {
+    const key = `inbox_checked_${accountId}`;
+    const last = Number(getSetting(db, key) ?? 0);
+    if (now().getTime() - last >= INBOX_EVERY_MINUTES * 60_000 && !activeJobExists(db, "check_inbox", null, accountId)) {
+      enqueue(db, { type: "check_inbox", accountId });
+      setSetting(db, key, String(now().getTime()));
     }
   }
 }
@@ -82,7 +91,7 @@ function hasOutgoing(db: Db, leadId: number, kind: string, statuses = ["draft", 
 
 /** Runs at most one job (from one lane when given). Returns false when nothing was due. */
 export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
-  const job = claimNext(deps.db, undefined, lane);
+  const job = claimNext(deps.db, undefined, lane, deps.mayClaim);
   if (!job) return false;
   try {
     await process(deps, job);
@@ -230,6 +239,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
     case "send": {
       const message = getMessage(db, Number(job.payload.messageId));
       if (!message || message.status !== "approved" || !lead || !account || message.leadId !== lead.id || message.accountId !== account.id) return;
+      if (!canSendAtStage(lead.stage, message.kind)) return;
       const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
       if (!campaign || campaign.status !== "active" || !campaignAccountIds(db, campaign.id).includes(account.id)) return;
       if (message.kind !== "reply") {
@@ -238,6 +248,19 @@ async function process(deps: Deps, job: Job): Promise<void> {
       }
       if (isDnc(db, lead.handle)) { markFailed(db, message.id, "Handle is on the do-not-contact list"); return; }
       await deps.pace();
+      if (workerControl(db).phase === "stopping") return;
+      // Approval, campaign state, or first-reply handoff can change while the worker waits.
+      const freshLead = getLead(db, lead.id), freshMessage = getMessage(db, message.id);
+      const freshAccount = getAccount(db, account.id);
+      const freshCampaign = freshLead?.campaignId ? getCampaign(db, freshLead.campaignId) : null;
+      if (!freshLead || !freshMessage || freshMessage.status !== "approved" || !canSendAtStage(freshLead.stage, freshMessage.kind)
+        || !freshAccount || freshAccount.status !== "active" || !browserModeAllowsJob(freshAccount.browserMode, "send")
+        || !freshCampaign || freshCampaign.status !== "active" || !campaignAccountIds(db, freshCampaign.id).includes(account.id)
+        || isDnc(db, freshLead.handle)) return;
+      if (remainingToday(freshAccount, todayOf(deps.now()), sentTodayForAccount(db, account.id, todayOf(deps.now()))) <= 0) {
+        deferJob(db, job, 120);
+        return;
+      }
       await driver.sendMessages(account, lead.handle, message.parts);
       try { db.transaction(() => afterSent(db, message.id, deps.now())).immediate(); }
       catch { throw new InstagramSendUncertainError(); }

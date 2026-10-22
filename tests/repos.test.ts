@@ -34,7 +34,7 @@ describe("leads", () => {
   });
   it("refuses illegal stage jumps and logs legal ones", () => {
     const { lead } = addLead(db, { handle: "x" }, "t");
-    expect(() => moveStage(db, lead.id, "replied", "t")).toThrow();
+    expect(() => moveStage(db, lead.id, "dm_sent", "t")).toThrow();
     moveStage(db, lead.id, "qualified", "t");
     expect(getLead(db, lead.id)!.stage).toBe("qualified");
     expect(listActivity(db).some((a) => a.action === "lead.qualified")).toBe(true);
@@ -45,6 +45,13 @@ describe("leads", () => {
     expect(getLead(db, lead.id)!.skipReason).toBe("Based in India");
     expect(countByStage(db).skipped).toBe(1);
   });
+});
+
+it("checks an account inbox before its queued send", () => {
+  const { acct } = seed(true);
+  enqueue(db, { type: "send", accountId: acct.id, payload: { messageId: 1 } });
+  enqueue(db, { type: "check_inbox", accountId: acct.id });
+  expect(claimNext(db, undefined, { accountId: acct.id })?.type).toBe("check_inbox");
 });
 
 describe("messages and approval", () => {
@@ -117,6 +124,12 @@ describe("incoming messages", () => {
     expect(handleIncoming(db, lead.id, "Interesting, what do you do exactly?").counted).toBe(true);
     expect(getLead(db, lead.id)).toMatchObject({ stage: "replied", nextFollowupAt: null });
     expect(claimNext(db)).toBeNull();
+  });
+  it("hands off when a prospect writes before our first DM", () => {
+    const { lead } = seed(true);
+    expect(handleIncoming(db, lead.id, "Please tell me about your service").counted).toBe(true);
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(handleIncoming(db, lead.id, "Another question").counted).toBe(false);
   });
   it("counts the first real reply once across repeated inbox checks", () => {
     const { lead } = toDmSent();

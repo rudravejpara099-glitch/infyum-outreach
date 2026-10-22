@@ -20,8 +20,9 @@ export function enqueue(db: Db, job: { type: string; leadId?: number | null; acc
 export type Lane = { accountId: number | null };
 
 /** Takes the oldest due job, optionally only from one lane. The transaction makes it safe even if two workers ever ran. */
-export function claimNext(db: Db, types?: string[], lane?: Lane): Job | null {
+export function claimNext(db: Db, types?: string[], lane?: Lane, mayClaim?: () => boolean): Job | null {
   return db.transaction(() => {
+    if (mayClaim && !mayClaim()) return null;
     const where = ["status='queued'", "run_after <= datetime('now')"];
     const args: unknown[] = [];
     if (types?.length) { where.push(`type IN (${types.map(() => "?").join(",")})`); args.push(...types); }
@@ -29,7 +30,8 @@ export function claimNext(db: Db, types?: string[], lane?: Lane): Job | null {
       if (lane.accountId === null) where.push("account_id IS NULL");
       else { where.push("account_id = ?"); args.push(lane.accountId); }
     }
-    const r = db.prepare(`SELECT * FROM jobs WHERE ${where.join(" AND ")} ORDER BY run_after, id LIMIT 1`).get(...args) as Record<string, unknown> | undefined;
+    // Check for a first reply before processing a waiting send in the same account lane.
+    const r = db.prepare(`SELECT * FROM jobs WHERE ${where.join(" AND ")} ORDER BY CASE WHEN type='check_inbox' THEN 0 ELSE 1 END, run_after, id LIMIT 1`).get(...args) as Record<string, unknown> | undefined;
     if (!r) return null;
     db.prepare("UPDATE jobs SET status='running', attempts = attempts + 1 WHERE id = ?").run(r.id);
     return map({ ...r, status: "running", attempts: (r.attempts as number) + 1 });
