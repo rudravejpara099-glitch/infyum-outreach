@@ -916,3 +916,9 @@ Changed on `fix/first-run-operability` / PR #13: an empty draft can now be delet
 Verified: `npm test` = 323 passed; `npm run typecheck`, `npm run lint`, `npm run smoke:ui`, `npx next build --webpack`, and `git diff --check` passed. The smoke deleted only a disposable empty draft. The rebuilt local app on port 3101 shows the delete button on an empty draft; no owner campaign was deleted. No DM or paid request.
 
 NOT verified: paid Anthropic, Apify, or real Stripe TEST connections; live campaign send-and-reply. Current sender `@timelessmoments.al` is connected; `@akash_infyum` still needs Chrome sign-in if it is intended to send. Campaign #4 remains approval ON, and its leads are skipped.
+
+### 2026-10-22: Verify disconnected lead-search behavior without spending
+
+Added an action-level regression proving that an active campaign with a positive saved cap still refuses lead search when the Apify connection is missing. The action creates no search job. This is a no-network test; no product runtime behavior was changed.
+
+Verified: `npm test` = 324 passed; `npm run typecheck`, `npm run lint`, and `git diff --check` passed. Current Settings and environment still show Anthropic, Apify, and Stripe credentials absent. No provider call or spend.

@@ -1010,3 +1010,10 @@ Verified: `npm test` = 323 passed; typecheck, lint, isolated UI smoke, Webpack p
 NOT verified: paid integrations or real Stripe TEST; new live send-and-reply. Campaign #4 remains approval ON; existing leads are skipped.
 Needs from Rudra: none for this cleanup feature. Sign into `@akash_infyum` only if it is intended to be a sender; no password in chat.
 Next: keep approval ON and paid work off; live sending still requires an eligible lead and your approval of the exact message.
+
+### [2026-10-22] Codex #125: Cover the disconnected Apify gate
+Changed: test-only on `fix/first-run-operability` / PR #13. Added an action-level test showing that a positive saved cap cannot queue lead search when the Apify token is absent; no paid request or job is created. No runtime code, migration, or dependency changed.
+Verified: `npm test` = 324 passed; typecheck, lint, and diff check passed. No provider call or spend.
+NOT verified: any live paid integration. Anthropic, Apify, and Stripe keys remain absent; live send-and-reply also remains unverified.
+Needs from Rudra: none for this test. Credentials and explicit spend approval are needed only if paid-provider behavior is to be tested.
+Next: preserve the no-spend setting and approval gate.

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { createCampaign, getCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
+import { createCampaign, getCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
+import { createAccount } from "@/lib/db/repos/accounts";
+import { setSetting } from "@/lib/db/repos/settings";
 import { addLeads, changeCampaignStatus, deleteEmptyDraftCampaign, findLeads } from "@/app/(app)/campaigns/actions";
 
 const state = vi.hoisted(() => ({ db: null as Db | null }));
@@ -14,7 +16,7 @@ beforeEach(() => {
   campaignId = createCampaign(db, { name: "Finished", niches: [], audienceText: "", country: "United States", minFollowers: 1, maxFollowers: 10000, approvalRequired: true, followupsEnabled: true }, [], "test").id;
   setCampaignStatus(db, campaignId, "done", "test");
 });
-afterEach(() => { db.close(); state.db = null; });
+afterEach(() => { vi.unstubAllEnvs(); db.close(); state.db = null; });
 
 it("does not allow a finished campaign to be restarted by a forged form", async () => {
   const form = new FormData(); form.set("id", String(campaignId)); form.set("status", "active");
@@ -32,6 +34,17 @@ it("requires an active campaign before a lead search can be queued", async () =>
   const form = new FormData(); form.set("id", String(campaignId));
   expect((await findLeads(form)).error).toMatch(/start this campaign/i);
   expect(db.prepare("SELECT count(*) n FROM jobs").get()).toEqual({ n: 0 });
+});
+
+it("does not queue a lead search when Apify is disconnected", async () => {
+  vi.stubEnv("APIFY_TOKEN", "");
+  const account = createAccount(db, { handle: "sender.test", profileDir: "/tmp/sender.test", dailyCap: 10 }, "test");
+  setCampaignAccounts(db, campaignId, [account.id]);
+  setCampaignStatus(db, campaignId, "active", "test");
+  setSetting(db, "apify_monthly_cap_usd", "1");
+  const form = new FormData(); form.set("id", String(campaignId));
+  expect((await findLeads(form)).error).toMatch(/not connected/i);
+  expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='find_leads'").get()).toEqual({ n: 0 });
 });
 
 it("deletes only an empty draft and records the change", async () => {
