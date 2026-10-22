@@ -517,3 +517,13 @@ Changed: extended the explicitly selected `chrome_read_only` account mode to sup
 Verified locally: `npm test` = 247 passing; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check`. No live profile facts or inbox content were read in this turn; no worker, social action, paid API, or payment ran. The earlier app-owned sign-in check remains the only live Instagram verification.
 
 NOT verified: live profile qualification, inbox sync, campaign execution, or live AI/Apify/Stripe connections. These are code-path checks only. Keep the worker stopped and do not claim outreach execution is live-ready.
+
+### Short whole-app verification (Codex, 2026-10-22)
+
+Verified in this turn: 247 unit/integration tests, typecheck, lint, Webpack production build; disposable Playwright UI smoke passed setup, login, campaign creation, leads, approvals, settings, responsive/theme/accessibility basics, authenticated routes, caps/pause/resume and fake worker heartbeat checks. Disposable billing simulator passed checkout, signed/replayed webhooks, exact fee reconciliation, exports and user isolation. Production security smoke passed unsafe-secret refusal, setup/login, protected routes, sign-out and signed-out redirects. These checks use temporary app data and a fake payment provider; no real payment or paid API was called.
+
+Live local state: the saved Chrome account has a completed sign-in check, but its adapter is read-only. Active campaign #4 is approval-required and assigned to a different account that is paused; there are no queued or running jobs. One app-adapter public-profile qualification attempt timed out before returning facts. No inbox was opened, worker started, or social action performed.
+
+Provider setup: local environment has no Apify, Anthropic, or Stripe credentials, no Stripe owner/test-webhook configuration, and no hosted database configuration. Real lead search, paid AI writing, test checkout with Stripe, campaign execution, and durable hosted operation remain unverified. Do not mark the app fully operational yet.
+
+Next work needs: (1) privately configure the owner-approved provider keys, starting with the exact integrations needed for the demo; (2) choose/authorize the Instagram write-capable connection approach—the existing connected Chrome mode cannot send and the isolated browser account is paused/unverified; (3) explicitly approve one single test DM with campaign approval ON before any live send test. No money was spent in this verification.

@@ -599,3 +599,10 @@ NOT verified: live profile qualification, inbox sync, campaign execution, Anthro
 Decisions made: preserve no-spend and read-only Chrome boundaries; don't run live inbox reads as a check.
 Needs from you: none for these local code changes. Paid API secrets and explicit approval for any paid call are needed to test real provider connections.
 Next I will: report exact live verification limits; keep all campaign sends off until an explicitly approved test send.
+
+### [2026-10-22] Codex #69: Run short whole-app no-spend verification
+Verified: 247 tests, typecheck, lint, Webpack production build, disposable Playwright UI smoke, fake-payment billing simulator, and production security smoke passed. UI coverage includes setup/login, campaign and lead creation, approvals, settings, protected routes, responsive/theme checks, pause/resume and DNC. Billing used a local fake processor; no charge, paid API, or live outreach ran.
+Live-state finding: the saved Chrome account has successful sign-in but is read-only. The active approval-required campaign #4 is assigned to a different paused account; no queued/running jobs exist. One live public-profile facts attempt timed out before returning; no inbox was read. Worker remained stopped.
+NOT verified: live profile facts/inbox, any campaign execution or send, paid AI, Apify, Stripe, or hosted database operation. Provider configuration is absent locally. No money was spent.
+Needs from owner: private provider configuration for whichever APIs are needed, a decision/authorization for the Instagram write-capable connection, and explicit confirmation before one live DM test with approval ON.
+Next I will: continue fixing product operation within the authorized board scope; keep paid calls and social writes off until approved.
