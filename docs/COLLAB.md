@@ -771,3 +771,11 @@ NOT verified: an actual lead in campaign #4, live worker execution, durable repl
 Decisions made: retain campaign approval and no-spend/no-send requirements. Do not claim complete SaaS operation from local simulations and read-only profile access.
 Needs from Rudra: identify the sender account for the unassigned historical messages or provide a fresh test lead, then explicitly approve a specific test DM.
 Next I will: continue with the no-spend path after the lead/account context is available; keep live campaign processing stopped.
+
+### [2026-10-22] Codex #91: Use team-local days for caps and counts
+Changed: account creation now records its warm-up start date in the saved team time zone. `worker/runner.ts`, the message repository, dashboard query, and authenticated dashboard/Accounts pages now use that zone for daily limits and counts. Added a pure timezone boundary rule that handles DST and tests for account setup, repository and dashboard behavior. Updated `HANDOFF.md` and `docs/FUNCTIONAL-AUDIT.md` to retire the stale UTC-counter gap.
+Verified: 284 tests, typecheck, lint, Webpack production build and disposable Playwright UI smoke pass. Runner regression confirms the cap holds a queued send after UTC midnight when the team-local day is already at its limit. No worker, Instagram write, paid service, payment, or owner-database mutation ran; no money was spent.
+NOT verified: live campaign send/cap enforcement, paid integrations, and durable reply sync. Campaign #4 still has no lead for checking its qualification path. Any test DM requires the owner's explicit approval.
+Decisions made: saved team time zone is authoritative for daily limits and daily counts; preserve the no-spend/no-send boundary.
+Needs from Rudra: provide a fresh lead for campaign #4 when ready and approve a specific test DM before any real send. No help is needed for the code change or local verification.
+Next I will: continue no-spend product verification with a correctly assigned lead if available.

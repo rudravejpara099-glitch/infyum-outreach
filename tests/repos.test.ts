@@ -3,7 +3,7 @@ import { openDb, type Db } from "@/lib/db/core";
 import { addLead, getLead, moveStage, dueFollowups, countByStage } from "@/lib/db/repos/leads";
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { createAccount } from "@/lib/db/repos/accounts";
-import { createOutgoing, approveMessage, listMessages, sentTodayForAccount, recentSentTexts } from "@/lib/db/repos/messages";
+import { createOutgoing, approveMessage, listMessages, sentTodayForAccount, recentSentTexts, markSent } from "@/lib/db/repos/messages";
 import { claimNext, enqueue, failJob, completeJob, requeueStuck } from "@/lib/db/repos/jobs";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { afterSent, handleIncoming, markDoNotContact } from "@/lib/services/outreach";
@@ -95,6 +95,22 @@ describe("sending flow", () => {
     expect(l.nextFollowupAt).toBe("2026-10-22 10:00:00");
     expect(sentTodayForAccount(db, acct.id, "2026-10-20")).toBe(1);
     expect(dueFollowups(db, "2026-10-22 10:00:01")).toHaveLength(1);
+  });
+  it("counts the team's local day across UTC midnight and daylight-saving changes", () => {
+    const { acct, camp } = seed(false);
+    const makeSent = (handle: string, at: string) => {
+      const { lead: target } = addLead(db, { handle }, "t");
+      const message = createOutgoing(db, { leadId: target.id, accountId: acct.id, kind: "dm", parts: [`Hello ${handle}`], campaign: camp }, "t");
+      markSent(db, message.id, new Date(at));
+    };
+    makeSent("before-local-day", "2026-10-20T18:29:59Z");
+    makeSent("inside-local-day", "2026-10-20T18:30:00Z");
+    makeSent("after-local-day", "2026-10-21T18:30:00Z");
+    expect(sentTodayForAccount(db, acct.id, "2026-10-21", "Asia/Kolkata")).toBe(1);
+
+    makeSent("first-fall-hour", "2026-11-01T05:30:00Z");
+    makeSent("repeated-fall-hour", "2026-11-01T06:30:00Z");
+    expect(sentTodayForAccount(db, acct.id, "2026-11-01", "America/New_York")).toBe(2);
   });
   it("stops follow-ups after two", () => {
     const { acct, camp, lead } = seed(false);

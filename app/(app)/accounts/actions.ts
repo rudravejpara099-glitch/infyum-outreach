@@ -9,6 +9,8 @@ import { createAccount, getAccount, setAccountBrowserMode, setAccountCap, setAcc
 import { enqueue } from "@/lib/db/repos/jobs";
 import { normHandle } from "@/lib/db/repos/dnc";
 import { workerStatus } from "@/lib/queries/worker-status";
+import { getSetting } from "@/lib/db/repos/settings";
+import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { loginWindowCommand } from "@/lib/services/login-window-command";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { accountIdSchema, capSchema, connectSchema } from "./validation";
@@ -61,7 +63,9 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   const backgroundRunning = process.env.OUTREACH_SMOKE_MODE === "1" || workerStatus(db, new Date()).running;
   let accountId = 0, request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
   db.transaction(() => {
-    const account = createAccount(db, { handle, profileDir: path.join(config.profilesDir, handle), dailyCap: parsed.data.dailyCap, browserMode: parsed.data.browserMode }, user.email);
+    const now = new Date();
+    const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
+    const account = createAccount(db, { handle, profileDir: path.join(config.profilesDir, handle), dailyCap: parsed.data.dailyCap, browserMode: parsed.data.browserMode, rampStart: dateInTimeZone(now, timeZone) }, user.email);
     accountId = account.id;
     request = requestLogin(db, account.id, backgroundRunning);
   }).immediate();

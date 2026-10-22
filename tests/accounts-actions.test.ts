@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
 import { createAccount, getAccount } from "@/lib/db/repos/accounts";
 import { enqueue } from "@/lib/db/repos/jobs";
+import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { connectAccount, reopenLogin, useSeparateSignIn, useSignedInChrome } from "@/app/(app)/accounts/actions";
 
 const state = vi.hoisted(() => ({ db: null as Db | null }));
@@ -21,11 +22,13 @@ afterEach(() => { db.close(); state.db = null; delete process.env.OUTREACH_SMOKE
 
 describe("Instagram sign-in actions", () => {
   it("opens a login-only process without requiring the full worker", async () => {
+    db.prepare("INSERT INTO settings (key,value) VALUES ('team_timezone','Asia/Kolkata')").run();
     const form = new FormData(); form.set("handle", "@review.account"); form.set("dailyCap", "20");
     const result = await connectAccount(form);
-    const account = db.prepare("SELECT id FROM ig_accounts").get() as { id: number };
+    const account = db.prepare("SELECT id,ramp_start FROM ig_accounts").get() as { id: number; ramp_start: string };
     const job = db.prepare("SELECT id,status FROM jobs WHERE type='open_login'").get() as { id: number; status: string };
     expect(result.message).toMatch(/opening in a separate window/i);
+    expect(account.ramp_start).toBe(dateInTimeZone(new Date(), "Asia/Kolkata"));
     expect(job.status).toBe("running");
     expect(spawn).toHaveBeenCalledWith(process.execPath, ["--import", "tsx", expect.stringContaining("open-instagram-login.ts"), String(account.id), String(job.id)], expect.objectContaining({ detached: true, stdio: "ignore", env: expect.not.objectContaining({ APIFY_TOKEN: expect.anything() }) }));
   });

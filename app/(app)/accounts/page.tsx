@@ -6,7 +6,8 @@ import { config } from "@/lib/config";
 import { listAccounts } from "@/lib/db/repos/accounts";
 import { sentTodayForAccount } from "@/lib/db/repos/messages";
 import { dailyAllowance } from "@/lib/domain/limits";
-import { todayIso } from "@/lib/format";
+import { getSetting } from "@/lib/db/repos/settings";
+import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { loginJobSummary } from "@/lib/ui/copy";
 import type { Job } from "@/lib/db/types";
 import { Empty, PageHeader } from "@/components/ui";
@@ -17,7 +18,8 @@ export const dynamic = "force-dynamic";
 export default async function AccountsPage() {
   await requireUser();
   const db = getDb();
-  const today = todayIso();
+  const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
+  const today = dateInTimeZone(new Date(), timeZone);
   const accounts = listAccounts(db);
   const worker = workerStatus(db, new Date());
   const loginJobs = db.prepare("SELECT account_id,status,last_error,payload FROM jobs j WHERE type='open_login' AND account_id IS NOT NULL AND id=(SELECT MAX(j2.id) FROM jobs j2 WHERE j2.type='open_login' AND j2.account_id=j.account_id)").all() as { account_id: number; status: Job["status"]; last_error: string; payload: string }[];
@@ -48,7 +50,7 @@ export default async function AccountsPage() {
                 <div className="font-medium break-words">@{a.handle} <span className={`badge ml-2 ${a.status === "active" ? "badge-ok" : a.status === "paused" ? "badge-warn" : "badge-bad"}`}>{a.status}</span></div>
                 {a.browserMode === "chrome_read_only" && <p className="mt-2 max-w-lg text-sm text-muted">Uses your signed-in Chrome to confirm this account. Campaign actions are disabled for this connection.</p>}
                 <div className="mt-0.5 text-xs text-muted">
-                  Today (UTC) {sentTodayForAccount(db, a.id, today)} of {dailyAllowance(a, today)} allowed{a.statusNote ? ` · ${a.statusNote}` : ""}
+                  Today {sentTodayForAccount(db, a.id, today, timeZone)} of {dailyAllowance(a, today)} allowed{a.statusNote ? ` · ${a.statusNote}` : ""}
                 </div>
                 {a.status === "blocked" && <p className="mt-2 max-w-lg text-sm text-bad">Instagram showed a warning. Outreach stays stopped. Opening the login window does not clear this warning.</p>}
               </div>

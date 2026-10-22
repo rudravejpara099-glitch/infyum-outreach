@@ -614,3 +614,11 @@ Current owner database, inspected read-only: campaign #4 is the only active camp
 Still not verified: adding a real lead to campaign #4, live qualification on that campaign, a long-running worker, durable reply sync against correctly attributed sent leads, any live DM, and real Anthropic/Apify/Stripe TEST calls. AI writing, Apify search, and Stripe credentials are not configured, and the owner's no-spend instruction remains in force. The worker remains stopped. A real test DM still requires the owner's explicit approval; paid provider calls require separate authorization.
 
 Next: first determine which account sent the unassigned historical DMs, or start with a new test lead explicitly assigned to campaign #4. Then continue only through the approved no-spend/read-only path until the owner confirms a specific test send.
+
+### Team-time-zone daily limits and counts (Codex, 2026-10-22)
+
+The saved team IANA time zone now governs new accounts' warm-up start date, the worker's daily-cap check (including its final pre-send recheck), Accounts-page sent count, dashboard account counts, and dashboard daily/seven-day totals. User-facing counts no longer label the day as UTC. Calendar boundaries correctly cover daylight-saving 23- and 25-hour days; invalid dates/zones fail instead of silently miscounting.
+
+Verified: `npm test` = 284 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; and `npm run smoke:ui` pass. A runner regression proves that a queued send waits when the local day is already at its cap even though UTC has passed midnight. The UI smoke uses a disposable database/browser and sent no messages. No worker, Instagram write, paid service or payment ran, and no owner database mutation occurred; no money was spent.
+
+Still unverified: live campaign send/cap enforcement, paid provider integrations and durable reply sync. Campaign #4 still has no lead for a campaign qualification check. A real test DM needs the owner's explicit approval; paid calls remain off under the no-spend instruction.

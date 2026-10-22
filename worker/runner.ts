@@ -23,6 +23,7 @@ import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import { payerFor } from "@/lib/billing/attribution";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch } from "@/lib/domain/browser-mode";
 import { canSendAtStage } from "@/lib/domain/stages";
+import { dateInTimeZone } from "@/lib/domain/time-zone";
 import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
@@ -41,7 +42,7 @@ export type Deps = {
 
 const WARMUP_PIECES = 10;
 const INBOX_EVERY_MINUTES = 30;
-const todayOf = (d: Date) => d.toISOString().slice(0, 10);
+const teamDate = (db: Db, now: Date) => dateInTimeZone(now, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz);
 
 /** Looks at the whole database and queues whatever work is due. Safe to run as often as you like. */
 export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
@@ -243,7 +244,8 @@ async function process(deps: Deps, job: Job): Promise<void> {
       const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
       if (!campaign || campaign.status !== "active" || !campaignAccountIds(db, campaign.id).includes(account.id)) return;
       if (message.kind !== "reply") {
-        const left = remainingToday(account, todayOf(deps.now()), sentTodayForAccount(db, account.id, todayOf(deps.now())));
+        const today = teamDate(db, deps.now());
+        const left = remainingToday(account, today, sentTodayForAccount(db, account.id, today, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz));
         if (left <= 0) { deferJob(db, job, 120); logActivity(db, "worker", "send.limit_reached", { accountId: account.id }); return; }
       }
       if (isDnc(db, lead.handle)) { markFailed(db, message.id, "Handle is on the do-not-contact list"); return; }
@@ -257,7 +259,8 @@ async function process(deps: Deps, job: Job): Promise<void> {
         || !freshAccount || freshAccount.status !== "active" || !browserModeAllowsJob(freshAccount.browserMode, "send")
         || !freshCampaign || freshCampaign.status !== "active" || !campaignAccountIds(db, freshCampaign.id).includes(account.id)
         || isDnc(db, freshLead.handle)) return;
-      if (remainingToday(freshAccount, todayOf(deps.now()), sentTodayForAccount(db, account.id, todayOf(deps.now()))) <= 0) {
+      const freshToday = teamDate(db, deps.now());
+      if (remainingToday(freshAccount, freshToday, sentTodayForAccount(db, account.id, freshToday, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz)) <= 0) {
         deferJob(db, job, 120);
         return;
       }

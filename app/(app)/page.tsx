@@ -9,7 +9,9 @@ import { workerStartProblem } from "@/lib/services/worker-start-readiness";
 import { dashboardData } from "@/lib/queries/dashboard";
 import { listActivity } from "@/lib/db/repos/activity";
 import { STAGES, type Stage } from "@/lib/domain/stages";
-import { ago, number, todayIso } from "@/lib/format";
+import { ago, number } from "@/lib/format";
+import { getSetting } from "@/lib/db/repos/settings";
+import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { stageCopy } from "@/lib/ui/copy";
 import { activityLabel } from "@/lib/ui/copy";
 import { PageHeader, Stat } from "@/components/ui";
@@ -22,7 +24,8 @@ export default async function Dashboard() {
   const worker = workerStatus(db, new Date());
   const workerProblem = workerStartProblem(db);
   const workerLabel = ({ running: "Outreach is running", starting: "Outreach is starting", stopping: "Outreach is stopping", unresponsive: "Outreach needs attention", legacy_running: "Outreach is running from a terminal", stopped: "Outreach is stopped" } as const)[worker.phase];
-  const d = dashboardData(db, todayIso());
+  const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
+  const d = dashboardData(db, dateInTimeZone(new Date(), timeZone), timeZone);
   const recent = listActivity(db, { limit: 8 });
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
@@ -68,7 +71,7 @@ export default async function Dashboard() {
       </section>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Leads" value={number(d.totalLeads)} />
-        <Stat label="DMs sent today (UTC)" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
+        <Stat label="DMs sent today" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
         <Stat label="Replies" value={d.stages.replied ?? 0} />
         <Stat label="Reply rate" value={`${Math.round(((d.stages.replied ?? 0) / Math.max(1, (d.stages.dm_sent ?? 0) + (d.stages.replied ?? 0))) * 100)}%`} hint="of leads we messaged" />
       </div>
@@ -100,7 +103,7 @@ export default async function Dashboard() {
         </section>
 
         <section className="card p-5">
-          <h2 className="mb-4 text-base font-semibold">Accounts today (UTC)</h2>
+          <h2 className="mb-4 text-base font-semibold">Accounts today</h2>
           {d.accounts.length === 0 ? (
             <p className="text-muted">No Instagram account connected yet. <Link href="/accounts" className="text-accent underline">Connect one</Link>.</p>
           ) : (

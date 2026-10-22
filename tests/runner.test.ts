@@ -3,7 +3,7 @@ import { openDb, type Db } from "@/lib/db/core";
 import { createAccount, getAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
-import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages } from "@/lib/db/repos/messages";
+import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages, markSent } from "@/lib/db/repos/messages";
 import { enqueue } from "@/lib/db/repos/jobs";
 import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
@@ -230,6 +230,27 @@ describe("worker pipeline", () => {
     db.prepare("UPDATE jobs SET run_after = datetime('now','-1 minute') WHERE status='queued'").run();
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(3);
+  });
+
+  it("enforces the cap by the saved team-local day after UTC midnight", async () => {
+    const { camp, acct } = setup(false);
+    db.prepare("UPDATE ig_accounts SET daily_cap=1").run();
+    db.prepare("INSERT INTO settings (key,value) VALUES ('team_timezone','Asia/Kolkata')").run();
+    const earlier = addLead(db, { handle: "already-sent", campaignId: camp.id }, "t").lead;
+    const earlierMessage = createOutgoing(db, { leadId: earlier.id, accountId: acct.id, kind: "dm", parts: ["Earlier local-day message"], campaign: camp }, "t");
+    markSent(db, earlierMessage.id, new Date("2026-10-20T20:00:00Z"));
+
+    const next = addLead(db, { handle: "must-wait", campaignId: camp.id }, "t").lead;
+    moveStage(db, next.id, "qualified", "t"); moveStage(db, next.id, "warmed", "t");
+    const message = createOutgoing(db, { leadId: next.id, accountId: acct.id, kind: "dm", parts: ["Another unique message"], campaign: camp }, "t");
+    enqueue(db, { type: "send", leadId: next.id, accountId: acct.id, payload: { messageId: message.id } });
+    clock = new Date("2026-10-21T00:15:00Z"); // Oct 21 in Kolkata, while the previous send is still today's local send.
+
+    await runOne(deps, { accountId: acct.id });
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("approved");
+    expect(db.prepare("SELECT status FROM jobs WHERE type='send' ORDER BY id DESC LIMIT 1").get()).toMatchObject({ status: "queued" });
   });
 
   it("blocks the account the moment Instagram shows a warning", async () => {

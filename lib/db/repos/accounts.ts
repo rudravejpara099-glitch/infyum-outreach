@@ -10,10 +10,10 @@ const map = (r: Record<string, unknown>): IgAccount => ({
   status: r.status as IgAccount["status"], statusNote: r.status_note as string,
 });
 
-export function createAccount(db: Db, input: { handle: string; label?: string; profileDir: string; dailyCap?: number; browserMode?: IgAccount["browserMode"] }, actor: string): IgAccount {
+export function createAccount(db: Db, input: { handle: string; label?: string; profileDir: string; dailyCap?: number; browserMode?: IgAccount["browserMode"]; rampStart?: string }, actor: string): IgAccount {
   const info = db
-    .prepare("INSERT INTO ig_accounts (handle, label, profile_dir, daily_cap, browser_mode) VALUES (?,?,?,?,?)")
-    .run(normHandle(input.handle), input.label ?? "", input.profileDir, input.dailyCap ?? 35, input.browserMode ?? "isolated");
+    .prepare("INSERT INTO ig_accounts (handle, label, profile_dir, daily_cap, browser_mode, ramp_start) VALUES (?,?,?,?,?,COALESCE(?,date('now')))")
+    .run(normHandle(input.handle), input.label ?? "", input.profileDir, input.dailyCap ?? 35, input.browserMode ?? "isolated", input.rampStart ?? null);
   const acct = getAccount(db, Number(info.lastInsertRowid))!;
   logActivity(db, actor, "account.connected", { accountId: acct.id, detail: acct.handle });
   return acct;
