@@ -1,6 +1,6 @@
 export type InstagramBrowserMode = "isolated" | "chrome_read_only";
 export function browserModeAllowsJob(mode: InstagramBrowserMode, type: string): boolean {
-  return mode !== "chrome_read_only" || ["open_login", "qualify", "check_inbox"].includes(type);
+  return mode !== "chrome_read_only" || ["open_login", "qualify", "check_inbox", "send"].includes(type);
 }
 export function browserModeAllowsLeadSearch(modes: InstagramBrowserMode[]): boolean {
   return modes.some((mode) => mode === "isolated");

@@ -6,13 +6,14 @@ import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 
 describe("signed-in Chrome mode", () => {
-  it("allows only sign-in, profile qualification, and inbox sync in Chrome mode", () => {
-    for (const job of ["warmup", "draft_dm", "draft_followup", "send", "find_leads"]) {
+  it("allows approved message sends but keeps warm-up and paid AI/search jobs disabled in Chrome mode", () => {
+    for (const job of ["warmup", "draft_dm", "draft_followup", "find_leads"]) {
       expect(browserModeAllowsJob("chrome_read_only", job)).toBe(false);
     }
     expect(browserModeAllowsJob("chrome_read_only", "open_login")).toBe(true);
     expect(browserModeAllowsJob("chrome_read_only", "qualify")).toBe(true);
     expect(browserModeAllowsJob("chrome_read_only", "check_inbox")).toBe(true);
+    expect(browserModeAllowsJob("chrome_read_only", "send")).toBe(true);
     expect(browserModeAllowsJob("isolated", "send")).toBe(true);
     expect(browserModeAllowsLeadSearch(["chrome_read_only"])).toBe(false);
     expect(browserModeAllowsLeadSearch(["chrome_read_only", "isolated"])).toBe(true);

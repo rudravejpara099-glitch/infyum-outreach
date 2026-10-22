@@ -30,9 +30,9 @@ export default async function AccountsPage() {
       <ActionForm action={connectAccount} className="card mb-6 flex flex-wrap items-end gap-3 p-4">
         <div className="w-56"><label className="label" htmlFor="handle">Instagram handle</label><input id="handle" name="handle" required placeholder="@yourbrand" className="input" /></div>
         <div className="w-40"><label className="label" htmlFor="dailyCap">DMs per day (max {config.absoluteDailyCeiling})</label><input id="dailyCap" name="dailyCap" type="number" defaultValue={35} min={1} max={config.absoluteDailyCeiling} className="input" /></div>
-        <div className="w-56"><label className="label" htmlFor="browserMode">How should it connect?</label><select id="browserMode" name="browserMode" defaultValue="isolated" className="input"><option value="isolated">New sign-in window</option><option value="chrome_read_only">My signed-in Chrome (read only)</option></select></div>
+        <div className="w-56"><label className="label" htmlFor="browserMode">How should it connect?</label><select id="browserMode" name="browserMode" defaultValue="isolated" className="input"><option value="isolated">New sign-in window</option><option value="chrome_read_only">My signed-in Chrome</option></select></div>
         <button className="btn btn-primary">Connect account</button>
-        <p className="basis-full text-xs text-muted">The new window is ready for campaigns. Signed-in Chrome can confirm your account without exposing your password; campaign actions stay off in read-only mode.</p>
+        <p className="basis-full text-xs text-muted">Choose a separate sign-in window or your existing signed-in Chrome. Campaign messages still wait for approval when approval is turned on in campaign settings.</p>
       </ActionForm>
 
       {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Campaign work is waiting for Outreach’s background service on this computer. You can still connect an Instagram account here.</p>}
@@ -48,7 +48,7 @@ export default async function AccountsPage() {
                   <p className="mt-1 text-xs">{signIn.detail}</p>
                 </div>
                 <div className="font-medium break-words">@{a.handle} <span className={`badge ml-2 ${a.status === "active" ? "badge-ok" : a.status === "paused" ? "badge-warn" : "badge-bad"}`}>{a.status}</span></div>
-                {a.browserMode === "chrome_read_only" && <p className="mt-2 max-w-lg text-sm text-muted">Uses your signed-in Chrome to confirm this account. Campaign actions are disabled for this connection.</p>}
+                {a.browserMode === "chrome_read_only" && <p className="mt-2 max-w-lg text-sm text-muted">Uses your existing signed-in Chrome for this account. Campaign approval settings still control whether messages can be sent.</p>}
                 <div className="mt-0.5 text-xs text-muted">
                   Today {sentTodayForAccount(db, a.id, today, timeZone)} of {dailyAllowance(a, today)} allowed{a.statusNote ? ` · ${a.statusNote}` : ""}
                 </div>

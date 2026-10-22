@@ -55,7 +55,7 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe("worker pipeline", () => {
-  it("allows Chrome mode to qualify profiles and sync replies, but blocks every other campaign action", async () => {
+  it("allows Chrome mode to qualify, sync replies, and dispatch send jobs while keeping warm-up and drafting disabled", async () => {
     const { acct, camp } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
     const { lead } = addLead(db, { handle: "read-only-target", campaignId: camp.id }, "t");
@@ -73,7 +73,7 @@ describe("worker pipeline", () => {
     expect(driver.warmups).toBe(0);
     expect(driver.sent).toHaveLength(0);
     expect(complete).not.toHaveBeenCalled();
-    expect(db.prepare("SELECT count(*) n FROM jobs WHERE status='queued' AND type IN ('warmup','draft_dm','draft_followup','send')").get()).toEqual({ n: 4 });
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE status='queued' AND type IN ('warmup','draft_dm','draft_followup','send')").get()).toEqual({ n: 3 });
   });
 
   it("allows Chrome mode inbox reads for matching accounts only", async () => {
@@ -109,6 +109,22 @@ describe("worker pipeline", () => {
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(1);
     expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
+  });
+
+  it("sends an approved Chrome-mode DM while preserving campaign approval", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "chrome-approved-target", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A human-approved message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+
+    await runOne(deps);
+
+    expect(driver.sent).toEqual([{ handle: "chrome-approved-target", parts: ["A human-approved message"] }]);
+    expect(getMessage(db, message.id)?.status).toBe("sent");
+    expect(getLead(db, lead.id)?.stage).toBe("dm_sent");
   });
 
   it("does not dispatch an already queued approved message after its campaign is finished", async () => {

@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { IgAccount } from "@/lib/db/types";
-import { InstagramBlockedError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
+import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { looksBlocked, looksLoggedOut } from "./parse";
 import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
 
@@ -37,7 +37,7 @@ export function chromeUserDataDir(platform: NodeJS.Platform = process.platform, 
   return pathJoin(home, ".config", "google-chrome");
 }
 export function chromeMcpArgs(bin: string, userDataDir = chromeUserDataDir()): string[] {
-  return [bin, "--auto-connect", "--channel=stable", "--user-data-dir", userDataDir, "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-input", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+  return [bin, "--auto-connect", "--channel=stable", "--user-data-dir", userDataDir, "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
 }
 export function isAllowedInstagramUrl(value: string): boolean {
   try {
@@ -71,10 +71,11 @@ export function instagramLoginCheckScript(handle: string): string {
   }`;
 }
 
-/** Read-only access to the owner's existing Chrome session. No write-capable MCP tool is called. */
+/** Access to the owner's explicitly selected Chrome session, restricted to Instagram pages. */
 export class ChromeReadOnlyInstagram implements InstagramDriver {
   private client?: Client;
   private transport?: StdioClientTransport;
+  constructor(testClient?: Client) { this.client = testClient; }
   private async connect(): Promise<Client> {
     if (this.client) return this.client;
     const entry = createRequire(import.meta.url).resolve("chrome-devtools-mcp");
@@ -128,6 +129,24 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
       pageId, waitForStableDom: false, function: script,
     } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, fallback);
   }
+  private async snapshot(pageId: number): Promise<string> {
+    const result = ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "take_snapshot", arguments: { pageId } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not inspect the Instagram page.");
+    return [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join("\n");
+  }
+  private async clickNamed(pageId: number, snapshot: string, role: string, name: string): Promise<void> {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const uid = snapshot.match(new RegExp(`uid=([^\\s]+)\\s+${role}\\s+"${escaped}"`, "i"))?.[1];
+    if (!uid) throw new Error(`Instagram did not show the expected ${name} control.`);
+    ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "click", arguments: { pageId, uid } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, `Chrome could not select ${name}.`);
+  }
+  private async sendPart(pageId: number, part: string, onSubmit: () => void): Promise<void> {
+    const snapshot = await this.snapshot(pageId);
+    const uid = snapshot.match(/uid=([^\s]+)\s+textbox\s+"[^"]*(?:message|write a message)[^"]*"/i)?.[1];
+    if (!uid) throw new Error("Instagram did not show a message box.");
+    ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "fill", arguments: { pageId, uid, value: part } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not enter the approved message.");
+    onSubmit();
+    ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "press_key", arguments: { pageId, key: "Enter" } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not submit the message.");
+  }
   private async verifyOwner(account: IgAccount): Promise<void> {
     const page = await this.openProfile(account);
     const result = await this.evaluate(page.pageId, instagramLoginCheckScript(account.handle), "Chrome could not verify the saved Instagram account.");
@@ -167,7 +186,16 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     if (looksBlocked("", page.url) || !isAllowedInstagramUrl(page.url)) throw new Error("Chrome is not showing an allowed Instagram profile.");
     return profileFactsFromToolResult(result);
   }
-  async readProfileNotes(): Promise<string> { throw new Error("Profile notes and AI drafting are disabled in Chrome read-only mode."); }
+  async readProfileNotes(account: IgAccount, handle: string): Promise<string> {
+    await this.verifyOwner(account);
+    const page = await this.openProfile(account, handle);
+    const result = await this.evaluate(page.pageId, "() => ({ text: document.querySelector('header')?.innerText ?? '', alts: Array.from(document.querySelectorAll('main img[alt]')).map(image => image.alt).filter(value => value.length > 20).slice(0, 8) })", "Chrome could not read Instagram profile notes.");
+    const parsed = jsonFromToolResult(result) as { text?: unknown; alts?: unknown } | null;
+    if (!parsed || typeof parsed.text !== "string" || !Array.isArray(parsed.alts)) throw new Error("Instagram profile notes were unavailable.");
+    if (looksBlocked(parsed.text, page.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+    const alts = parsed.alts.filter((value): value is string => typeof value === "string");
+    return [`Profile header:\n${parsed.text}`, alts.length ? `Recent posts (image descriptions):\n- ${alts.join("\n- ")}` : ""].filter(Boolean).join("\n\n");
+  }
   async readInbox(account: IgAccount): Promise<{ handle: string; text: string }[]> {
     await this.verifyOwner(account);
     let identityError: Error | null = null;
@@ -197,7 +225,29 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     }
     throw identityError ?? new Error("The saved Instagram account could not be confirmed before reading replies.");
   }
-  async warmUp(): Promise<WarmUpResult> { throw new Error("Campaign actions are disabled in Chrome read-only mode."); }
-  async sendMessages(): Promise<void> { throw new Error("Message sending is disabled in Chrome read-only mode."); }
+  async warmUp(): Promise<WarmUpResult> { throw new Error("Likes, comments, and follows are not enabled for signed-in Chrome campaigns."); }
+  async sendMessages(account: IgAccount, handle: string, parts: string[]): Promise<void> {
+    if (parts.length === 0 || parts.some((part) => !part.trim())) throw new Error("The approved message is empty.");
+    await this.verifyOwner(account);
+    const target = await this.openProfile(account, handle);
+    let snapshot = await this.snapshot(target.pageId);
+    await this.clickNamed(target.pageId, snapshot, "button", "Message");
+    snapshot = await this.snapshot(target.pageId);
+    if (!/textbox\s+"[^"]*(?:message|write a message)/i.test(snapshot)) throw new Error(`Chat with @${handle} did not open.`);
+    let attempted = false;
+    try {
+      for (const part of parts) {
+        await this.sendPart(target.pageId, part, () => { attempted = true; });
+        const check = await this.evaluate(target.pageId, `() => ({ allowed: location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && location.pathname.startsWith('/direct/'), text: document.body?.innerText ?? '' })`, "Chrome could not verify the sent message.");
+        const parsed = jsonFromToolResult(check) as { allowed?: unknown; text?: unknown } | null;
+        if (parsed?.allowed !== true || typeof parsed.text !== "string") throw new Error("Instagram chat identity could not be verified after sending.");
+        if (looksBlocked(parsed.text, `https://www.instagram.com/direct/inbox/`)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+        if (!parsed.text.includes(part.slice(0, Math.min(30, part.length)))) throw new Error(`The message to @${handle} did not appear in the conversation.`);
+      }
+    } catch (error) {
+      if (attempted) throw new InstagramSendUncertainError(error instanceof InstagramBlockedError);
+      throw error;
+    }
+  }
   async close(): Promise<void> { await this.client?.close(); await this.transport?.close(); this.client = undefined; this.transport = undefined; }
 }

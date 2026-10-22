@@ -8,29 +8,30 @@ const account = (overrides: Partial<IgAccount>): IgAccount => ({
 });
 
 describe("campaign sender readiness", () => {
-  it("explains paused and read-only selected senders", () => {
+  it("treats an active signed-in Chrome sender as campaign-ready", () => {
     expect(campaignSendBlockers([
       account({ status: "paused" }),
       account({ id: 2, handle: "chrome.sender", browserMode: "chrome_read_only" }),
-    ], [1, 2])).toEqual([
+    ], [2])).toEqual([]);
+    expect(campaignSendBlockers([account({ status: "paused" })], [1])).toEqual([
       "@sender is paused",
-      "@chrome.sender uses signed-in Chrome in read-only mode",
-      "No active account is set up for campaign actions",
+      "No active Instagram account is ready for campaign actions",
     ]);
   });
 
   it("does not offer a blocked account as ready or warn when a send-capable account is selected", () => {
     expect(campaignSendBlockers([account({ status: "blocked" })], [1])).toEqual([
       "@sender is stopped after an Instagram warning",
-      "No active account is set up for campaign actions",
+      "No active Instagram account is ready for campaign actions",
     ]);
     expect(campaignSendBlockers([account({ id: 2 })], [1, 2])).toEqual([]);
+    expect(campaignSendBlockers([account({ browserMode: "chrome_read_only" })], [1])).toEqual([]);
   });
 
   it("identifies an active campaign-capable account that is not selected", () => {
     expect(campaignSendBlockers([
       account({ status: "paused" }),
-      account({ id: 2, handle: "available.sender" }),
+      account({ id: 2, handle: "available.sender", browserMode: "chrome_read_only" }),
     ], [1])).toEqual(["@sender is paused", "@available.sender can run campaigns but isn’t selected"]);
   });
 
