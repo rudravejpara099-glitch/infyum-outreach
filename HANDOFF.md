@@ -650,3 +650,9 @@ Verified: `npm test` = 288 passed; `npm run typecheck`; `npm run lint`; `npx nex
 Strengthened the browser cleanup regression to go through `AccountInstagramDriver`, close two persistent contexts, and confirm a failure in one context does not prevent cleanup of the other. Then started the actual worker process against a temporary empty SQLite database, sent SIGINT after its ready message, and verified it exited and wrote a stopped lease. No accounts, campaigns, jobs, or provider credentials were present in the fixture.
 
 Verified: `npm test` = 287 passed; `npm run typecheck`, `npm run lint`, and `git diff --check`. This verifies an idle graceful stop and mocked context cleanup; it does not verify an open real Instagram browser during worker shutdown. No real integration or spend occurred.
+
+### Full local verification refresh (Codex, 2026-10-22)
+
+Re-ran the current branch checks: 287 tests passed, `npm run typecheck`, `npm run lint`, and `npx next build --webpack` passed. The isolated browser smoke passed setup, sign-in, campaign creation, lead import, campaign-scoped approvals, responsive/theme behavior, worker heartbeat states, settings, DNC, account checks, and related controls; it sent no messages. The billing simulator passed with fake payments and disposable data. Production sign-in/security smoke passed on a temporary database. No Instagram, Apify, AI, real Stripe, or worker campaign call ran, and no money was spent.
+
+The signed-in local app still shows campaign #4 active with zero leads and the background service stopped. The application cannot verify that campaign's real prospect-to-first-reply path without a lead; continue with read-only qualification after a fresh lead is added, and require specific owner approval before any send. No campaign settings or owner data were changed during this refresh.
