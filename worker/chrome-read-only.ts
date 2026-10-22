@@ -72,7 +72,7 @@ export function instagramLoginCheckScript(handle: string): string {
 }
 
 /** Access to the owner's explicitly selected Chrome session, restricted to Instagram pages. */
-export class ChromeReadOnlyInstagram implements InstagramDriver {
+export class ChromeInstagram implements InstagramDriver {
   private client?: Client;
   private transport?: StdioClientTransport;
   constructor(testClient?: Client) { this.client = testClient; }
@@ -86,7 +86,7 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", CI: "1", CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1" },
       stderr: "ignore",
     });
-    const client = new Client({ name: "infyum-instagram-read-only", version: "1.0.0" });
+    const client = new Client({ name: "infyum-instagram-campaign", version: "1.0.0" });
     try {
       await client.connect(transport, { timeout: CHROME_REQUEST_TIMEOUT_MS });
     } catch (error) {

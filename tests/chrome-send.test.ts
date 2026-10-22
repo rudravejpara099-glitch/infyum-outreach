@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { IgAccount } from "@/lib/db/types";
-import { ChromeReadOnlyInstagram } from "@/worker/chrome-read-only";
+import { ChromeInstagram } from "@/worker/chrome-read-only";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 const owner: IgAccount = { id: 1, handle: "owner", label: "", profileDir: "/tmp/owner", browserMode: "chrome_read_only", dailyCap: 35, rampStart: "2026-01-01", status: "active", statusNote: "" };
@@ -23,7 +23,7 @@ describe("signed-in Chrome DM driver", () => {
       }),
       close: vi.fn(async () => {}),
     } as unknown as Client;
-    const driver = new ChromeReadOnlyInstagram(fakeClient);
+    const driver = new ChromeInstagram(fakeClient);
 
     await driver.sendMessages(owner, "prospect", ["A reviewed message from the user"]);
 
@@ -36,7 +36,7 @@ describe("signed-in Chrome DM driver", () => {
 
   it("refuses empty messages before interacting with Chrome", async () => {
     const fakeClient = { callTool: vi.fn(), close: vi.fn() } as unknown as Client;
-    const driver = new ChromeReadOnlyInstagram(fakeClient);
+    const driver = new ChromeInstagram(fakeClient);
     await expect(driver.sendMessages(owner, "prospect", [" "])).rejects.toThrow("approved message is empty");
     expect(fakeClient.callTool).not.toHaveBeenCalled();
   });

@@ -1,16 +1,16 @@
 import type { IgAccount } from "@/lib/db/types";
 import type { InstagramDriver, ProfileFacts, WarmUpResult } from "./driver";
-import { ChromeReadOnlyInstagram } from "./chrome-read-only";
+import { ChromeInstagram } from "./chrome-read-only";
 import { PlaywrightInstagram } from "./instagram";
 
 /** Selects the explicitly chosen browser connection per account. */
 export class AccountInstagramDriver implements InstagramDriver {
   private readonly isolated = new PlaywrightInstagram();
-  private readonly chrome = new Map<number, ChromeReadOnlyInstagram>();
+  private readonly chrome = new Map<number, ChromeInstagram>();
   private for(account: IgAccount): InstagramDriver {
     if (account.browserMode !== "chrome_read_only") return this.isolated;
     let driver = this.chrome.get(account.id);
-    if (!driver) { driver = new ChromeReadOnlyInstagram(); this.chrome.set(account.id, driver); }
+    if (!driver) { driver = new ChromeInstagram(); this.chrome.set(account.id, driver); }
     return driver;
   }
   openLogin(account: IgAccount) { return this.for(account).openLogin(account); }

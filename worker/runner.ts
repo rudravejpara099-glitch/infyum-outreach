@@ -134,8 +134,8 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
 async function process(deps: Deps, job: Job): Promise<void> {
   const { db, driver, engine } = deps;
   const account = job.accountId ? getAccount(db, job.accountId) : null;
-  // The signed-in Chrome integration is deliberately read-only. Enforce this
-  // before job dispatch as a second boundary in addition to the driver methods.
+  // Restrict the signed-in Chrome integration to its supported job types before
+  // dispatch, in addition to the driver-level checks.
   if (account && !browserModeAllowsJob(account.browserMode, job.type)) {
     deferJob(db, job, 60);
     return;
