@@ -803,3 +803,11 @@ NOT verified: actual Stripe TEST mode, paid AI/Apify, live campaign job or DM. T
 Decisions made: keep the app in no-spend mode; local billing simulations do not count as live Stripe verification.
 Needs from Rudra: add a fresh lead to campaign #4 for the next read-only qualification check; explicitly approve a specific DM before any real send. No help is needed to run these local simulations.
 Next I will: continue only no-cost checks until the live campaign prerequisites are supplied.
+
+### [2026-10-22] Codex #95: Close browser resources on worker shutdown
+Changed: `worker/index.ts` now closes the Instagram driver after all active account lanes drain and before releasing the worker lease. The account driver closes isolated Playwright contexts and signed-in Chrome DevTools clients; isolated cleanup is idempotent and best-effort across all contexts. Added regression tests in `tests/instagram-launch.test.ts`.
+Verified: `npm test` = 288 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check`. No worker was started or Instagram account opened; no paid provider, payment, or owner database was used.
+NOT verified: actual worker shutdown while live Instagram contexts are open; no real campaign work was run.
+Decisions made: always close browser connections after lanes drain, then release the singleton lease even if cleanup fails.
+Needs from Rudra: no help needed for this code fix. A fresh lead in campaign #4 is still needed for a read-only qualification check; any real DM requires approval.
+Next I will: continue with no-cost checks without starting the campaign.

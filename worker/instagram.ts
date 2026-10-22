@@ -11,6 +11,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class PlaywrightInstagram implements InstagramDriver {
   private contexts = new Map<number, BrowserContext>();
 
+  async close(): Promise<void> {
+    const contexts = [...this.contexts.values()];
+    this.contexts.clear();
+    await Promise.all(contexts.map(async (context) => { await context.close().catch(() => {}); }));
+  }
+
   private async context(account: IgAccount): Promise<BrowserContext> {
     const existing = this.contexts.get(account.id);
     if (existing) return existing;

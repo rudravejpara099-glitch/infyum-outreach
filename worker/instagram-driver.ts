@@ -19,5 +19,11 @@ export class AccountInstagramDriver implements InstagramDriver {
   warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>): Promise<WarmUpResult> { return this.for(account).warmUp(account, handle, pieces, makeComment); }
   sendMessages(account: IgAccount, handle: string, parts: string[]) { return this.for(account).sendMessages(account, handle, parts); }
   readInbox(account: IgAccount) { return this.for(account).readInbox(account); }
-  async close() { await Promise.all([...this.chrome.values()].map((driver) => driver.close())); this.chrome.clear(); }
+  async close() {
+    await Promise.allSettled([
+      this.isolated.close(),
+      ...[...this.chrome.values()].map((driver) => driver.close()),
+    ]);
+    this.chrome.clear();
+  }
 }

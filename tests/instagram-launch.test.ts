@@ -13,6 +13,7 @@ vi.mock("playwright", () => ({ chromium: { launchPersistentContext: browserMocks
 vi.mock("@/worker/human", () => ({ wait: vi.fn().mockResolvedValue(undefined) }));
 
 import { PlaywrightInstagram } from "@/worker/instagram";
+import { AccountInstagramDriver } from "@/worker/instagram-driver";
 
 describe("Instagram login browser launch", () => {
   beforeEach(() => {
@@ -51,5 +52,33 @@ describe("Instagram login browser launch", () => {
 
     await expect(driver.readProfileNotes(account, "public.profile")).rejects.toThrow("Not logged in");
     expect(browserMocks.page.locator).toHaveBeenCalledWith("body");
+  });
+
+  it("closes persistent isolated browser contexts during driver shutdown", async () => {
+    const account = { id: 4, profileDir: "/profiles/instagram-4" } as IgAccount;
+    browserMocks.page.goto.mockResolvedValue(undefined);
+    browserMocks.page.url.mockReturnValue("https://www.instagram.com/public.profile/");
+    browserMocks.page.locator.mockImplementation((selector: string) => {
+      if (selector === "body") return { innerText: vi.fn().mockResolvedValue("Public profile") };
+      if (selector === "header") return { first: () => ({ innerText: vi.fn().mockResolvedValue("Public profile\n1,234 followers") }) };
+      return { evaluateAll: vi.fn().mockResolvedValue([]) };
+    });
+    const driver = new PlaywrightInstagram();
+
+    await driver.readProfileNotes(account, "public.profile");
+    expect(browserMocks.context.close).not.toHaveBeenCalled();
+    await driver.close();
+    await driver.close();
+
+    expect(browserMocks.context.close).toHaveBeenCalledOnce();
+  });
+
+  it("includes isolated browser contexts in account-driver cleanup", async () => {
+    const close = vi.spyOn(PlaywrightInstagram.prototype, "close").mockResolvedValue();
+    const driver = new AccountInstagramDriver();
+
+    await driver.close();
+
+    expect(close).toHaveBeenCalledOnce();
   });
 });

@@ -638,3 +638,9 @@ This confirms the local screens and saved state only. No live campaign job, real
 ### Additional production-auth and billing simulation check (Codex, 2026-10-22)
 
 Rechecked campaign #4 in the signed-in local app: still active with zero leads; no owner change since the prior snapshot. `node --import tsx scripts/security-smoke.ts` passed production setup/sign-in, protected routes, sign-out and signed-out redirects on disposable data. `npm run smoke:billing` passed its isolated checkout, signed/replayed webhook, reconciliation, export, user-isolation and responsive UI scenarios using only the local fake provider. Neither test started a worker or called Instagram, real Stripe, AI or Apify. Actual Stripe TEST remains unverified; the user's no-spend instruction remains in force.
+
+### Close Instagram browser resources when the worker stops (Codex, 2026-10-22)
+
+The worker now closes its account driver after active lanes drain and before it releases the worker lease. Driver shutdown closes all persistent isolated Playwright contexts as well as signed-in Chrome DevTools clients; repeated cleanup is safe, and cleanup errors do not prevent the remaining contexts from closing or the worker lease from being released. Regression tests cover the isolated context lifecycle and its inclusion in account-driver cleanup.
+
+Verified: `npm test` = 288 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check`. No live browser was opened, worker was started, or Instagram action/provider/payment performed as part of these tests. Live worker shutdown with an open Instagram context remains unverified.

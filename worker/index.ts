@@ -31,12 +31,13 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  const driver = new AccountInstagramDriver();
   try {
     // A second process can never re-queue the first process's in-flight send.
     const requeued = requeueStuck(db);
     if (requeued) console.log(`Recovered ${requeued} interrupted task(s).`);
     const deps: Deps = {
-      db, engine: defaultEngine(), driver: new AccountInstagramDriver(), now: () => new Date(),
+      db, engine: defaultEngine(), driver, now: () => new Date(),
       apify: process.env.APIFY_TOKEN ? new ApifyClient({ token: process.env.APIFY_TOKEN }) : undefined,
       humanPace: {},
       mayClaim: () => workerMayClaim(db, token!, process.pid),
@@ -67,7 +68,8 @@ async function main(): Promise<void> {
     }
     await Promise.all(running.values());
   } finally {
-    releaseWorker(db, token, process.pid);
+    try { await driver.close(); }
+    finally { releaseWorker(db, token, process.pid); }
   }
 }
 
