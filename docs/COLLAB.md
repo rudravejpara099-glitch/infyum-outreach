@@ -559,3 +559,11 @@ NOT verified: successful app-side sign-in, profile/inbox reads in the product, c
 Decisions: keep Chrome mode read-only and campaign-disabled; preserve isolated mode as default. Keep all paid and outbound operations off.
 Needs from owner: none for current engineering work. No credentials are requested.
 Next: diagnose the product adapter's bridge lifecycle/response handling, then test status through Accounts and read-only profile access. Do not claim app connectivity until that passes.
+
+### [2026-10-22] Codex #64: Verify the account-scoped Chrome sign-in job
+Changed: no application source. Added evidence and the remaining owner-side UI check to `HANDOFF.md`.
+Verified: the product's `AccountInstagramDriver` plus `open_login` job script completed against a disposable SQLite database in `chrome_read_only` mode and stored `authenticated: true` for the exact account handle. It read only the Instagram profile signed-in indicator. No real app database change, inbox content, cookie/password, campaign job, outreach write, paid provider, or spend occurred. The app server is running locally at `127.0.0.1:3100`.
+NOT verified: owner-authenticated Accounts UI status, read-only profile/inbox through the product, campaign execution, or live paid-provider connectivity. Chrome mode remains campaign-disabled. Browser control policy rejected opening the localhost Accounts page, so the owner must sign into the local app and confirm the visible status.
+Decisions: maintain read-only Chrome mode and keep paid/outbound operations off.
+Needs from owner: sign into `http://127.0.0.1:3100/login` and open Accounts for the visible UI check. Do not send credentials in chat.
+Next: after the owner confirms Accounts is open, continue only with allowed read-only product checks.

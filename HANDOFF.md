@@ -483,3 +483,13 @@ Verified: 237 tests, typecheck, lint, webpack production build, UI smoke, fake l
 NOT verified: successful app-side Chrome sign-in check, read-only app profile/inbox reads, worker campaign execution, or live AI/Apify/Stripe connectivity. The live app login screen is not authenticated in this browser, and the local server was unavailable during the final smoke check.
 
 Next: fix and test the product's Chrome bridge call/response lifecycle, then verify the signed-in status through Accounts and the read-only app profile flow. Keep the worker stopped and do not perform social writes or paid calls.
+
+### Product-level Chrome sign-in job verified (Codex, 2026-10-22)
+
+Verified: the actual `AccountInstagramDriver` and `open_login` job script ran against a disposable SQLite database, used account mode `chrome_read_only`, and completed with `authenticated: true` for the exact saved handle `timelessmoments.al`. This is stronger than the standalone bridge probe: the app code selected the account-specific Chrome driver and wrote the job result. The test read only the profile page's signed-in indicator. No real app database was modified; no inbox text, cookies, passwords, campaign jobs, social writes, or paid APIs were used; no money was spent.
+
+Environment detail: sandboxed Node processes cannot read Chrome's `DevToolsActivePort`; the same app job succeeds when run with the user's approved local Chrome access. This is a local-machine permission boundary, not a missing Instagram login. The production Next server is running on `127.0.0.1:3100` for owner sign-in. Browser automation policy blocked the agent from opening the localhost Accounts page, so the visible app UI confirmation still needs the owner to sign in and view Accounts.
+
+Still unverified: owner-authenticated Accounts page status, read-only profile/inbox operations through the product, and live campaign execution. The Chrome mode intentionally refuses campaign work; no warm-up or message send was run. Paid API, Apify, and Stripe connections remain untested.
+
+Next: owner signs into the local app at `http://127.0.0.1:3100/login`, opens Accounts, and confirms the connected indicator. Then continue with read-only product checks only. Do not run campaign sends or paid calls without separate approval.
