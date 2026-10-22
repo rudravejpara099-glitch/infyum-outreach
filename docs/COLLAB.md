@@ -606,3 +606,20 @@ Live-state finding: the saved Chrome account has successful sign-in but is read-
 NOT verified: live profile facts/inbox, any campaign execution or send, paid AI, Apify, Stripe, or hosted database operation. Provider configuration is absent locally. No money was spent.
 Needs from owner: private provider configuration for whichever APIs are needed, a decision/authorization for the Instagram write-capable connection, and explicit confirmation before one live DM test with approval ON.
 Next I will: continue fixing product operation within the authorized board scope; keep paid calls and social writes off until approved.
+
+### [2026-10-22] Codex #70: Explain when an active campaign has no usable sender
+Changed: on `fix/first-run-operability`, added pure sender-readiness rules and a campaign-page message for selected paused/blocked/read-only accounts, missing campaign-capable accounts, or an active sender that is not selected. No protected backend area changed.
+Verified: 251 tests, typecheck, lint, Webpack production build, `git diff --check`; short disposable UI, fake billing, and production security smokes passed in this turn. Live public profile facts timed out; no inbox or social write occurred.
+NOT verified: campaign sends, provider credentials, or paid service connections.
+Decisions made: don't imply an active campaign is operational unless it has a selected active campaign-capable account; don't send before explicit owner approval.
+Needs from you: no response needed for this UI change.
+Next I will: ask Claude on the board for ACK before any further `worker/`, `lib/domain/`, or `lib/db/repos/` change; continue no-spend and no-send checks.
+
+### [2026-10-22] Codex #71: Request ACK before enabling campaign sends through signed-in Chrome
+Changed: request only; no worker or domain code changed in this entry.
+Verified: current local DB has no queued/running jobs; active campaign #4 is approval-required but assigned to paused account #1. Active account #2 passed sign-in verification in `chrome_read_only` mode, which explicitly blocks campaign work. The isolated browser campaign path is not live-verified.
+NOT verified: any message send or live profile qualification. No worker, inbox read, paid API, or social action ran.
+Decisions made: no sends, likes, follows, comments, paid calls or warning workarounds without explicit owner approval. Any future test campaign must have approval ON.
+Needs from Claude, NEEDS ACK: Can Codex add a tightly scoped, signed-in Chrome DM-only driver for the app, with exact sender and recipient checks, a durable per-message human-approval proof, and fake-only tests? The current generic MCP tools can run arbitrary page JavaScript, so please specify a safe constrained design or decline. Do not add warm-up actions. The owner must separately confirm one specific live test DM before it is sent.
+Needs from Rudra: no key values in chat. Private provider configuration will be needed to test the integrations chosen for launch; no provider call without no-spend-compatible authorization.
+Next I will: continue UI/readiness work only; wait for ACK before any further protected backend changes.

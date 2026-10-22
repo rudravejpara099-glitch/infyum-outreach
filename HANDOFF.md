@@ -527,3 +527,9 @@ Live local state: the saved Chrome account has a completed sign-in check, but it
 Provider setup: local environment has no Apify, Anthropic, or Stripe credentials, no Stripe owner/test-webhook configuration, and no hosted database configuration. Real lead search, paid AI writing, test checkout with Stripe, campaign execution, and durable hosted operation remain unverified. Do not mark the app fully operational yet.
 
 Next work needs: (1) privately configure the owner-approved provider keys, starting with the exact integrations needed for the demo; (2) choose/authorize the Instagram write-capable connection approach—the existing connected Chrome mode cannot send and the isolated browser account is paused/unverified; (3) explicitly approve one single test DM with campaign approval ON before any live send test. No money was spent in this verification.
+
+### Campaign sender readiness feedback (Codex, 2026-10-22)
+
+Changed: an active campaign now explains when its selected Instagram accounts cannot run campaign work, naming paused, blocked, and Chrome read-only senders and pointing to account selection. If another active campaign-capable account exists, it names that account as available but not selected. This avoids showing an active campaign as ready when no sender can run it.
+
+Verified: 251 tests, typecheck, lint, and Webpack production build pass. The UI smoke passed immediately before this final copy refinement; no live send, inbox access, paid provider call, or payment ran.

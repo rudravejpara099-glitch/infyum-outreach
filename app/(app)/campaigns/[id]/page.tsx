@@ -16,6 +16,7 @@ import { campaignHistory } from "@/lib/queries/campaign-history";
 import { validTimeZone } from "../../settings/validation";
 import { messageKindLabel } from "@/lib/ui/copy";
 import { CAMPAIGN_STATUS_LABEL } from "@/components/campaign-status";
+import { campaignSendBlockers } from "@/lib/ui/campaign-send-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   const overview = campaignOverview(db, campaign.id);
   const accounts = listAccounts(db);
   const selected = campaignAccountIds(db, campaign.id);
+  const senderBlockers = campaignSendBlockers(accounts, selected);
   const next = campaign.status === "active" ? { to: "paused", label: "Pause campaign" } : { to: "active", label: campaign.status === "draft" ? "Start campaign" : "Resume campaign" };
   const cap = getSetting(db, "apify_monthly_cap_usd");
   const savedZone = getSetting(db, "team_timezone") ?? "America/New_York";
@@ -55,6 +57,10 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     </header>
     {campaign.status === "done" && <p className="card mb-4 p-4 text-sm text-muted">This campaign is finished. No new lead searches or messages will run. Any message already being sent may complete.</p>}
     {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Outreach is waiting. Campaign work will not start until its background service is running on this computer.</p>}
+    {campaign.status === "active" && senderBlockers.length > 0 && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
+      <p className="font-medium">This campaign can’t run yet</p>
+      <p className="mt-1">{senderBlockers.join(" · ")}. Choose an account that is active and set up for campaign actions in <Link href="#settings" className="underline">Campaign settings</Link>.</p>
+    </div>}
     <section className="audience-summary" aria-labelledby="audience-title">
       <div><h2 id="audience-title">Who you’re reaching</h2><p>{campaign.audienceText || campaign.niches.join(", ") || "Describe your audience in campaign settings."}</p></div>
       <Link href="#settings" className="text-link">Edit audience <Icon name="arrow" size={15} /></Link>
