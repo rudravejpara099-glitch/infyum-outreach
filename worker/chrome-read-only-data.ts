@@ -5,21 +5,25 @@ import { instagramProfileUrl, jsonFromToolResult } from "./chrome-read-only";
 type ToolResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
 const safeHandle = (handle: string) => new URL(instagramProfileUrl(handle)).pathname.toLowerCase();
 
-/** Scripts disclose content only after confirming both the target URL and signed-in owner link. */
-export function profileFactsScript(ownerHandle: string, targetHandle: string): string {
-  const ownerPath = safeHandle(ownerHandle), targetPath = safeHandle(targetHandle);
+/** The caller verifies the saved owner first; this script rechecks the exact target page before reading it. */
+export function profileFactsScript(targetHandle: string): string {
+  const targetPath = safeHandle(targetHandle);
   return `async () => {
     const allowed = location.protocol === 'https:' &&
       (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
       location.pathname.toLowerCase() === ${JSON.stringify(targetPath)};
-    const ownerMatches = Array.from(document.querySelectorAll('a[href]')).some((a) => {
-      try { return new URL(a.href).pathname.toLowerCase() === ${JSON.stringify(ownerPath)}; } catch { return false; }
-    });
-    if (!allowed || !ownerMatches) return { allowed, ownerMatches, blocked: false };
+    if (!allowed) return { allowed, blocked: false };
+    const ready = () => {
+      const text = document.body?.innerText ?? '';
+      return Boolean(document.querySelector('header') &&
+        (/followers|this account is private|log in to continue|you need to log in to continue|action blocked|try again later|confirm you'?re (a )?human|help us confirm/i.test(text)));
+    };
+    const deadline = Date.now() + 6000;
+    while (!ready() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
     const body = document.body?.innerText ?? '';
     const blocked = /action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(body) || /\\/(challenge|accounts\\/suspended)\\//i.test(location.pathname);
-    if (blocked) return { allowed, ownerMatches, blocked: true, text: body.slice(0, 1200) };
-    if (/log in to (see|view)|sign up to (see|view)|log in to continue|you need to log in to continue/i.test(body)) return { allowed, ownerMatches, loggedOut: true };
+    if (blocked) return { allowed, blocked: true, text: body.slice(0, 1200) };
+    if (/log in to (see|view)|sign up to (see|view)|log in to continue|you need to log in to continue/i.test(body)) return { allowed, loggedOut: true };
     const header = document.querySelector('header');
     const headerText = header?.innerText ?? '';
     const followerText = headerText.match(/[\\d.,]+\\s*[kKmM]?\\s+followers/i)?.[0] ??
@@ -38,7 +42,7 @@ export function profileFactsScript(ownerHandle: string, targetHandle: string): s
         await new Promise((resolve) => setTimeout(resolve, 300));
         const afterDialog = document.body?.innerText ?? '';
         if (/action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(afterDialog) || /\\/(challenge|accounts\\/suspended)\\//i.test(location.pathname)) {
-          return { allowed, ownerMatches, blocked: true };
+          return { allowed, blocked: true };
         }
         const dialogText = document.querySelector('[role=dialog]')?.innerText ?? '';
         const match = dialogText.replace(/\\u00a0/g, ' ').match(/Account based in\\s*\\n?\\s*([^\\n]+)/i);
@@ -47,7 +51,7 @@ export function profileFactsScript(ownerHandle: string, targetHandle: string): s
       }
     }
     return {
-      allowed, ownerMatches, blocked: false, loggedOut: false,
+      allowed, blocked: false, loggedOut: false,
       isPublic: !/this account is private/i.test(body), followerText, relation, country,
     };
   }`;
@@ -56,7 +60,7 @@ export function profileFactsScript(ownerHandle: string, targetHandle: string): s
 export function profileFactsFromToolResult(result: ToolResult): ProfileFacts {
   if (result.isError) throw new Error("Chrome could not read Instagram profile facts.");
   const parsed = jsonFromToolResult(result) as Record<string, unknown> | null;
-  if (!parsed || parsed.allowed !== true || parsed.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before reading this profile.");
+  if (!parsed || parsed.allowed !== true) throw new Error("Chrome is no longer showing the expected Instagram profile.");
   if (parsed.blocked === true) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
   if (parsed.loggedOut === true) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
   const followerText = typeof parsed.followerText === "string" ? parsed.followerText : "";

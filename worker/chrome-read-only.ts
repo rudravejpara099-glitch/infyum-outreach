@@ -151,7 +151,7 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
   async readFacts(account: IgAccount, handle: string): Promise<ProfileFacts> {
     await this.verifyOwner(account);
     const page = await this.openProfile(account, handle);
-    const result = await this.evaluate(page.pageId, profileFactsScript(account.handle, handle), "Chrome could not read Instagram profile facts.");
+    const result = await this.evaluate(page.pageId, profileFactsScript(handle), "Chrome could not read Instagram profile facts.");
     if (looksBlocked("", page.url) || !isAllowedInstagramUrl(page.url)) throw new Error("Chrome is not showing an allowed Instagram profile.");
     return profileFactsFromToolResult(result);
   }

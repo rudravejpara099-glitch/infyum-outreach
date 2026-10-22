@@ -528,6 +528,10 @@ Provider setup: local environment has no Apify, Anthropic, or Stripe credentials
 
 Next work needs: (1) privately configure the owner-approved provider keys, starting with the exact integrations needed for the demo; (2) choose/authorize the Instagram write-capable connection approach—the existing connected Chrome mode cannot send and the isolated browser account is paused/unverified; (3) explicitly approve one single test DM with campaign approval ON before any live send test. No money was spent in this verification.
 
+### Chrome profile loading follow-up (Codex, 2026-10-22)
+
+The live public-profile check now passes its saved-owner verification and opens the exact target profile, but Chrome showed Instagram's loading screen and the follower count was unavailable. Added a six-second bounded wait for the profile header and expected profile content before parsing facts; exact host/path validation and warning/sign-in checks remain in place. Added a regression assertion for the bound. The live profile was not read successfully, no inbox was opened, and no worker, social action, or paid call ran. 251 tests, typecheck, lint, and Webpack production build pass. Profile facts, inbox sync, paid provider connections, and campaign execution remain unverified.
+
 ### Campaign sender readiness feedback (Codex, 2026-10-22)
 
 Changed: an active campaign now explains when its selected Instagram accounts cannot run campaign work, naming paused, blocked, and Chrome read-only senders and pointing to account selection. If another active campaign-capable account exists, it names that account as available but not selected. This avoids showing an active campaign as ready when no sender can run it.
