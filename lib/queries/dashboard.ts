@@ -14,6 +14,8 @@ export function dashboardData(db: Db, today: string, timeZone = "UTC") {
   const accounts = listAccounts(db).map((a) => ({
     ...a, sentToday: sentTodayForAccount(db, a.id, today, timeZone), allowance: dailyAllowance(a, today),
   }));
+  const failedJobTypes = Object.fromEntries((db.prepare("SELECT type, COUNT(*) AS count FROM jobs WHERE status='failed' GROUP BY type")
+    .all() as { type: string; count: number }[]).map(({ type, count }) => [type, count]));
   return {
     stages,
     totalLeads: Object.values(stages).reduce((x, y) => x + y, 0),
@@ -21,6 +23,7 @@ export function dashboardData(db: Db, today: string, timeZone = "UTC") {
     sentWeek: c("SELECT COUNT(*) c FROM messages WHERE direction='out' AND status='sent' AND sent_at>=? AND sent_at<?", sqlDate(week.start), sqlDate(day.end)),
     pending: c("SELECT COUNT(*) c FROM messages WHERE status='pending_approval'"),
     failedJobs: c("SELECT COUNT(*) c FROM jobs WHERE status='failed'"),
+    failedJobTypes,
     accounts,
   };
 }

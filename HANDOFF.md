@@ -751,3 +751,9 @@ NOT verified: crash recovery against an actual running worker, durable replies i
 Decisions made: never automatically repeat a partially completed Instagram write or paid task after a crash. Keep only idempotent reads and retired no-ops in automatic recovery. Existing message approval and send safeguards remain unchanged.
 Needs from Rudra: none for this code change. No-spend work can continue; live paid tests remain intentionally off.
 Next I will: push this verified recovery fix to PR #13 and keep the live worker stopped.
+
+### [2026-10-22] Codex #106: Make worker waits and old sign-in failures clear
+
+The dashboard previously said the worker was "handling" work even when the next job was correctly waiting for the account's allowed work window. It also reported five historical sign-in-window failures as generic background task failures. The Overview now names the next queued task and its team-local time, and labels sign-in failures separately with a link to Activity. Mixed/other failed work still gets a visible attention message. No queue, pacing, approval or delivery rule changed.
+
+Verified: 306 tests pass; typecheck, lint, Webpack production build and isolated `npm run smoke:ui` pass. The authenticated owner dashboard at `127.0.0.1:3100` now visibly says "Next lead check at 9:42 AM (team time)" and explains the five old sign-in attempts. The worker remains live, the lead check remains queued for 13:42 UTC, 23 messages remain pending approval and 0 DMs have been sent today. No Instagram write or paid call occurred.

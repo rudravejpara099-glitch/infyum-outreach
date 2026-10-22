@@ -4,6 +4,7 @@ import { createAccount } from "@/lib/db/repos/accounts";
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { addLead } from "@/lib/db/repos/leads";
 import { createOutgoing, markSent } from "@/lib/db/repos/messages";
+import { enqueue } from "@/lib/db/repos/jobs";
 import { dashboardData } from "@/lib/queries/dashboard";
 
 let db: Db;
@@ -31,5 +32,15 @@ describe("dashboard counts", () => {
     expect(result.sentToday).toBe(1);
     expect(result.sentWeek).toBe(2);
     expect(result.accounts[0].sentToday).toBe(1);
+  });
+
+  it("breaks failed task counts down by type for accurate dashboard guidance", () => {
+    enqueue(db, { type: "open_login" });
+    enqueue(db, { type: "qualify" });
+    db.prepare("UPDATE jobs SET status='failed'").run();
+
+    const result = dashboardData(db, "2026-10-21", "UTC");
+    expect(result.failedJobs).toBe(2);
+    expect(result.failedJobTypes).toEqual({ open_login: 1, qualify: 1 });
   });
 });

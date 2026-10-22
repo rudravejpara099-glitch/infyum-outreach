@@ -12,6 +12,15 @@ export function beat(db: Db, now: Date): void {
 
 export type WorkerStatus = { running: boolean; lastSeen: string | null; phase: WorkerPhase | "legacy_running" };
 
+export type QueuedWork = { type: string; runAfter: string };
+
+/** Earliest queued task, used to explain when a running service will next act. */
+export function nextQueuedWork(db: Db): QueuedWork | null {
+  const row = db.prepare("SELECT type, run_after FROM jobs WHERE status='queued' ORDER BY run_after, id LIMIT 1")
+    .get() as { type: string; run_after: string } | undefined;
+  return row ? { type: row.type, runAfter: row.run_after } : null;
+}
+
 export function workerStatus(db: Db, now: Date): WorkerStatus {
   const lastSeen = getSetting(db, KEY);
   const control = workerControl(db, now);

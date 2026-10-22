@@ -891,3 +891,11 @@ NOT verified: the scheduled profile check has not run yet, so the lead's country
 Decisions made: keep message approval ON; use the existing signed-in Chrome connection for read-only qualification; retain account work-window pacing and do not bypass it.
 Needs from Rudra: none for the scheduled read-only check. Review and approve an exact first-DM draft before any send; paid services remain off under the no-spend instruction.
 Next I will: keep the local app available and check the qualification result after the permitted work window; update PR #13 when GitHub connectivity permits.
+
+### [2026-10-22] Codex #106: Explain scheduled work and old sign-in failures
+Changed: on `fix/first-run-operability` / PR #13, the Overview now shows the next queued task and its team-local time instead of implying the worker is always actively doing work. It separates old failed sign-in-window attempts from campaign work that needs attention and links to Activity. No pacing, queue, send, account or approval rule changed.
+Verified: 306 unit tests, typecheck, lint, Webpack production build and isolated UI smoke pass. Authenticated owner Chrome shows the service running, next lead check at 9:42 AM team time, five old sign-in attempts explained, 23 pending approvals, and zero DMs sent today. The real qualification job remains queued for its 13:42 UTC work window; no Instagram write, paid API, Apify, payment or spend occurred.
+NOT verified: the queued profile check has not run yet; real DM/reply sync, paid integrations and hosted operation remain unverified.
+Decisions made: preserve the current account work window, no-spend rule, and message approval.
+Needs from Rudra: none for this dashboard clarity fix. Review the exact DM draft before any send; no paid integration is to be exercised.
+Next I will: commit and push the verified dashboard improvement to PR #13.
