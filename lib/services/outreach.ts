@@ -48,7 +48,7 @@ export function handleIncoming(db: Db, leadId: number, text: string): { counted:
       return { counted: false };
     }
     // The first real message is the goal. Mark the hand-off, stop follow-ups, and leave the rest to a person or the GHL agent.
-    if (lead.stage !== "skipped") moveStage(db, leadId, "replied", "worker");
+    moveStage(db, leadId, "replied", "worker");
     scheduleFollowup(db, leadId, null);
     logActivity(db, "worker", "lead.handoff", { leadId, accountId: lead.accountId, detail: text.slice(0, 200) });
     return { counted: true };

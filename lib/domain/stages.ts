@@ -29,7 +29,7 @@ const NEXT: Record<Stage, readonly Stage[]> = {
   dm_sent: ["replied", "closed"],
   replied: ["closed"], // the app's job ends here: a person or the GHL agent takes over from the first reply
   closed: ["replied"], // a stopped lead can come back if they write again
-  skipped: ["found"], // retry after a rule change
+  skipped: ["found", "replied"], // retry after a rule change, or hand off if they write first
 };
 
 export function canMove(from: Stage, to: Stage): boolean {

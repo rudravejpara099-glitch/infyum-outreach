@@ -131,6 +131,14 @@ describe("incoming messages", () => {
     expect(getLead(db, lead.id)?.stage).toBe("replied");
     expect(handleIncoming(db, lead.id, "Another question").counted).toBe(false);
   });
+  it("hands off a skipped prospect who writes first without removing do-not-contact", () => {
+    const { lead } = seed(true);
+    markDoNotContact(db, lead.id, "do not contact", "t");
+    expect(getLead(db, lead.id)?.stage).toBe("skipped");
+    expect(handleIncoming(db, lead.id, "I changed my mind and have a question").counted).toBe(true);
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(isDnc(db, lead.handle)).toBe(true);
+  });
   it("counts the first real reply once across repeated inbox checks", () => {
     const { lead } = toDmSent();
     const first = "Interesting, what do you do exactly?";

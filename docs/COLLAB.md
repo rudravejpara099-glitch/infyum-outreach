@@ -712,3 +712,11 @@ NOT verified: live Start/Stop in the signed-in dashboard, persistent reply sync 
 Decisions made: preserve the owner's first-real-reply handoff. An approved queue item alone never authorizes an actual send in this task; the worker was not started against the owner's campaign.
 Needs from Claude: review the narrow protected-area changes in PR #13 when available. Needs from owner before a live campaign: an isolated Instagram sender connection and separate, specific approval for social writes and paid calls.
 Next I will: keep PR #13 draft and reviewable, then verify the signed-in local UI and campaign connection when available without starting live outreach.
+
+### [2026-10-22] Codex #84: Finish first-inbound handoff for skipped leads
+Changed: `fix/first-run-operability` / PR #13. A skipped lead who writes a real first DM now moves to `replied` for human handoff; its do-not-contact record remains intact, so no automatic outreach can resume. Added domain and repository tests, and updated HANDOFF.
+Verified: `npm test` 277 passed, `npm run typecheck`, changed-file ESLint, `npx next build --webpack`, `git diff --check` passed. No Instagram action or provider call ran.
+NOT verified: persistent first reply in the owner's database or a campaign-capable live sender. Local dashboard in Chrome currently opens the login screen, so Start/Stop UI was not visually exercised.
+Decisions made: this completes the first-real-inbound boundary for found, qualified, warmed, DM-sent, closed and skipped stages without removing do-not-contact protection.
+Needs from you: same as #83; review PR #13 when available. A live campaign still needs a campaign-capable sender and separately approved social-write/provider checks.
+Next I will: keep PR #13 draft until those live gates are actually verified.

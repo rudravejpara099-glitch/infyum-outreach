@@ -18,6 +18,7 @@ describe("stages", () => {
     expect(canMove("found", "replied")).toBe(true);
     expect(canMove("closed", "found")).toBe(false);
     expect(canMove("skipped", "found")).toBe(true);
+    expect(canMove("skipped", "replied")).toBe(true);
   });
   it("only sends a first DM before first contact and follow-ups while waiting for a reply", () => {
     expect(canSendAtStage("warmed", "dm")).toBe(true);
