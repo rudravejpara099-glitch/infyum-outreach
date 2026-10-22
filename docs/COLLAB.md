@@ -674,3 +674,25 @@ Follow-up: implemented the narrow fix and fake-DOM regressions. A live `readFact
 Verified: `npm test` = 253 passed, `npm run typecheck`, changed-file ESLint, `npx next build --webpack`, and `git diff --check` pass. No inbox, campaign job, social action, paid provider, or payment ran.
 Needs from Claude: review this protected read-only change; no send-path or paid-provider permission is implied.
 Next I will: run the full local checks and update PR #13. Inbox sync, isolated campaign sign-in, and sending remain unverified.
+
+### [2026-10-22] Codex #79: Diagnose read-only inbox sync
+Changed: request and live diagnosis only; no inbox code changed. The owner specifically approved a read-only check of up to 15 recent DM threads with no message content in the report. The app's `readInbox` returned an owner-identity mismatch because a newly opened `/direct/inbox/` tab was still on Instagram's loading splash. A previously loaded Messages tab showed the correct saved owner profile link and conversation controls. Its thread list uses `div[role=button]` rows, while the current script only finds `a[href^="/direct/t/"]`, so it would silently return zero threads even after loading.
+Verified: no social write, paid call, payment, or worker campaign job ran. No message text was printed by the app diagnostic.
+NOT verified: actual reply extraction or database sync.
+Needs from Claude, NEEDS ACK: review a bounded read-only inbox fix: wait for a loaded owner-bound inbox, find the actual conversation controls, navigate at most 15 threads, and parse incoming-only messages with exact owner/URL checks. Do not touch send or campaign jobs. The owner has authorized the private read-only test for this session.
+Next I will: inspect only the DOM structure needed for safe parsing, then add fake-DOM tests before another live read-only check.
+
+### [2026-10-22] Codex #80: Owner ruling for urgent backend completion
+Changed: the owner was asked whether Codex may temporarily take ownership of necessary worker/backend fixes while Claude is unavailable; the owner replied “upto you be smart.” I interpret this as permission to proceed with narrow fixes needed for the requested working product on this branch, with tests and a reviewable PR. This is a temporary ownership exception, not permission for a live send, paid call, warning workaround, or an unrelated redesign.
+Verified: no code was changed for the inbox fix before this ruling. The first read-only inbox attempt failed its owner-link check on a loading tab; a loaded Messages tab confirms the UI now uses conversation buttons, not thread anchors. The owner separately approved opening up to 15 recent DM threads for read-only verification; message contents will not be reported.
+NOT verified: fixed inbox parser, reply sync, campaign execution, or provider connections.
+Needs from Claude: review the narrow backend commits in PR #13 when available; no ACK is needed to unblock this owner-directed urgent work.
+Next I will: implement the read-only inbox correction and tests, then verify the actual app path without any social write or spend.
+
+### [2026-10-22] Codex #81: First-reply handoff and read-only Instagram checks
+Changed: on `fix/first-run-operability` / PR #13, made incoming-reply handoff idempotent in `lib/services/outreach.ts` and `lib/db/repos/messages.ts`; repeated polling or later messages stop at the first real reply. The Chrome read-only parser now selects bounded conversation rows, excludes the account note, reads incoming-only message articles, handles existing thread navigation, and rejects still-loading conversations instead of returning a false zero. Public profile facts now wait for or reuse the About dialog to obtain country. Added focused tests and HANDOFF evidence.
+Verified: a live `readFacts` call in the owner's approved Chrome session returned public facts including `country: United States` for `instagram`. The owner-approved, count-only inbox check reached the conversation list but Instagram kept the conversation pane on a loading spinner; the final app call failed explicitly with “conversation is still loading.” No private message text was printed by diagnostics. `npm test` = 262 passing, `npm run typecheck`, changed-file ESLint, `npx next build --webpack`, and `git diff --check` pass.
+NOT verified: live incoming-reply extraction, database sync with a real reply, a campaign-capable Instagram connection, campaign execution, live provider connections or payment. No worker, social write, paid provider call or payment ran.
+Decisions made: retain the owner's first-real-reply endpoint and human/GHL handoff. Chrome mode remains read-only; warning and send gates remain intact. The owner temporarily authorized these necessary protected-area fixes in #80 while Claude is unavailable.
+Needs from Claude: review these narrow backend commits in PR #13 when available. No live send or paid call is authorized by this entry.
+Next I will: complete full checks and push the reviewable PR; retry inbox verification only when Instagram's conversation pane loads normally.
