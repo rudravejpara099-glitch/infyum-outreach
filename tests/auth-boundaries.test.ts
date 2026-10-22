@@ -1,9 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { relative, join, sep } from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-const protectedApp = join(process.cwd(), "app", "(app)");
-const publicAuthActions = join(process.cwd(), "app", "login", "actions.ts");
+const appRoot = join(process.cwd(), "app");
+const publicPages = new Set(["login/page.tsx", "setup/page.tsx"]);
+const publicActions = new Set(["login/actions.ts:login", "login/actions.ts:setup"]);
+const providerAuthenticatedRoutes = new Set(["api/billing/webhook/route.ts"]);
+
+type FunctionBody = { name: string; body: ts.Block };
 
 function filesUnder(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -12,65 +17,92 @@ function filesUnder(directory: string): string[] {
   });
 }
 
-function firstStatementAfter(source: string, start: number): string {
-  const parameterOpen = source.indexOf("(", start);
-  if (parameterOpen < 0) return "";
-  let depth = 0;
-  let parameterClose = -1;
-  for (let index = parameterOpen; index < source.length; index += 1) {
-    if (source[index] === "(") depth += 1;
-    if (source[index] === ")") depth -= 1;
-    if (depth === 0) {
-      parameterClose = index;
-      break;
-    }
-  }
-  if (parameterClose < 0) return "";
-  const open = source.indexOf("{", parameterClose + 1);
-  if (open < 0) return "";
-  return source.slice(open + 1).trimStart();
+function relativeAppPath(file: string): string {
+  return relative(appRoot, file).split(sep).join("/");
 }
 
-function startsWithUserGuard(source: string, start: number): boolean {
-  return /^(?:const\s+\w+\s*=\s*)?await\s+requireUser\(\)\s*;/.test(
-    firstStatementAfter(source, start),
-  );
+function hasModifier(node: ts.Node, modifier: ts.SyntaxKind): boolean {
+  return ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((item) => item.kind === modifier);
+}
+
+function functionBody(node: ts.Expression | undefined): ts.Block | undefined {
+  if (node && (ts.isArrowFunction(node) || ts.isFunctionExpression(node))) return node.body && ts.isBlock(node.body) ? node.body : undefined;
+  return undefined;
+}
+
+function exportedFunctions(source: ts.SourceFile): FunctionBody[] {
+  const functions: FunctionBody[] = [];
+  for (const statement of source.statements) {
+    if (ts.isFunctionDeclaration(statement) && hasModifier(statement, ts.SyntaxKind.ExportKeyword) && statement.body) {
+      functions.push({
+        name: hasModifier(statement, ts.SyntaxKind.DefaultKeyword) ? "default" : statement.name?.text ?? "",
+        body: statement.body,
+      });
+    }
+    if (!ts.isVariableStatement(statement) || !hasModifier(statement, ts.SyntaxKind.ExportKeyword)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name)) continue;
+      const body = functionBody(declaration.initializer);
+      if (body) functions.push({ name: declaration.name.text, body });
+    }
+  }
+  return functions;
+}
+
+function callsRequireUser(expression: ts.Expression): boolean {
+  if (ts.isAwaitExpression(expression)) return callsRequireUser(expression.expression);
+  return ts.isCallExpression(expression) && ts.isIdentifier(expression.expression) && expression.expression.text === "requireUser";
+}
+
+function startsWithUserGuard(body: ts.Block): boolean {
+  const first = body.statements[0];
+  if (!first) return false;
+  if (ts.isExpressionStatement(first)) return callsRequireUser(first.expression);
+  if (!ts.isVariableStatement(first)) return false;
+  return first.declarationList.declarations.some((declaration) => declaration.initializer && callsRequireUser(declaration.initializer));
+}
+
+function readSource(file: string): ts.SourceFile {
+  return ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 }
 
 describe("protected app authentication boundaries", () => {
-  const files = filesUnder(protectedApp);
+  const files = filesUnder(appRoot);
 
-  it("checks the user before each protected page or loading screen does work", () => {
-    const pages = files.filter((file) => ["page.tsx", "loading.tsx"].includes(basename(file)));
-    expect(pages.length).toBeGreaterThan(0);
+  it("checks the user before each protected page, layout, or loading screen does work", () => {
+    const protectedSegments = files.filter((file) => {
+      const path = relativeAppPath(file);
+      return path.startsWith("(app)/") && ["page.tsx", "loading.tsx", "layout.tsx"].includes(file.split(sep).at(-1) ?? "");
+    });
+    expect(protectedSegments.length).toBeGreaterThan(0);
 
-    for (const file of pages) {
-      const source = readFileSync(file, "utf8");
-      const declaration = source.indexOf("export default async function");
-      expect(declaration, file).toBeGreaterThanOrEqual(0);
-      expect(startsWithUserGuard(source, declaration), file).toBe(true);
+    for (const file of protectedSegments) {
+      if (publicPages.has(relativeAppPath(file))) continue;
+      const source = readSource(file);
+      const page = exportedFunctions(source).find((item) => item.name === "default");
+      expect(page, file).toBeDefined();
+      expect(startsWithUserGuard(page!.body), file).toBe(true);
     }
   });
 
   it("checks the user first in every server action and protected route handler", () => {
-    const actionAndRouteFiles = [...files, publicAuthActions];
-    const protectedFunctions = actionAndRouteFiles.flatMap((file) => {
-      const source = readFileSync(file, "utf8");
-      const isActionFile = source.startsWith('"use server"') || source.startsWith("'use server'");
-      const isRouteFile = basename(file) === "route.ts";
-      if (!isActionFile && !isRouteFile) return [];
+    const actionOrRouteFiles = files.filter((file) => {
+      const source = readSource(file);
+      const first = source.statements[0];
+      const isServerAction = !!first && ts.isExpressionStatement(first) && ts.isStringLiteral(first.expression) && first.expression.text === "use server";
+      return isServerAction || file.split(sep).at(-1) === "route.ts";
+    });
 
-      const declarations = [...source.matchAll(/export\s+async\s+function\s+(\w+)/g)];
-      return declarations.flatMap((match) => {
-        // Login and one-time setup are public by design; logout and all other actions are protected.
-        if (match[1] === "login" || match[1] === "setup") return [];
-        return [{ file, source, index: match.index ?? -1 }];
-      });
+    const protectedFunctions = actionOrRouteFiles.flatMap((file) => {
+      if (providerAuthenticatedRoutes.has(relativeAppPath(file))) return [];
+      return exportedFunctions(readSource(file))
+        .filter(({ name }) => !publicActions.has(`${relativeAppPath(file)}:${name}`))
+        .map((item) => ({ file, ...item }));
     });
 
     expect(protectedFunctions.length).toBeGreaterThan(0);
-    for (const { file, source, index } of protectedFunctions) {
-      expect(startsWithUserGuard(source, index), file).toBe(true);
+    for (const { file, name, body } of protectedFunctions) {
+      expect(startsWithUserGuard(body), `${relativeAppPath(file)}:${name}`).toBe(true);
     }
   });
 });

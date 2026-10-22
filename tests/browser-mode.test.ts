@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch, loginCheckFailure } from "@/lib/domain/browser-mode";
-import { bindInstagramPage, chromeMcpArgs, instagramProfileUrl, isAllowedInstagramUrl, jsonFromToolResult } from "@/worker/chrome-read-only";
+import { bindInstagramPage, chromeMcpArgs, ensureChromeToolSucceeded, instagramProfileUrl, isAllowedInstagramUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
 import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 
@@ -44,6 +44,16 @@ describe("signed-in Chrome mode", () => {
     expect(jsonFromToolResult({ content: [{ type: "text", text: "Script ran on page and returned:\n```json\n{\"loggedIn\":true}\n```" }] })).toEqual({ loggedIn: true });
     expect(jsonFromToolResult({ structuredContent: { message: "Script ran on page and returned:\n```json\n{\"loggedIn\":true}\n```" } })).toEqual({ loggedIn: true });
     expect(jsonFromToolResult({ content: [{ type: "text", text: "no readable result" }] })).toBeNull();
+  });
+
+  it("does not turn a Chrome bridge tool error into an unauthenticated result", () => {
+    expect(() => ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "internal path and diagnostic" }] }, "Chrome could not verify sign-in."))
+      .toThrow("Chrome could not verify sign-in.");
+    expect(() => ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "403 at /Users/private/profile" }] }, "fallback"))
+      .toThrow("Chrome remote debugging permission was denied.");
+    expect(ensureChromeToolSucceeded({ content: [{ type: "text", text: "ok" }] }, "fallback")).toEqual({ content: [{ type: "text", text: "ok" }] });
+    expect(loginStateFromToolResult({ content: [{ type: "text", text: "```json\n{\"loggedIn\":false}\n```" }] })).toEqual({ text: "", loggedIn: false });
+    expect(() => loginStateFromToolResult({ content: [{ type: "text", text: "no status returned" }] })).toThrow("no Instagram sign-in status");
   });
 
   it("uses Chrome's approved auto-connect flow instead of a raw profile socket", () => {

@@ -8,6 +8,18 @@ import { looksBlocked, looksLoggedOut } from "./parse";
 
 type Page = { id: number; url: string };
 type ToolTextResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
+const CHROME_REQUEST_TIMEOUT_MS = 30_000;
+export function ensureChromeToolSucceeded<T extends ToolTextResult>(result: T, fallback: string): T {
+  if (!result.isError) return result;
+  const details = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
+  if (/403|remote debugging|DevToolsActivePort|could not connect to Chrome/i.test(details)) throw new Error("Chrome remote debugging permission was denied.");
+  throw new Error(fallback);
+}
+export function loginStateFromToolResult(result: ToolTextResult): { text: string; loggedIn: boolean } {
+  const parsed = jsonFromToolResult(ensureChromeToolSucceeded(result, "Chrome could not verify the Instagram sign-in state.")) as { text?: unknown; loggedIn?: unknown } | null;
+  if (!parsed || typeof parsed.loggedIn !== "boolean") throw new Error("Chrome returned no Instagram sign-in status.");
+  return { text: typeof parsed.text === "string" ? parsed.text : "", loggedIn: parsed.loggedIn };
+}
 export function jsonFromToolResult(result: ToolTextResult): unknown {
   const raw = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join("\n");
   const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)?.[1];
@@ -49,17 +61,18 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
       stderr: "ignore",
     });
     const client = new Client({ name: "infyum-instagram-read-only", version: "1.0.0" });
-    await client.connect(transport);
+    try {
+      await client.connect(transport, { timeout: CHROME_REQUEST_TIMEOUT_MS });
+    } catch (error) {
+      await transport.close().catch(() => {});
+      throw error;
+    }
     this.transport = transport;
     this.client = client;
     return client;
   }
   private async pages(): Promise<Page[]> {
-    const result = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }) as ToolTextResult & { structuredContent?: { pages?: Page[]; message?: string } };
-    if (result.isError) {
-      const message = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
-      throw new Error(message || "Chrome could not list its open pages.");
-    }
+    const result = ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "list_pages", arguments: {} }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult & { structuredContent?: { pages?: Page[]; message?: string } }, "Chrome could not list its open pages.");
     if (result.structuredContent?.pages?.length) return result.structuredContent.pages.map((page) => ({ id: Number(page.id), url: page.url })).filter((page) => Number.isSafeInteger(page.id));
     const text = result.content?.filter((part) => part.type === "text").map((part) => part.text).join("\n") ?? "";
     return [...text.matchAll(/(?:^|\n)\s*(\d+):\s*(.*?)\s+\((https?:\/\/[^)]+)\)/g)].map((m) => ({ id: Number(m[1]), url: m[3].trim() }));
@@ -69,7 +82,7 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     const url = instagramProfileUrl(handle);
     let page = bindInstagramPage(await this.pages(), handle);
     if (!page) {
-      await client.callTool({ name: "new_page", arguments: { url, background: true } });
+      ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url, background: true } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
       page = bindInstagramPage(await this.pages(), handle);
     }
     if (!page) throw new Error("Could not open the Instagram profile in Chrome.");
@@ -77,10 +90,10 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
   }
   private async inspect(account: IgAccount, handle = account.handle): Promise<{ pageId: number; text: string; controls: string; url: string }> {
     const page = await this.openProfile(account, handle);
-    const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
+    const result = ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
       pageId: page.pageId, waitForStableDom: false,
       function: "() => ({ text: document.body?.innerText ?? '', controls: Array.from(document.querySelectorAll('button,[role=button]')).map(e => (e.getAttribute('aria-label') || e.innerText || '')).join(' ') })",
-    } }) as ToolTextResult;
+    } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not read the Instagram profile state.");
     const parsed = jsonFromToolResult(result) as { text?: unknown; controls?: unknown } | null;
     if (!parsed) throw new Error("Instagram did not return readable profile information.");
     const text = typeof parsed.text === "string" ? parsed.text : "";
@@ -95,12 +108,10 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
       pageId: p.pageId, waitForStableDom: false,
       function: "() => ({ text: document.body?.innerText ?? '', loggedIn: /edit profile/i.test(document.body?.innerText ?? '') })",
-    } }) as ToolTextResult;
-    const value = jsonFromToolResult(result) as { text?: unknown; loggedIn?: unknown } | null;
-    if (!value) return false;
-    const text = typeof value.text === "string" ? value.text : "";
+    } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
+    const { text, loggedIn } = loginStateFromToolResult(result);
     if (looksBlocked(text, p.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
-    return value.loggedIn === true;
+    return loggedIn;
   }
   async readFacts(account: IgAccount, handle: string): Promise<ProfileFacts> {
     await this.inspect(account, handle);

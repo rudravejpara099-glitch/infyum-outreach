@@ -36,6 +36,18 @@ describe("login-only job", () => {
     expect(JSON.parse(job.payload)).toEqual({ authenticated: false });
   });
 
+  it("fails the login check when Chrome itself returns an error", async () => {
+    const account = createAccount(db, { handle: "owner", profileDir: "/tmp/owner", dailyCap: 35 }, "test");
+    const id = enqueue(db, { type: "open_login", accountId: account.id });
+    db.prepare("UPDATE jobs SET status='running' WHERE id=?").run(id);
+
+    await expect(openLoginWindowJob(db, id, account.id, { openLogin: vi.fn(async () => { throw new Error("Chrome could not verify the Instagram sign-in state."); }) }))
+      .rejects.toThrow("The sign-in check could not finish.");
+    const job = db.prepare("SELECT status,payload FROM jobs WHERE id=?").get(id) as { status: string; payload: string };
+    expect(job.status).toBe("failed");
+    expect(JSON.parse(job.payload)).toEqual({});
+  });
+
   it("refuses to run a non-login job", async () => {
     const account = createAccount(db, { handle: "owner", profileDir: "/tmp/owner", dailyCap: 35 }, "test");
     const id = enqueue(db, { type: "warmup", accountId: account.id });

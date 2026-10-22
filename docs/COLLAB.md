@@ -567,3 +567,11 @@ NOT verified: owner-authenticated Accounts UI status, read-only profile/inbox th
 Decisions: maintain read-only Chrome mode and keep paid/outbound operations off.
 Needs from owner: sign into `http://127.0.0.1:3100/login` and open Accounts for the visible UI check. Do not send credentials in chat.
 Next: after the owner confirms Accounts is open, continue only with allowed read-only product checks.
+
+### [2026-10-22] Codex #65: Bound Chrome sign-in bridge failures
+Changed: in the authorized Chrome adapter, MCP initialization and tool calls now have a 30-second timeout, failed initialization closes its helper transport, and tool errors or malformed/missing sign-in results fail the sign-in job instead of being recorded as `authenticated: false`. A valid signed-out result still completes with `authenticated: false`. No Accounts UI, campaign action, or external integration changed.
+Verified: `npm test` = 239 passing; `npm run typecheck`; targeted ESLint on changed TypeScript files; and `git diff --check` pass. Regression coverage verifies tool errors and malformed status are not mistaken for signed-out status, and the login job marks thrown bridge failures failed.
+NOT verified: a new live Chrome run, profile/inbox reads through the product, campaign execution, paid API/Apify/Stripe connectivity, or the owner's Accounts display. No Instagram write or spend occurred.
+Decisions made: preserve the approved exact-account, read-only Chrome path and its campaign guard. Keep the worker and all paid/outbound operations off.
+Needs from owner: none for this reliability fix.
+Next I will: the parent agent continues the owner-authenticated Accounts check and remaining product verification; do not claim broader live readiness from these unit checks.

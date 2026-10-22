@@ -47,9 +47,9 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
           <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value={next.to} />
           <button className="btn">{campaign.status === "active" && <Icon name="pause" size={16} />}{next.label}</button>
         </ActionForm>
-        <ActionForm action={changeCampaignStatus} confirmMessage="Finish this campaign? No new work will run. A message already being sent may still complete; saved drafts will remain in the campaign. This can’t be undone.">
+        <ActionForm action={changeCampaignStatus} confirmMessage="Stop this campaign? It will be marked finished and can’t be restarted. No new work will run. A message already being sent may still complete; saved drafts will remain in the campaign.">
           <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value="done" />
-          <button className="btn">Finish campaign</button>
+          <button className="btn">Stop campaign</button>
         </ActionForm>
       </div>}
     </header>

@@ -493,3 +493,7 @@ Environment detail: sandboxed Node processes cannot read Chrome's `DevToolsActiv
 Still unverified: owner-authenticated Accounts page status, read-only profile/inbox operations through the product, and live campaign execution. The Chrome mode intentionally refuses campaign work; no warm-up or message send was run. Paid API, Apify, and Stripe connections remain untested.
 
 Next: owner signs into the local app at `http://127.0.0.1:3100/login`, opens Accounts, and confirms the connected indicator. Then continue with read-only product checks only. Do not run campaign sends or paid calls without separate approval.
+
+### Chrome bridge reliability follow-up
+
+The app-owned read-only Chrome adapter now bounds MCP initialization and tool calls at 30 seconds, closes the helper transport if initialization fails, and treats MCP tool errors or missing/malformed sign-in results as failed checks rather than completed jobs with `authenticated: false`. A genuine `loggedIn: false` result still records a completed, unauthenticated check. Full `npm test` passes (239 tests), `npm run typecheck` passes, and `git diff --check` passes. This is not a new live Instagram verification: signed-in Chrome, product-side profile/inbox checks, worker execution, and paid integrations remain unverified.
