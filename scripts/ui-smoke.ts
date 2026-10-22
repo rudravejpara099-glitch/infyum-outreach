@@ -337,8 +337,9 @@ try {
   await page.getByRole("heading", { name: "3 drafts need your review" }).waitFor();
   await page.goto(`${base}/accounts`);
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
+  await page.getByLabel("How should it connect?", { exact: true }).selectOption("chrome_read_only");
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
+  await page.locator('div[role="status"]').filter({ hasText: "Chrome sign-in check is waiting" }).waitFor();
   await page.getByText("Connecting", { exact: true }).waitFor();
   const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
   assert(account.profile_dir.startsWith(temp));
@@ -619,13 +620,13 @@ try {
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "already saved" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 2);
-  await reviewAccountCard.getByRole("button", { name: "Open login window", exact: true }).click();
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
+  await reviewAccountCard.getByRole("button", { name: "Check Chrome sign-in", exact: true }).click();
+  await page.locator('div[role="status"]').filter({ hasText: "Chrome sign-in check is waiting" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login' AND account_id=?").get(account.id) as { n: number }).n, 1);
-  await page.getByText("Sign-in request saved for the browser check.", { exact: true }).waitFor();
+  await page.getByText("Chrome sign-in check saved.", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.reload();
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting to open" }).waitFor();
+  await page.locator('div[role="status"]').filter({ hasText: "Chrome sign-in check is waiting" }).waitFor();
   const loginJob = db.prepare("SELECT id FROM jobs WHERE type='open_login' AND account_id=? ORDER BY id DESC LIMIT 1").get(account.id) as { id: number };
   db.prepare("UPDATE jobs SET status='done',payload=? WHERE id=?").run(JSON.stringify({ authenticated: false }), loginJob.id);
   await page.reload();

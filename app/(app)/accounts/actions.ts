@@ -59,7 +59,7 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   const parsed = connectSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message, field: String(parsed.error.issues[0].path[0]) };
   const handle = normHandle(parsed.data.handle), db = getDb();
-  if (db.prepare("SELECT id FROM ig_accounts WHERE handle=?").get(handle)) return { error: "This account is already saved. Use its Open login window button below.", field: "handle" };
+  if (db.prepare("SELECT id FROM ig_accounts WHERE handle=?").get(handle)) return { error: "This account is already saved. Use its sign-in button below.", field: "handle" };
   const backgroundRunning = process.env.OUTREACH_SMOKE_MODE === "1" || workerStatus(db, new Date()).running;
   let accountId = 0, request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
   db.transaction(() => {
@@ -73,8 +73,13 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   const started = !request.launch || startLoginWindow(accountId, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
-  if (!started) return { error: "The account was saved, but its sign-in window could not open. Try again from the account below." };
-  return { message: smoke ? "Account saved. The browser check uses a queued sign-in request." : "Instagram is opening in a separate window. Sign in there, then refresh this page to see the connection status." };
+  if (!started) return { error: parsed.data.browserMode === "chrome_read_only"
+    ? "The account was saved, but the Chrome sign-in check could not start. Try again from the account below."
+    : "The account was saved, but its sign-in window could not open. Try again from the account below." };
+  const message = parsed.data.browserMode === "chrome_read_only"
+    ? smoke ? "Account saved. Chrome sign-in check is queued." : "Account saved. Outreach is checking the current Chrome sign-in."
+    : smoke ? "Account saved. Sign-in window check is queued." : "Instagram is opening in a separate sign-in window. Sign in there, then refresh this page to see the connection status.";
+  return { message };
 }
 export async function useSignedInChrome(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
@@ -90,7 +95,7 @@ export async function useSignedInChrome(form: FormData): Promise<ActionResult> {
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: "Chrome connection was selected, but the check could not start. Try again." };
-  return { message: "Chrome connection selected. If Chrome asks to share access, choose Allow. The app will only read Instagram; campaign actions remain disabled." };
+  return { message: "Chrome selected. Outreach will check that this Instagram account is signed in. Campaign messages still require approval." };
 }
 export async function useSeparateSignIn(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
@@ -115,9 +120,11 @@ export async function reopenLogin(form: FormData): Promise<ActionResult> {
   const started = !request.launch || startLoginWindow(account.id, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
-  if (!started) return { error: "The sign-in window could not open. Try again shortly." };
-  if (request.alreadyOpening) return { message: "The sign-in window is already opening. Finish there before requesting another." };
-  return { message: process.env.OUTREACH_SMOKE_MODE === "1" ? "Sign-in request saved for the browser check." : "Instagram is opening in a separate window. Sign in there, then refresh this page to see the connection status." };
+  if (!started) return { error: account.browserMode === "chrome_read_only" ? "The Chrome sign-in check could not start. Try again shortly." : "The sign-in window could not open. Try again shortly." };
+  if (request.alreadyOpening) return { message: account.browserMode === "chrome_read_only" ? "The Chrome sign-in check is already running. Wait for it to finish before requesting another." : "The sign-in window is already opening. Finish there before requesting another." };
+  return { message: account.browserMode === "chrome_read_only"
+    ? process.env.OUTREACH_SMOKE_MODE === "1" ? "Chrome sign-in check saved." : "Chrome sign-in check requested. Switch Chrome to this Instagram account first if a different account is signed in."
+    : process.env.OUTREACH_SMOKE_MODE === "1" ? "Sign-in window check saved." : "Instagram is opening in a separate sign-in window. Sign in there, then refresh this page to see the connection status." };
 }
 export async function changeStatus(form: FormData): Promise<ActionResult> {
   const user = await requireUser();

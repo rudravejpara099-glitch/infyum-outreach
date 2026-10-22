@@ -896,3 +896,15 @@ NOT verified: sign-in for `@akash_infyum`; a new eligible campaign send/reply; l
 Needs from Rudra: sign into `@akash_infyum` in regular Chrome if it is the intended sender; then run the read-only sign-in check. Never send credentials in chat. If it was a prospect, do not use it as a sender.
 
 Next: keep approval ON and paid work off; wait for the owner sign-in before verifying that account.
+
+### 2026-10-22: Clarify the signed-in Chrome account flow
+
+Changed on `fix/first-run-operability` / PR #13: Accounts now describes the existing-Chrome check accurately in its status, buttons, and result messages. It no longer says that an existing Chrome check opens a separate login window. Campaign messages continue to require campaign approval. Added action/copy tests and updated the disposable UI smoke to exercise Chrome mode.
+
+Verified: `npm test` = 320 passed; `npm run typecheck`, `npm run lint`, `npm run smoke:ui`, and `npx next build --webpack` passed. The authenticated Accounts page in the user's signed-in Chrome displays `@timelessmoments.al` as Connected and `@akash_infyum` as Sign-in needed, with “Check Chrome sign-in” on the latter. No message sent, paid call, or spend.
+
+NOT verified: `@akash_infyum` until the owner signs into it in Chrome; a new live send-and-reply; paid providers or real Stripe TEST; hosted operation. Campaign #4 remains approval ON, and its existing leads are skipped.
+
+Needs from Rudra: sign into `@akash_infyum` in signed-in Chrome if that is the intended sender; then it can be checked read-only. No password in chat. No help is needed for the current free checks.
+
+Next: keep approval ON and paid work off. No outbound action without the exact message being approved.

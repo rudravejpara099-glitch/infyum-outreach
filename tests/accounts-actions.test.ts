@@ -27,10 +27,18 @@ describe("Instagram sign-in actions", () => {
     const result = await connectAccount(form);
     const account = db.prepare("SELECT id,ramp_start FROM ig_accounts").get() as { id: number; ramp_start: string };
     const job = db.prepare("SELECT id,status FROM jobs WHERE type='open_login'").get() as { id: number; status: string };
-    expect(result.message).toMatch(/opening in a separate window/i);
+    expect(result.message).toMatch(/separate sign-in window/i);
     expect(account.ramp_start).toBe(dateInTimeZone(new Date(), "Asia/Kolkata"));
     expect(job.status).toBe("running");
     expect(spawn).toHaveBeenCalledWith(process.execPath, ["--import", "tsx", expect.stringContaining("open-instagram-login.ts"), String(account.id), String(job.id)], expect.objectContaining({ detached: true, stdio: "ignore", env: expect.not.objectContaining({ APIFY_TOKEN: expect.anything() }) }));
+  });
+
+  it("describes signed-in Chrome as a check, not a new login window", async () => {
+    const form = new FormData(); form.set("handle", "@chrome.account"); form.set("dailyCap", "20"); form.set("browserMode", "chrome_read_only");
+    const result = await connectAccount(form);
+    expect(result.message).toBe("Account saved. Outreach is checking the current Chrome sign-in.");
+    expect(result.message).not.toMatch(/separate window/i);
+    expect(db.prepare("SELECT browser_mode FROM ig_accounts WHERE handle='chrome.account'").get()).toEqual({ browser_mode: "chrome_read_only" });
   });
 
   it("does not start a duplicate window while a sign-in request is active", async () => {
@@ -50,7 +58,7 @@ describe("Instagram sign-in actions", () => {
     const account = createAccount(db, { handle: "review.account", profileDir: "/tmp/review.account" }, "test");
     const form = new FormData(); form.set("id", String(account.id));
     const result = await useSignedInChrome(form);
-    expect(result.message).toMatch(/campaign actions remain disabled/i);
+    expect(result.message).toMatch(/campaign messages still require approval/i);
     expect(getAccount(db, account.id)?.browserMode).toBe("chrome_read_only");
     expect(spawn).toHaveBeenCalledTimes(1);
 

@@ -996,3 +996,10 @@ NOT verified: sign-in for `@akash_infyum`; new live send/reply; paid providers o
 Decisions made: keep approval ON; no-spend, no-send, and no social writes remain in force.
 Needs from Rudra: sign into `@akash_infyum` in regular Chrome if it is the intended sender; no password in chat. If it is a prospect, do not use it as a sender.
 Next I will: verify its sign-in read-only after manual login; keep PR #13 in draft.
+
+### [2026-10-22] Codex #123: Clarify the signed-in Chrome account flow
+Changed: on `fix/first-run-operability` / PR #13, made Accounts copy and action responses accurately describe checking the current Chrome sign-in. The Chrome check no longer claims to open a separate login window. Campaign messages still require approval. Added coverage for Chrome-specific statuses and messages; no migration or dependency.
+Verified: `npm test` = 320 passed; `npm run typecheck`, `npm run lint`, `npm run smoke:ui`, `npx next build --webpack`, and `git diff --check` passed. The authenticated Accounts page in the existing Chrome profile shows `@timelessmoments.al` Connected and `@akash_infyum` Sign-in needed. No outbound message, paid call, or spend.
+NOT verified: sign-in for `@akash_infyum`, a new live send-and-reply, paid integrations or real Stripe TEST, hosted operation. Campaign #4 approval remains ON; all existing leads are skipped.
+Needs from Rudra: if `@akash_infyum` is the intended sender, sign into that account in regular Chrome so Outreach can check it read-only. Do not send a password in chat.
+Next: keep approval ON and paid work off; do not send without explicit approval of the exact message.

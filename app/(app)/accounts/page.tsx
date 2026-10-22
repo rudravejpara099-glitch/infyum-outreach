@@ -26,7 +26,7 @@ export default async function AccountsPage() {
   const loginJobByAccount = new Map(loginJobs.map((job) => [job.account_id, { status: job.status, lastError: job.last_error, payload: JSON.parse(job.payload) as Record<string, unknown> }]));
   return (
     <>
-      <PageHeader title="Instagram accounts" sub="Each account runs in its own browser window. You log in once; the app never sees the password." />
+      <PageHeader title="Instagram accounts" sub="Sign in yourself in your existing Chrome or a separate sign-in window. Outreach never sees your password." />
       <ActionForm action={connectAccount} className="card mb-6 flex flex-wrap items-end gap-3 p-4">
         <div className="w-56"><label className="label" htmlFor="handle">Instagram handle</label><input id="handle" name="handle" required placeholder="@yourbrand" className="input" /></div>
         <div className="w-40"><label className="label" htmlFor="dailyCap">DMs per day (max {config.absoluteDailyCeiling})</label><input id="dailyCap" name="dailyCap" type="number" defaultValue={35} min={1} max={config.absoluteDailyCeiling} className="input" /></div>
@@ -39,7 +39,7 @@ export default async function AccountsPage() {
       {accounts.length === 0 ? <Empty title="No accounts yet">Connect the Instagram account that will send the DMs.</Empty> : (
         <div className="card divide-y divide-line">
           {accounts.map((a) => {
-            const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running);
+            const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running, a.browserMode);
             const statusBadge = accountStatusBadge(a.status, signIn.tone);
             const signInTone = signIn.tone === "error" ? "border-bad bg-bad/5 text-bad" : signIn.tone === "success" ? "border-ok bg-ok/5 text-ok" : signIn.tone === "attention" ? "border-warn bg-warn/5 text-warn" : "border-line bg-panel text-muted";
             return <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
@@ -61,7 +61,7 @@ export default async function AccountsPage() {
                   <input name="cap" type="number" defaultValue={a.dailyCap} min={1} max={config.absoluteDailyCeiling} aria-label="Daily cap" className="input w-20" />
                   <button className="btn">Set cap</button>
                 </ActionForm>
-                <ActionForm action={reopenLogin}><input type="hidden" name="id" value={a.id} /><button className="btn">Open login window</button></ActionForm>
+                <ActionForm action={reopenLogin}><input type="hidden" name="id" value={a.id} /><button className="btn">{a.browserMode === "chrome_read_only" ? "Check Chrome sign-in" : "Open login window"}</button></ActionForm>
                 {a.browserMode !== "chrome_read_only" && <ActionForm action={useSignedInChrome}><input type="hidden" name="id" value={a.id} /><button className="btn">Use signed-in Chrome</button></ActionForm>}
                 {a.browserMode === "chrome_read_only" && <ActionForm action={useSeparateSignIn}><input type="hidden" name="id" value={a.id} /><button className="btn">Use separate sign-in</button></ActionForm>}
                 <ActionForm action={changeStatus}>
