@@ -27,6 +27,7 @@ export function looksBlocked(pageText: string, url: string): boolean {
 const LOGIN_PROMPTS = [
   /log in to (?:see|view) (?:photos|posts|this profile|content)/i,
   /sign up to (?:see|view) (?:photos|posts|this profile|content)/i,
+  /see photos, videos and more from[\s\S]{0,200}sign up and never miss a post/i,
   /log in to continue/i,
   /you need to log in to continue/i,
 ];
