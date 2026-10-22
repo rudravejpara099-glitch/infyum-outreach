@@ -30,8 +30,12 @@ export function profileFactsScript(targetHandle: string): string {
     const headerText = header?.innerText ?? '';
     const followerText = headerText.match(/[\\d.,]+\\s*[kKmM]?\\s+followers/i)?.[0] ??
       (document.querySelector('a[href$="/followers/"]')?.innerText ?? '');
-    const relation = Array.from(header?.querySelectorAll('button,[role=button]') ?? []).map((e) =>
-      (e.getAttribute('aria-label') || e.innerText || '').trim().toLowerCase()).find((s) => /^(follow|follow back|following|requested)$/.test(s)) ?? '';
+    let relation = '';
+    let relationScope = header;
+    for (let depth = 0; relationScope && depth < 3 && !relation; depth++, relationScope = relationScope.parentElement) {
+      relation = Array.from(relationScope.querySelectorAll('button,[role=button]')).map((e) =>
+        (e.getAttribute('aria-label') || e.innerText || '').trim().toLowerCase()).find((s) => /^(follow|follow back|following|requested)$/.test(s)) ?? '';
+    }
     let country = null;
     let dialog = Array.from(document.querySelectorAll('[role=dialog]')).find((item) => /Account based in/i.test(item.innerText || ''));
     const options = header?.querySelector('[aria-label="Options"],[aria-label="More options"]')?.closest('button,[role="button"]');

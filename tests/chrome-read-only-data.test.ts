@@ -69,6 +69,23 @@ describe("Chrome read-only data adapter", () => {
     expect(result).toMatchObject({ allowed: true, followerText: "686m followers", relation: "follow" });
   });
 
+  it("finds the target profile relationship control just outside the header", async () => {
+    const follow = { innerText: "Follow", getAttribute: () => null };
+    const parent = { querySelectorAll: () => [follow], parentElement: null };
+    const header = {
+      innerText: "17.4K followers",
+      parentElement: parent,
+      querySelector: () => null,
+      querySelectorAll: () => [],
+    };
+    const result = await runFastScript(profileFactsScript("target"), { protocol: "https:", hostname: "www.instagram.com", pathname: "/target/" }, {
+      body: { innerText: "17.4K followers" },
+      querySelector: (selector: string) => selector === "header" ? header : null,
+      querySelectorAll: () => [],
+    });
+    expect(result).toMatchObject({ allowed: true, followerText: "17.4K followers", relation: "follow" });
+  });
+
   it("waits for the About dialog before reading the public account country", async () => {
     let aboutClicked = false;
     let dialogChecks = 0;

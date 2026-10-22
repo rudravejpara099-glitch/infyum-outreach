@@ -764,3 +764,11 @@ The dashboard previously said the worker was "handling" work even when the next 
 
 Verified: 306 tests pass; typecheck, lint, Webpack production build and isolated `npm run smoke:ui` pass. The authenticated owner dashboard at `127.0.0.1:3100` now visibly says "Next lead check at 9:42 AM (team time)" and explains the five old sign-in attempts. The worker remains live, the lead check remains queued for 13:42 UTC, 23 messages remain pending approval and 0 DMs have been sent today. No Instagram write or paid call occurred.
 Committed and pushed as `752f42b` to PR #13. GitHub reports the PR open/draft with no configured status checks.
+
+### [2026-10-22] Codex #108: Fix profile relationship detection in signed-in Chrome
+
+Instagram's read-only profile checker looked for the target account's relationship button only inside `<header>`. A live page showed the target's Follow control just outside that header, causing a false “connection status unclear” failure. The checker now searches the header and its two nearest ancestors, stopping at the first clear status; it still fails closed when status is missing. Added a regression test for the Instagram layout that caused the failure. No migration, dependency, social write, paid call, or spend.
+
+Verified: focused adapter tests (13); full `npm test` (309); `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check`.
+NOT verified: the fix could not be rerun against the live Chrome bridge in this sandbox because starting a new bridge was denied local IPC (`listen EPERM`). The previous live attempt did reach the intended public profile but stopped at this parser error before inbox reading. No message content was read in this attempt, no Instagram action was taken, and no paid integration was used.
+Next: run this read-only profile check in the already-authorized signed-in Chrome environment; if it passes, continue with the previously approved inbox count check. Keep approvals ON and do not send, follow, like, comment, spend, or bypass account pacing.
