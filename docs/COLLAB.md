@@ -1003,3 +1003,10 @@ Verified: `npm test` = 320 passed; `npm run typecheck`, `npm run lint`, `npm run
 NOT verified: sign-in for `@akash_infyum`, a new live send-and-reply, paid integrations or real Stripe TEST, hosted operation. Campaign #4 approval remains ON; all existing leads are skipped.
 Needs from Rudra: if `@akash_infyum` is the intended sender, sign into that account in regular Chrome so Outreach can check it read-only. Do not send a password in chat.
 Next: keep approval ON and paid work off; do not send without explicit approval of the exact message.
+
+### [2026-10-22] Codex #124: Safely delete an empty campaign draft
+Changed: on `fix/first-run-operability` / PR #13, added a confirmed delete action only for empty draft campaigns. The action rechecks draft status and lead count in a transaction, preserves campaign history, and records a History event. The add-leads action rechecks campaign existence in its write transaction so a stale form cannot create an orphan after deletion. No protected repository or migration changed.
+Verified: `npm test` = 323 passed; typecheck, lint, isolated UI smoke, Webpack production build, and diff check passed. UI smoke deletes only its temporary empty draft and confirms it disappears. Live built app on port 3101 shows the button for the real empty draft; no owner data was changed. No social write, paid call, or spend.
+NOT verified: paid integrations or real Stripe TEST; new live send-and-reply. Campaign #4 remains approval ON; existing leads are skipped.
+Needs from Rudra: none for this cleanup feature. Sign into `@akash_infyum` only if it is intended to be a sender; no password in chat.
+Next: keep approval ON and paid work off; live sending still requires an eligible lead and your approval of the exact message.

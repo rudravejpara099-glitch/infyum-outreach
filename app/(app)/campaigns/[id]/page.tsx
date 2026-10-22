@@ -11,7 +11,7 @@ import { Icon } from "@/components/icon";
 import { CampaignDetails } from "@/components/campaign-details";
 import { ActionForm } from "@/components/action-form";
 import { workerStatus } from "@/lib/queries/worker-status";
-import { changeCampaignStatus } from "../actions";
+import { changeCampaignStatus, deleteEmptyDraftCampaign } from "../actions";
 import { campaignHistory } from "@/lib/queries/campaign-history";
 import { validTimeZone } from "../../settings/validation";
 import { messageKindLabel } from "@/lib/ui/copy";
@@ -54,6 +54,10 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
           <button className="btn">Stop campaign</button>
         </ActionForm>
       </div>}
+      {campaign.status === "draft" && overview.total === 0 && <ActionForm action={deleteEmptyDraftCampaign} className="campaign-delete-form" confirmMessage="Delete this empty draft campaign permanently? This can’t be undone.">
+        <input type="hidden" name="id" value={campaign.id} />
+        <button className="btn">Delete empty draft</button>
+      </ActionForm>}
     </header>
     {campaign.status === "done" && <p className="card mb-4 p-4 text-sm text-muted">This campaign is finished. No new lead searches or messages will run. Any message already being sent may complete.</p>}
     {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Outreach is waiting. Campaign work will not start until its background service is running on this computer.</p>}

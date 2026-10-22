@@ -908,3 +908,11 @@ NOT verified: `@akash_infyum` until the owner signs into it in Chrome; a new liv
 Needs from Rudra: sign into `@akash_infyum` in signed-in Chrome if that is the intended sender; then it can be checked read-only. No password in chat. No help is needed for the current free checks.
 
 Next: keep approval ON and paid work off. No outbound action without the exact message being approved.
+
+### 2026-10-22: Add safe cleanup for empty campaign drafts
+
+Changed on `fix/first-run-operability` / PR #13: an empty draft can now be deleted from its detail page after a confirmation. The server permits deletion only while it is still a draft with no leads, checks inside a transaction, and records the change in History. Finished campaigns and any campaign with leads stay intact. Adding leads also rechecks the campaign inside its write transaction, so an old form cannot create an unassigned lead if the empty draft was deleted. No migration or dependency.
+
+Verified: `npm test` = 323 passed; `npm run typecheck`, `npm run lint`, `npm run smoke:ui`, `npx next build --webpack`, and `git diff --check` passed. The smoke deleted only a disposable empty draft. The rebuilt local app on port 3101 shows the delete button on an empty draft; no owner campaign was deleted. No DM or paid request.
+
+NOT verified: paid Anthropic, Apify, or real Stripe TEST connections; live campaign send-and-reply. Current sender `@timelessmoments.al` is connected; `@akash_infyum` still needs Chrome sign-in if it is intended to send. Campaign #4 remains approval ON, and its leads are skipped.

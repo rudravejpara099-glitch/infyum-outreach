@@ -180,6 +180,14 @@ try {
   await page.waitForURL(/\/campaigns\/\d+$/);
   const campaignUrl = page.url();
   const id = Number(new URL(campaignUrl).pathname.split("/").pop());
+  const disposableDraft = createCampaign(db, { name: "Disposable empty draft", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+  await page.goto(`${base}/campaigns/${disposableDraft.id}`);
+  await page.getByRole("button", { name: "Delete empty draft", exact: true }).waitFor();
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Delete empty draft", exact: true }).click();
+  await page.waitForURL(`${base}/campaigns`);
+  assert.equal((db.prepare("SELECT count(*) n FROM campaigns WHERE id=?").get(disposableDraft.id) as { n: number }).n, 0, "Deleting an empty draft removes only that campaign");
+  await page.goto(campaignUrl);
   await page.goto(`${base}/pipeline?campaign=${id}`);
   await page.getByText("No leads in this campaign yet", { exact: true }).waitFor();
   await page.getByRole("link", { name: "Add leads to this campaign", exact: true }).waitFor();

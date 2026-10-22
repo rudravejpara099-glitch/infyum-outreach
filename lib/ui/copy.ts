@@ -47,6 +47,7 @@ const activityCopy: Record<string, string> = {
   "campaign.active": "Campaign started",
   "campaign.paused": "Campaign paused",
   "campaign.done": "Campaign finished",
+  "campaign.deleted": "Empty draft deleted",
   "leads.found": "Lead search completed",
   "lead.added": "Lead added",
   "message.sent.dm": "First message sent",
