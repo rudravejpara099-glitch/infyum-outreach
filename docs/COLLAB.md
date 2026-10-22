@@ -720,3 +720,11 @@ NOT verified: persistent first reply in the owner's database or a campaign-capab
 Decisions made: this completes the first-real-inbound boundary for found, qualified, warmed, DM-sent, closed and skipped stages without removing do-not-contact protection.
 Needs from you: same as #83; review PR #13 when available. A live campaign still needs a campaign-capable sender and separately approved social-write/provider checks.
 Next I will: keep PR #13 draft until those live gates are actually verified.
+
+### [2026-10-22] Codex #85: Run the isolated whole-app browser check
+Changed: updated `scripts/ui-smoke.ts` to expect the dashboard's current worker states: stopped, running from a terminal, and stopped again after the heartbeat expires. The old strings were stale after the worker-control update.
+Verified: `npm run smoke:ui` passed end to end, including setup, login, campaign creation, lead import, approvals, account flow, responsive layouts, settings, safety checks and billing-facing UI. The script uses a disposable database, local browser and smoke-mode runtime; no worker, Instagram, Apify, paid API or payment ran. `npm test` 277 passed and `npm run typecheck` passed.
+NOT verified: owner-authenticated dashboard rendering, real account sending, long-running worker, or paid integrations. The existing Chrome profile is on the local app's login page. No money spent.
+Decisions made: retain the current stopped/running labels as the source for worker-status UI checks.
+Needs from you: live end-to-end operation still needs a campaign-capable sender account. Separate approval is needed before any real social write or paid provider call.
+Next I will: report the passing no-spend checks and the remaining live connection help clearly; keep PR #13 draft.

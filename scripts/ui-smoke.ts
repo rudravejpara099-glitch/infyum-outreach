@@ -429,13 +429,13 @@ try {
   await page.getByRole("heading", { name: "Get started" }).waitFor();
   await page.getByText("1 account saved. Open its login window and sign in by hand.", { exact: true }).waitFor();
   await page.getByRole("link", { name: "Go to Campaigns", exact: true }).waitFor();
-  await page.getByText("Outreach is waiting", { exact: true }).waitFor();
+  await page.getByText("Outreach is stopped", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.getByRole("button", { name: "Check background status" }).click();
-  await page.getByText("Outreach is running", { exact: true }).waitFor();
+  await page.getByText("Outreach is running from a terminal", { exact: true }).waitFor();
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60000).toISOString());
   await page.getByRole("button", { name: "Check background status" }).click();
-  await page.getByText("Outreach is waiting", { exact: true }).waitFor();
+  await page.getByText("Outreach is stopped", { exact: true }).waitFor();
 
   await page.goto(`${base}/settings`);
   await page.getByRole("heading", { name: "AI message writing", exact: true }).waitFor();
