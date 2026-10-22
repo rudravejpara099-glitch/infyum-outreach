@@ -40,7 +40,7 @@ export default async function Dashboard() {
           <li className="rounded-2xl border border-line bg-bg p-4">
             <p className="text-xs font-medium text-muted">STEP 1</p>
             <p className="mt-1 font-medium">Connect Instagram</p>
-            <p className="mt-1 text-sm text-muted">{d.accounts.length ? `${d.accounts.length} account${d.accounts.length === 1 ? "" : "s"} saved. Open its login window and sign in by hand.` : "Add an account, then sign in by hand in the browser window."}</p>
+            <p className="mt-1 text-sm text-muted">{d.accounts.length ? `${d.accounts.length} account${d.accounts.length === 1 ? "" : "s"} saved. Check Accounts to see which are signed in.` : "Add an account, then sign in by hand in the browser window."}</p>
             <Link href="/accounts" className="mt-3 inline-block text-sm text-accent underline">Go to Accounts</Link>
           </li>
           <li className="rounded-2xl border border-line bg-bg p-4">

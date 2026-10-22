@@ -711,3 +711,17 @@ The authenticated app UI still shows campaign #4 active, approval required ON, z
 Current checks: `npm test` passed 287 tests; `npm run typecheck`, `npm run lint`, `npx next build --webpack`, isolated `npm run smoke:ui`, and fake-provider `npm run smoke:billing` passed. The build, type generation, and UI/billing smoke needed the sandbox's approved local write/socket permissions. No live campaign send, like, follow, comment, AI/API call, Apify run, or payment was performed, and no money was spent.
 
 The owner was asked whether the saved read-only rule should change to let the existing Chrome account run campaigns, with message approval kept ON. Until that ruling, keep the existing `chrome_read_only` behavior and do not claim campaign sending is verified. Live campaign execution still needs a lead in campaign #4, a campaign-capable sender, the worker running, and a separately confirmed test send.
+
+### Disposable end-to-end manual review and dashboard sign-in copy (Codex, 2026-10-22)
+
+The isolated UI smoke now creates a temporary campaign, adds a temporary sender and lead, marks the lead ready, writes a manual first message through the actual lead page, and verifies the saved message is `pending_approval` with zero sent messages. The overview's setup copy now says to check Accounts for sign-in status when accounts are saved, instead of telling everyone to open a login window again.
+
+Verified on the current branch: `npm test` = 296 passed; `npm run typecheck`; `npm run lint`; `git diff --check`; `npx next build --webpack`; `npm run smoke:ui` passed including the new composer path and existing full UI checks; `npm run smoke:billing` passed with the local fake processor only. No live social action, paid API, Apify run, real payment, or spend occurred. The local app remains running at `http://127.0.0.1:3100` with the owner workspace; worker is stopped.
+
+Current owner workspace: the regular Chrome profile `Rudra099` is signed in as `@timelessmoments.al`, and the Accounts page shows that account using signed-in Chrome. Campaign #4 remains active with approval ON and zero leads. There are 23 pending approvals. Activity lists five earlier failed sign-in attempts from the wrong/test windows; they are historical and do not mean the current Chrome profile is signed out. No inbox message text was read.
+
+NOT verified: live qualification of a campaign #4 lead, a real Instagram send, reply sync, or external paid integrations. The test send must wait for a suitable lead and the owner's review/confirmation of its exact message. Anthropic API, Apify, and real Stripe are not configured/verified; no money was spent.
+
+Decisions made: use the owner's existing Chrome profile for campaign DMs, keep approval ON, keep the worker stopped, and do not spend money or send any message during the verification.
+Needs from Rudra: no sign-in help is needed now. Add a suitable lead to campaign #4 when ready; then review and explicitly confirm before the first real send. Paid integrations are optional.
+Next I will: update PR #13 with this verification and keep the local app ready for the owner's test.

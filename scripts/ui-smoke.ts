@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
 import { openDb } from "@/lib/db/core";
+import { createAccount } from "@/lib/db/repos/accounts";
 import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { createOutgoing } from "@/lib/db/repos/messages";
 import { addLead, listLeads } from "@/lib/db/repos/leads";
@@ -194,6 +195,10 @@ try {
   await page.getByRole("button", { name: "Start campaign", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "Choose a sending account" }).waitFor();
   await screenshot(page, { path: path.join(screenshots, "campaign-empty.png"), fullPage: true, caret: "initial" });
+  const manualAccount = createAccount(db, { handle: "manual.sender", profileDir: path.join(temp, "manual.sender"), dailyCap: 35 }, "ui-fixture");
+  setCampaignAccounts(db, id, [manualAccount.id]);
+  await page.getByRole("button", { name: "Start campaign", exact: true }).click();
+  await page.getByRole("heading", { name: "US business coaches" }).waitFor();
   await page.getByRole("link", { name: "Add leads", exact: true }).click();
   assert(await page.locator("#add-leads").getAttribute("open") !== null, "In-page link must open the disclosure");
   await page.getByLabel("Instagram handles").fill("maya.coaches\ngrowthwithalex\nstudio.sarah");
@@ -202,6 +207,17 @@ try {
   await page.getByLabel("Instagram handles").fill("MAYA.COACHES, growthwithalex, studio.sarah, https://invalid.example.test");
   await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "3 duplicate" }).waitFor();
+  const manualLead = listLeads(db, { campaignId: id })[0];
+  db.prepare("UPDATE leads SET stage='warmed',account_id=? WHERE id=?").run(manualAccount.id, manualLead.id);
+  await page.goto(`${base}/leads/${manualLead.id}`);
+  await page.getByRole("heading", { name: "Write a first message" }).waitFor();
+  await page.getByLabel("Message 1").fill("Your workshop has a clear and practical structure.");
+  await page.getByLabel("Message 2").fill("I’m Rudra at Infyum. https://portfolio.infyum.com/sales-funnel");
+  await page.getByLabel("Message 3").fill("What do people usually do after attending?");
+  await page.getByRole("button", { name: "Send to review", exact: true }).click();
+  await page.getByText("First message · Needs review", { exact: false }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM messages WHERE lead_id=? AND direction='out' AND kind='dm'").get(manualLead.id) as { status: string }).status, "pending_approval");
+  assert.equal((db.prepare("SELECT count(*) n FROM messages WHERE lead_id=? AND direction='out' AND status='sent'").get(manualLead.id) as { n: number }).n, 0, "Manual composer must never send directly");
   const quietLead = addLead(db, { handle: "quiet.fixture", campaignId: null }, "ui-fixture").lead;
   db.prepare("DELETE FROM activity WHERE lead_id=?").run(quietLead.id);
   await page.goto(`${base}/leads/${quietLead.id}`);
@@ -246,8 +262,8 @@ try {
   }
   removeDnc(db, "csv.blocked");
   await page.goto(campaignUrl);
-  for (const lead of listLeads(db, { campaignId: id })) {
-    db.prepare("UPDATE leads SET stage='warmed' WHERE id=?").run(lead.id);
+  for (const lead of listLeads(db, { campaignId: id }).filter((lead) => lead.id !== manualLead.id)) {
+    db.prepare("UPDATE leads SET stage='warmed',account_id=? WHERE id=?").run(manualAccount.id, lead.id);
     createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"], campaign: { approvalRequired: true } }, "ui-fixture");
   }
   const unrelated = addLead(db, { handle: "another.campaign", campaignId: other.id }, "ui-fixture").lead;
@@ -287,6 +303,7 @@ try {
   await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
   const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
   assert(account.profile_dir.startsWith(temp));
+  const reviewAccountCard = page.locator(".card.divide-y > div").filter({ hasText: "@review.account" });
   setCampaignAccounts(db, id, [account.id]);
   db.prepare("UPDATE leads SET account_id=? WHERE campaign_id=?").run(account.id, id);
   db.prepare("UPDATE messages SET account_id=? WHERE lead_id IN (SELECT id FROM leads WHERE campaign_id=?) AND direction='out'").run(account.id, id);
@@ -427,7 +444,7 @@ try {
   // Operational controls must change real rows and give honest feedback without a worker.
   await page.goto(`${base}/`);
   await page.getByRole("heading", { name: "Get started" }).waitFor();
-  await page.getByText("1 account saved. Open its login window and sign in by hand.", { exact: true }).waitFor();
+  await page.getByText("2 accounts saved. Check Accounts to see which are signed in.", { exact: true }).waitFor();
   await page.getByRole("link", { name: "Go to Campaigns", exact: true }).waitFor();
   await page.getByText("Outreach is stopped", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
@@ -562,8 +579,8 @@ try {
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "already saved" }).waitFor();
-  assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 1);
-  await page.getByRole("button", { name: "Open login window", exact: true }).click();
+  assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 2);
+  await reviewAccountCard.getByRole("button", { name: "Open login window", exact: true }).click();
   await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login' AND account_id=?").get(account.id) as { n: number }).n, 1);
   await page.getByText("Sign-in request saved for the browser check.", { exact: true }).waitFor();
@@ -579,13 +596,13 @@ try {
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60_000).toISOString());
   await page.goto(`${base}/accounts`);
   await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
-  await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await page.getByRole("button", { name: "Resume", exact: true }).waitFor();
+  await reviewAccountCard.getByRole("button", { name: "Pause", exact: true }).click();
+  await reviewAccountCard.getByRole("button", { name: "Resume", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "paused");
-  await page.getByRole("button", { name: "Resume", exact: true }).click();
-  await page.getByRole("button", { name: "Pause", exact: true }).waitFor();
-  await page.getByLabel("Daily cap", { exact: true }).fill("20");
-  await page.getByRole("button", { name: "Set cap", exact: true }).click();
+  await reviewAccountCard.getByRole("button", { name: "Resume", exact: true }).click();
+  await reviewAccountCard.getByRole("button", { name: "Pause", exact: true }).waitFor();
+  await reviewAccountCard.getByLabel("Daily cap", { exact: true }).fill("20");
+  await reviewAccountCard.getByRole("button", { name: "Set cap", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Daily limit saved" }).waitFor();
   assert.equal((db.prepare("SELECT daily_cap FROM ig_accounts WHERE id=?").get(account.id) as { daily_cap: number }).daily_cap, 20);
   setCampaignStatus(db, id, "paused", "ui-fixture");

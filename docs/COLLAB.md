@@ -851,3 +851,11 @@ NOT verified: fresh-lead qualification, manual message review/approval in campai
 Decisions made: continue with the user's campaign-in-Chrome authorization, preserve approval ON, keep worker stopped after the lifecycle check, and make no paid calls without explicit approval. Do not perform likes, comments, or follows.
 Needs from Rudra: add a suitable lead to campaign #4. For an actual test send, review its message and confirm before sending. Paid AI/Apify setup is only needed if those features are wanted.
 Next I will: update PR #13 and keep live sends paused until the user approves one.
+
+### [2026-10-22] Codex #101: Verify manual review flow in the app
+Changed: branch `fix/first-run-operability`, PR #13. Expanded `scripts/ui-smoke.ts` to create a disposable account/lead and submit a first message through the actual lead page. It verifies that the saved status is pending approval and that no sent message exists. Updated the overview's setup copy to tell users with saved accounts to check sign-in status on Accounts, instead of prompting them to sign in again.
+Verified: `npm test` = 296 passed; `npm run typecheck`; `npm run lint`; `git diff --check`; `npx next build --webpack`; `npm run smoke:ui` passed, including manual compose → pending approval → zero sends; `npm run smoke:billing` passed with local fake processor and disposable data. The regular Chrome profile `Rudra099` is signed into Instagram as `@timelessmoments.al`; the app's Accounts page says that account uses signed-in Chrome. Campaign #4 has approval ON and zero leads; worker is stopped. No real DM, inbox read, paid API/Apify call, real payment, or spend.
+NOT verified: live qualification for campaign #4, real send, reply sync, paid AI, Apify, or real Stripe. Activity shows five historical failed login-window attempts from earlier wrong/test windows.
+Decisions made: preserve approval ON and keep the worker stopped; do not send or spend during checks. User sign-in to the regular Chrome profile is not needed now.
+Needs from Rudra: add a suitable lead to campaign #4 when ready; review and explicitly approve the exact first real message. Paid integrations remain optional.
+Next I will: update PR #13, keep local app available, and wait for a real lead before the live end-to-end send test.
