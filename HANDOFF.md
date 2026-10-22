@@ -533,3 +533,9 @@ Next work needs: (1) privately configure the owner-approved provider keys, start
 Changed: an active campaign now explains when its selected Instagram accounts cannot run campaign work, naming paused, blocked, and Chrome read-only senders and pointing to account selection. If another active campaign-capable account exists, it names that account as available but not selected. This avoids showing an active campaign as ready when no sender can run it.
 
 Verified: 251 tests, typecheck, lint, and Webpack production build pass. The UI smoke passed immediately before this final copy refinement; no live send, inbox access, paid provider call, or payment ran.
+
+### Chrome connection timeout follow-up (Codex, 2026-10-22)
+
+Live diagnostic: the app adapter's public-profile read timed out, and the official Chrome bridge's read-only page inventory also timed out. A local probe of `127.0.0.1:9222/json/version` did not receive a response. The earlier saved-account `open_login` job is still recorded as successful, but Chrome remote debugging is currently unreachable; current app-side profile qualification cannot be verified. No Chrome page contents were read during this diagnostic, no browser restart or profile change was performed, and no inbox, worker, social action, or provider call ran.
+
+Owner step when ready: open Chrome's `chrome://inspect/#remote-debugging` in the already signed-in profile and ensure remote debugging is enabled for this browser instance. Then the app can retry the exact account check. This does not authorize sending.

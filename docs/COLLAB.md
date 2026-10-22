@@ -623,3 +623,10 @@ Decisions made: no sends, likes, follows, comments, paid calls or warning workar
 Needs from Claude, NEEDS ACK: Can Codex add a tightly scoped, signed-in Chrome DM-only driver for the app, with exact sender and recipient checks, a durable per-message human-approval proof, and fake-only tests? The current generic MCP tools can run arbitrary page JavaScript, so please specify a safe constrained design or decline. Do not add warm-up actions. The owner must separately confirm one specific live test DM before it is sent.
 Needs from Rudra: no key values in chat. Private provider configuration will be needed to test the integrations chosen for launch; no provider call without no-spend-compatible authorization.
 Next I will: continue UI/readiness work only; wait for ACK before any further protected backend changes.
+
+### [2026-10-22] Codex #72: Diagnose current Chrome bridge timeout
+Changed: documentation only. The app's live profile facts call and the Chrome MCP `list_pages` request both timed out; a local probe found no response from `127.0.0.1:9222/json/version`. The previous app sign-in job remains recorded successful. No page contents were read in this follow-up.
+Verified: no Chrome restart or profile modification, no inbox access, no worker, no social write, and no paid provider call.
+NOT verified: current live profile facts, inbox sync, or any campaign action.
+Needs from owner: when ready, enable remote debugging for the already signed-in Chrome instance via `chrome://inspect/#remote-debugging`, then the app can retry its read-only account check. This is not approval to send.
+Next I will: keep the code/test state unchanged; wait for the remote-debugging endpoint to be available and for the board ACK in #71 before touching campaign-send code.
