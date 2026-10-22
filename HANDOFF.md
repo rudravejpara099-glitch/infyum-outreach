@@ -497,3 +497,15 @@ Next: owner signs into the local app at `http://127.0.0.1:3100/login`, opens Acc
 ### Chrome bridge reliability follow-up
 
 The app-owned read-only Chrome adapter now bounds MCP initialization and tool calls at 30 seconds, closes the helper transport if initialization fails, and treats MCP tool errors or missing/malformed sign-in results as failed checks rather than completed jobs with `authenticated: false`. A genuine `loggedIn: false` result still records a completed, unauthenticated check. Full `npm test` passes (239 tests), `npm run typecheck` passes, and `git diff --check` passes. This is not a new live Instagram verification: signed-in Chrome, product-side profile/inbox checks, worker execution, and paid integrations remain unverified.
+
+### Live app account sign-in verified (Codex, 2026-10-22)
+
+Changed the saved Instagram account to the approved `chrome_read_only` mode after confirming it had no active campaign or queued work. The real app-owned `open_login` job then completed with `authenticated: true` for the exact saved profile in the user's approved Chrome profile. The check read only the exact profile page's UI signal and warning state; it did not open/read the inbox, start the worker, or perform any social action. No money was spent.
+
+The connection is now verified for sign-in only. Chrome mode still blocks all campaign jobs; profile-fact qualification and inbox sync are not enabled through this adapter. The separate isolated sign-in path remains unverified. AI, Apify, and Stripe credentials are absent from the local environment, so real provider flows remain untested and must not be called under the no-spend instruction.
+
+Whole-app no-spend checks: `npm test` = 241 passing, `npm run typecheck`, `npm run lint`, and `npx next build --webpack` pass. The disposable UI and billing simulator smokes also passed: setup/login, campaign/lead/approval/account/settings/auth routes and layouts; and fake checkout, webhook replay, fee reconciliation, exports and user isolation. These prove local test flows only, not real Instagram reads, provider APIs, campaign execution, or payment processing.
+
+### Chrome sign-in tab identity guard
+
+The app-owned read-only Chrome sign-in check now revalidates the live page inside the evaluated script before reading any body text. It requires HTTPS, an exact Instagram host, and the exact saved account profile path; a redirect or changed tab returns no page text and fails the check rather than reading another page. The handle is validated before it is embedded in the script. Focused browser-mode/login-job tests (12) and `npm run typecheck` pass. This is a local regression check only: a fresh live Chrome run, profile facts, and inbox reading remain unverified. Chrome mode still permits only the sign-in check; no worker, social write, or paid call ran.

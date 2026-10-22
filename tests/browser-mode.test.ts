@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch, loginCheckFailure } from "@/lib/domain/browser-mode";
-import { bindInstagramPage, chromeMcpArgs, ensureChromeToolSucceeded, instagramProfileUrl, isAllowedInstagramUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
+import { bindInstagramPage, chromeMcpArgs, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
 import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 
@@ -52,8 +52,17 @@ describe("signed-in Chrome mode", () => {
     expect(() => ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "403 at /Users/private/profile" }] }, "fallback"))
       .toThrow("Chrome remote debugging permission was denied.");
     expect(ensureChromeToolSucceeded({ content: [{ type: "text", text: "ok" }] }, "fallback")).toEqual({ content: [{ type: "text", text: "ok" }] });
-    expect(loginStateFromToolResult({ content: [{ type: "text", text: "```json\n{\"loggedIn\":false}\n```" }] })).toEqual({ text: "", loggedIn: false });
+    expect(loginStateFromToolResult({ content: [{ type: "text", text: "```json\n{\"allowed\":true,\"loggedIn\":false}\n```" }] })).toEqual({ text: "", loggedIn: false });
     expect(() => loginStateFromToolResult({ content: [{ type: "text", text: "no status returned" }] })).toThrow("no Instagram sign-in status");
+    expect(() => loginStateFromToolResult({ content: [{ type: "text", text: "```json\n{\"allowed\":false,\"text\":\"private unrelated page\",\"loggedIn\":true}\n```" }] })).toThrow("expected Instagram profile");
+  });
+
+  it("reads page text only while Chrome still shows the exact saved Instagram profile", () => {
+    const script = instagramLoginCheckScript("@owner");
+    expect(script).toContain("location.protocol === 'https:'");
+    expect(script).toContain("location.pathname.toLowerCase() === \"/owner/\"");
+    expect(script.indexOf("if (!allowed) return")).toBeLessThan(script.indexOf("document.body?.innerText"));
+    expect(() => instagramLoginCheckScript("https://attacker.example")).toThrow("Invalid Instagram handle");
   });
 
   it("uses Chrome's approved auto-connect flow instead of a raw profile socket", () => {

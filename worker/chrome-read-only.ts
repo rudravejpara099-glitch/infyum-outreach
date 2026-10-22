@@ -16,8 +16,9 @@ export function ensureChromeToolSucceeded<T extends ToolTextResult>(result: T, f
   throw new Error(fallback);
 }
 export function loginStateFromToolResult(result: ToolTextResult): { text: string; loggedIn: boolean } {
-  const parsed = jsonFromToolResult(ensureChromeToolSucceeded(result, "Chrome could not verify the Instagram sign-in state.")) as { text?: unknown; loggedIn?: unknown } | null;
+  const parsed = jsonFromToolResult(ensureChromeToolSucceeded(result, "Chrome could not verify the Instagram sign-in state.")) as { allowed?: unknown; text?: unknown; loggedIn?: unknown } | null;
   if (!parsed || typeof parsed.loggedIn !== "boolean") throw new Error("Chrome returned no Instagram sign-in status.");
+  if (parsed.allowed !== true) throw new Error("Chrome is no longer showing the expected Instagram profile.");
   return { text: typeof parsed.text === "string" ? parsed.text : "", loggedIn: parsed.loggedIn };
 }
 export function jsonFromToolResult(result: ToolTextResult): unknown {
@@ -44,6 +45,17 @@ export function instagramProfileUrl(handle: string): string {
   const normalized = handle.replace(/^@/, "");
   if (!/^[a-zA-Z0-9._]{1,30}$/.test(normalized) || normalized === "." || normalized === "..") throw new Error("Invalid Instagram handle.");
   return `https://www.instagram.com/${normalized}/`;
+}
+export function instagramLoginCheckScript(handle: string): string {
+  const expectedPath = new URL(instagramProfileUrl(handle)).pathname.toLowerCase();
+  return `() => {
+    const allowed = location.protocol === 'https:' &&
+      (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
+      location.pathname.toLowerCase() === ${JSON.stringify(expectedPath)};
+    if (!allowed) return { allowed: false, loggedIn: false };
+    const text = document.body?.innerText ?? '';
+    return { allowed: true, text, loggedIn: /edit profile/i.test(text) };
+  }`;
 }
 
 /** Read-only access to the owner's existing Chrome session. No write-capable MCP tool is called. */
@@ -107,7 +119,7 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     const p = await this.openProfile(account);
     const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
       pageId: p.pageId, waitForStableDom: false,
-      function: "() => ({ text: document.body?.innerText ?? '', loggedIn: /edit profile/i.test(document.body?.innerText ?? '') })",
+      function: instagramLoginCheckScript(account.handle),
     } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
     const { text, loggedIn } = loginStateFromToolResult(result);
     if (looksBlocked(text, p.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");

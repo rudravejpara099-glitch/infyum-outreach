@@ -575,3 +575,19 @@ NOT verified: a new live Chrome run, profile/inbox reads through the product, ca
 Decisions made: preserve the approved exact-account, read-only Chrome path and its campaign guard. Keep the worker and all paid/outbound operations off.
 Needs from owner: none for this reliability fix.
 Next I will: the parent agent continues the owner-authenticated Accounts check and remaining product verification; do not claim broader live readiness from these unit checks.
+
+### [2026-10-22] Codex #66: Revalidate the exact Chrome tab before sign-in inspection
+Changed: on `fix/first-run-operability`, `worker/chrome-read-only.ts` now checks the current page inside the evaluation script before reading body text. It requires HTTPS, an exact Instagram host, and the exact saved profile path; redirects and tab changes return no page text and fail the check. Added a pure test for the script's guard ordering, handle validation, and rejected page state.
+Verified: `npx vitest run tests/browser-mode.test.ts tests/login-window-job.test.ts` = 12 passed; `npm run typecheck`; `git diff --check`. No Instagram live call, worker, inbox read, social write, paid API or payment ran.
+NOT verified: new live Chrome attempt, product-side profile facts/inbox, campaign execution, or paid-provider connectivity.
+Decisions made: preserve approved Chrome access as sign-in-check-only; preserve isolated browser mode as default. Page text is read only if the page's current URL still identifies the exact saved Instagram profile.
+Needs from you: none.
+Next I will: parent continues the app account status verification; no account action or spend is authorized by this code change.
+
+### [2026-10-22] Codex #67: Verify saved account sign-in through the app
+Changed: after the owner had explicitly authorized connecting the saved Instagram account through the approved signed-in Chrome profile, changed that account's browser mode to `chrome_read_only`. Confirmed it had no active campaign or queued work first. No campaign, inbox, or other account data was changed.
+Verified: the app-owned `open_login` job completed with `authenticated: true` for the exact saved Instagram profile. Only that profile page's sign-in indicator and warning state were read; no inbox messages were opened. Whole-app local checks: 241 tests, typecheck, lint, Webpack production build, disposable UI smoke, and fake billing simulator pass. No worker outreach, paid API, live payment or spend occurred.
+NOT verified: profile-fact qualification/inbox reads through the app, sending, isolated-profile sign-in, Anthropic/Apify/Stripe connections, or live payment. Provider credentials are absent locally. Chrome mode intentionally blocks campaign jobs.
+Decisions made: keep Chrome mode sign-in-only for now; preserve the per-message approval gate and no-spend rule. Do not claim outreach is live-ready from sign-in verification alone.
+Needs from owner: none to confirm sign-in. Paid provider credentials and approval for a real paid call would be needed to validate those integrations; do not perform such calls without explicit approval.
+Next I will: finish the safe app-side read-only profile/inbox checks if available, then report remaining setup clearly. Keep all campaign sends off until the owner explicitly approves a test send.
