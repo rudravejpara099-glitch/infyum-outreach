@@ -883,3 +883,11 @@ NOT verified: recovery against a live worker, durable reply sync in owner data, 
 Decisions made: keep worker stopped and preserve approval/no-spend rules.
 Needs from you: none; Claude may review this backend change in PR #13.
 Next I will: push the verified change to PR #13.
+
+### [2026-10-22] Codex #105: Start local service and queue one read-only campaign check
+Changed: on the owner-authorized `fix/first-run-operability` branch, started the local worker from the signed-in dashboard. Moved untouched lead `@richcreditrepair` (17,400 saved followers, credit-repair niche, no messages) from draft campaign #3 to active campaign #4 through the app's normal reassignment flow. Campaign approval remains ON; the lead remains `found`; no message was created.
+Verified: authenticated Chrome shows the worker running and 23 messages still pending owner approval, with 0 DMs sent today. Campaign #4's read-only qualification job is queued for 13:42 UTC in its permitted work window. No warm-up/send job, paid AI, Apify, payment, or social write ran; no money was spent. The worker lease and owner DB confirm the service is live. Automated checks on the branch: 301 unit tests, typecheck, lint, Webpack production build, isolated UI smoke, and isolated billing smoke with the local fake payment provider pass.
+NOT verified: the scheduled profile check has not run yet, so the lead's country and campaign fit remain unknown. Live sends, reply sync in owner data, paid providers and hosted operation remain unverified.
+Decisions made: keep message approval ON; use the existing signed-in Chrome connection for read-only qualification; retain account work-window pacing and do not bypass it.
+Needs from Rudra: none for the scheduled read-only check. Review and approve an exact first-DM draft before any send; paid services remain off under the no-spend instruction.
+Next I will: keep the local app available and check the qualification result after the permitted work window; update PR #13 when GitHub connectivity permits.
