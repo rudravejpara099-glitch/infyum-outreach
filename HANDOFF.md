@@ -509,3 +509,11 @@ Whole-app no-spend checks: `npm test` = 241 passing, `npm run typecheck`, `npm r
 ### Chrome sign-in tab identity guard
 
 The app-owned read-only Chrome sign-in check now revalidates the live page inside the evaluated script before reading any body text. It requires HTTPS, an exact Instagram host, and the exact saved account profile path; a redirect or changed tab returns no page text and fails the check rather than reading another page. The handle is validated before it is embedded in the script. Focused browser-mode/login-job tests (12) and `npm run typecheck` pass. This is a local regression check only: a fresh live Chrome run, profile facts, and inbox reading remain unverified. Chrome mode still permits only the sign-in check; no worker, social write, or paid call ran.
+
+### Chrome read-only profile and reply checks (Codex, 2026-10-22)
+
+Changed: extended the explicitly selected `chrome_read_only` account mode to support public-profile qualification and inbox reply synchronization. Both paths first verify the saved account's exact Instagram profile in the approved Chrome session. Page scripts check Instagram host, exact profile/inbox/thread path, owner identity, and warning/login state before returning page text. Inbox sync is bounded to the 15 most recent threads and incoming messages only. Warm-up, AI drafting, sending, lead search through a Chrome-only campaign, and all paid services remain disabled.
+
+Verified locally: `npm test` = 247 passing; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check`. No live profile facts or inbox content were read in this turn; no worker, social action, paid API, or payment ran. The earlier app-owned sign-in check remains the only live Instagram verification.
+
+NOT verified: live profile qualification, inbox sync, campaign execution, or live AI/Apify/Stripe connections. These are code-path checks only. Keep the worker stopped and do not claim outreach execution is live-ready.

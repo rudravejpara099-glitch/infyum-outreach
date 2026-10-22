@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { createAccount, getAccount } from "@/lib/db/repos/accounts";
+import { createAccount, getAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages } from "@/lib/db/repos/messages";
@@ -14,21 +14,22 @@ const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudr
 class FakeDriver implements InstagramDriver {
   sent: { handle: string; parts: string[] }[] = [];
   inbox: { handle: string; text: string }[] = [];
+  factsRead = 0; warmups = 0; inboxReads = 0;
   facts = { isPublic: true, country: "United States", followers: 5000, linkedToInfyum: false };
   blockOnSend = false;
   uncertainOnSend = false;
   errorOnSend = false;
   async openLogin() { return true; }
-  async readFacts(account?: unknown) { void account; return this.facts; }
+  async readFacts(account?: unknown) { void account; this.factsRead++; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
-  async warmUp() { return { likes: 10, comments: 10, followed: true }; }
+  async warmUp() { this.warmups++; return { likes: 10, comments: 10, followed: true }; }
   async sendMessages(_a: unknown, handle: string, parts: string[]) {
     if (this.blockOnSend) throw new InstagramBlockedError("Action blocked");
     if (this.errorOnSend) throw new Error("Chat did not open");
     this.sent.push({ handle, parts });
     if (this.uncertainOnSend) throw new InstagramSendUncertainError();
   }
-  async readInbox() { const out = this.inbox; this.inbox = []; return out; }
+  async readInbox() { this.inboxReads++; const out = this.inbox; this.inbox = []; return out; }
 }
 
 let db: Db; let driver: FakeDriver; let deps: Deps; let clock: Date;
@@ -53,6 +54,40 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe("worker pipeline", () => {
+  it("allows Chrome mode to qualify profiles and sync replies, but blocks every other campaign action", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "read-only-target", campaignId: camp.id }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const complete = vi.spyOn(engine, "complete");
+    enqueue(db, { type: "qualify", leadId: lead.id, accountId: acct.id });
+    await runOne(deps);
+    expect(driver.factsRead).toBe(1);
+    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+
+    for (const type of ["warmup", "draft_dm", "draft_followup", "send"]) {
+      enqueue(db, { type, leadId: lead.id, accountId: acct.id, payload: { messageId: 999 } });
+    }
+    for (let i = 0; i < 4; i++) await runOne(deps);
+    expect(driver.warmups).toBe(0);
+    expect(driver.sent).toHaveLength(0);
+    expect(complete).not.toHaveBeenCalled();
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE status='queued' AND type IN ('warmup','draft_dm','draft_followup','send')").get()).toEqual({ n: 4 });
+  });
+
+  it("allows Chrome mode inbox reads for matching accounts only", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "known-lead", stage: "dm_sent" }, "t");
+    driver.inbox = [{ handle: "known-lead", text: "Can you explain the funnel?" }];
+    enqueue(db, { type: "check_inbox", accountId: acct.id });
+    await runOne(deps);
+    expect(driver.inboxReads).toBe(1);
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(listMessages(db, { leadId: lead.id }).some((message) => message.direction === "in" && message.parts.join(" ").includes("explain the funnel"))).toBe(true);
+    expect(driver.sent).toHaveLength(0);
+  });
+
   it("takes a lead from found to dm_sent on its own when approval is off", async () => {
     const { camp } = setup(false);
     const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");

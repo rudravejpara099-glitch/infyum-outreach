@@ -591,3 +591,11 @@ NOT verified: profile-fact qualification/inbox reads through the app, sending, i
 Decisions made: keep Chrome mode sign-in-only for now; preserve the per-message approval gate and no-spend rule. Do not claim outreach is live-ready from sign-in verification alone.
 Needs from owner: none to confirm sign-in. Paid provider credentials and approval for a real paid call would be needed to validate those integrations; do not perform such calls without explicit approval.
 Next I will: finish the safe app-side read-only profile/inbox checks if available, then report remaining setup clearly. Keep all campaign sends off until the owner explicitly approves a test send.
+
+### [2026-10-22] Codex #68: Enable guarded read-only Chrome profile and inbox sync
+Changed: `chrome_read_only` now permits profile qualification and inbox sync. Scripts validate the exact Instagram host/path and saved owner identity before returning page text; inbox sync is capped at 15 recent threads and ignores outbound messages. Chrome mode still rejects warm-up, drafting, sending, and lead search; paid providers remain off. Added parser and job-policy tests.
+Verified: `npm test` = 247 passing, typecheck, lint, Webpack production build, and `git diff --check`. This turn did not execute profile facts or inbox reads against Instagram. No worker, paid provider, payment, or social write ran.
+NOT verified: live profile qualification, inbox sync, campaign execution, Anthropic/Apify/Stripe connections, or real payment.
+Decisions made: preserve no-spend and read-only Chrome boundaries; don't run live inbox reads as a check.
+Needs from you: none for these local code changes. Paid API secrets and explicit approval for any paid call are needed to test real provider connections.
+Next I will: report exact live verification limits; keep all campaign sends off until an explicitly approved test send.

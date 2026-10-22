@@ -5,6 +5,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { IgAccount } from "@/lib/db/types";
 import { InstagramBlockedError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { looksBlocked, looksLoggedOut } from "./parse";
+import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxThreadPathsFromToolResult, inboxThreadScript, inboxThreadUrl, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
 
 type Page = { id: number; url: string };
 type ToolTextResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
@@ -100,6 +101,28 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     if (!page) throw new Error("Could not open the Instagram profile in Chrome.");
     return { pageId: page.id, url: page.url };
   }
+  private async openInbox(): Promise<Page> {
+    const client = await this.connect();
+    let page = (await this.pages()).find((item) => isAllowedInstagramUrl(item.url) && new URL(item.url).pathname.replace(/\/$/, "").toLowerCase() === "/direct/inbox") ?? null;
+    if (!page) {
+      ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url: inboxIdentityUrl(), background: true } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open Instagram replies.");
+      page = (await this.pages()).find((item) => isAllowedInstagramUrl(item.url) && new URL(item.url).pathname.replace(/\/$/, "").toLowerCase() === "/direct/inbox") ?? null;
+    }
+    if (!page) throw new Error("Could not open Instagram replies in Chrome.");
+    return page;
+  }
+  private async evaluate(pageId: number, script: string, fallback: string): Promise<ToolTextResult> {
+    return ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
+      pageId, waitForStableDom: false, function: script,
+    } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, fallback);
+  }
+  private async verifyOwner(account: IgAccount): Promise<void> {
+    const page = await this.openProfile(account);
+    const result = await this.evaluate(page.pageId, instagramLoginCheckScript(account.handle), "Chrome could not verify the saved Instagram account.");
+    const state = loginStateFromToolResult(result);
+    if (looksBlocked(state.text, page.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+    if (!state.loggedIn) throw new InstagramBlockedError("The saved Instagram account is not signed in in Chrome.");
+  }
   private async inspect(account: IgAccount, handle = account.handle): Promise<{ pageId: number; text: string; controls: string; url: string }> {
     const page = await this.openProfile(account, handle);
     const result = ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
@@ -126,11 +149,30 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     return loggedIn;
   }
   async readFacts(account: IgAccount, handle: string): Promise<ProfileFacts> {
-    await this.inspect(account, handle);
-    throw new Error("Campaign profile checks are not enabled for signed-in Chrome yet. The account sign-in check completed, and no campaign action was taken.");
+    await this.verifyOwner(account);
+    const page = await this.openProfile(account, handle);
+    const result = await this.evaluate(page.pageId, profileFactsScript(account.handle, handle), "Chrome could not read Instagram profile facts.");
+    if (looksBlocked("", page.url) || !isAllowedInstagramUrl(page.url)) throw new Error("Chrome is not showing an allowed Instagram profile.");
+    return profileFactsFromToolResult(result);
   }
-  async readProfileNotes(account: IgAccount, handle: string): Promise<string> { return (await this.inspect(account, handle)).text.slice(0, 4000); }
-  async readInbox(): Promise<{ handle: string; text: string }[]> { throw new Error("Inbox reading is not enabled in Chrome read-only mode yet."); }
+  async readProfileNotes(): Promise<string> { throw new Error("Profile notes and AI drafting are disabled in Chrome read-only mode."); }
+  async readInbox(account: IgAccount): Promise<{ handle: string; text: string }[]> {
+    await this.verifyOwner(account);
+    const page = await this.openInbox();
+    const result = await this.evaluate(page.id, inboxListScript(account.handle), "Chrome could not read Instagram replies.");
+    if (!isAllowedInstagramUrl(page.url)) throw new Error("Chrome is not showing an allowed Instagram inbox.");
+    const threads = inboxThreadPathsFromToolResult(result);
+    const items: { handle: string; text: string }[] = [];
+    for (const path of threads) {
+      ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "navigate_page", arguments: {
+        pageId: page.id, type: "url", url: inboxThreadUrl(path),
+      } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open an Instagram reply.");
+      const thread = await this.evaluate(page.id, inboxThreadScript(account.handle, path), "Chrome could not read an Instagram reply.");
+      const incoming = inboxItemFromToolResult(thread);
+      if (incoming) items.push(incoming);
+    }
+    return items;
+  }
   async warmUp(): Promise<WarmUpResult> { throw new Error("Campaign actions are disabled in Chrome read-only mode."); }
   async sendMessages(): Promise<void> { throw new Error("Message sending is disabled in Chrome read-only mode."); }
   async close(): Promise<void> { await this.client?.close(); await this.transport?.close(); this.client = undefined; this.transport = undefined; }
