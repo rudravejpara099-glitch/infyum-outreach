@@ -15,12 +15,14 @@ export function profileFactsScript(targetHandle: string): string {
     if (!allowed) return { allowed, blocked: false };
     const ready = () => {
       const text = document.body?.innerText ?? '';
-      return Boolean(document.querySelector('header') &&
-        (/followers|this account is private|log in to continue|you need to log in to continue|action blocked|try again later|confirm you'?re (a )?human|help us confirm/i.test(text)));
+      return /restricted profile|you must be \\d+ years old or over to see this profile/i.test(text) ||
+        Boolean(document.querySelector('header') &&
+          (/followers|this account is private|log in to continue|you need to log in to continue|action blocked|try again later|confirm you'?re (a )?human|help us confirm/i.test(text)));
     };
     const deadline = Date.now() + 6000;
     while (!ready() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
     const body = document.body?.innerText ?? '';
+    if (/restricted profile|you must be \\d+ years old or over to see this profile/i.test(body)) return { allowed, restricted: true };
     const blocked = /action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(body) || /\\/(challenge|accounts\\/suspended)\\//i.test(location.pathname);
     if (blocked) return { allowed, blocked: true, text: body.slice(0, 1200) };
     if (/log in to (see|view)|sign up to (see|view)|log in to continue|you need to log in to continue/i.test(body)) return { allowed, loggedOut: true };
@@ -31,8 +33,8 @@ export function profileFactsScript(targetHandle: string): string {
     const relation = Array.from(header?.querySelectorAll('button,[role=button]') ?? []).map((e) =>
       (e.getAttribute('aria-label') || e.innerText || '').trim().toLowerCase()).find((s) => /^(follow|follow back|following|requested)$/.test(s)) ?? '';
     let country = null;
-    const options = header?.querySelector('[aria-label="Options"],[aria-label="More options"]');
-    if (options) {
+    const options = header?.querySelector('[aria-label="Options"],[aria-label="More options"]')?.closest('button,[role="button"]');
+    if (options && typeof options.click === 'function') {
       options.click();
       await new Promise((resolve) => setTimeout(resolve, 300));
       const about = Array.from(document.querySelectorAll('button,[role=button],a,div'))
@@ -62,6 +64,7 @@ export function profileFactsFromToolResult(result: ToolResult): ProfileFacts {
   const parsed = jsonFromToolResult(result) as Record<string, unknown> | null;
   if (!parsed || parsed.allowed !== true) throw new Error("Chrome is no longer showing the expected Instagram profile.");
   if (parsed.blocked === true) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+  if (parsed.restricted === true) throw new Error("Instagram restricts this profile, so its facts cannot be read.");
   if (parsed.loggedOut === true) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
   const followerText = typeof parsed.followerText === "string" ? parsed.followerText : "";
   const followers = followersFromText(followerText);

@@ -665,3 +665,12 @@ Verified: with the explicit path, the app adapter's read-only sign-in check retu
 Needs from Claude: please review the explicit-path fix and regression test in `worker/chrome-read-only.ts` / `tests/browser-mode.test.ts` for the current Chrome connection failure. No broader worker or send behavior changed.
 Needs from Rudra: none. Keep no-spend/no-send rules in force.
 Next I will: finish review and deliver the update through the existing pull request.
+
+### [2026-10-22] Codex #78: Correct read-only public profile parsing
+Changed: request and live diagnosis only; no protected code changed yet. The saved owner profile verified successfully through the approved Chrome session. A target profile returned Instagram's age-restricted notice with no header. On a normal public profile, `profileFactsScript` failed because the `[aria-label="Options"]` match has no `.click()` method in this Chrome DOM; the public page visibly has a Follow button and follower count.
+Needs from Claude, NEEDS ACK: review a narrow read-only fix in `worker/chrome-read-only-data.ts`: recognize age-restricted profiles as unavailable, and target an actual interactive Options control before opening “About this account.” Keep exact URL/owner checks and warning stops. Add fake DOM regression coverage. This does not authorize inbox reads or any social/paid action.
+Needs from Rudra: none for this read-only fix.
+Follow-up: implemented the narrow fix and fake-DOM regressions. A live `readFacts` call verified the saved owner, bound the exact public `instagram` profile, and returned public status, follower count, and relationship in under seven seconds after Chrome's existing permission prompt was accepted. The age-restricted target was recognized as unavailable in the fake-DOM test and visibly showed Instagram's restriction in Chrome. The bridge asks Chrome for permission on each new process; the long-running worker reuses one connection per account, but that lifecycle still needs a product check.
+Verified: `npm test` = 253 passed, `npm run typecheck`, changed-file ESLint, `npx next build --webpack`, and `git diff --check` pass. No inbox, campaign job, social action, paid provider, or payment ran.
+Needs from Claude: review this protected read-only change; no send-path or paid-provider permission is implied.
+Next I will: run the full local checks and update PR #13. Inbox sync, isolated campaign sign-in, and sending remain unverified.

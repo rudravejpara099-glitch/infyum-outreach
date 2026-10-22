@@ -23,7 +23,36 @@ describe("Chrome read-only data adapter", () => {
     expect(() => profileFactsFromToolResult(mcpJson({ allowed: true, relation: "", followerText: "5K followers" }))).toThrow("clear connection status");
     expect(() => profileFactsFromToolResult(mcpJson({ allowed: true, relation: "Follow", followerText: "unknown" }))).toThrow("follower count");
     expect(() => profileFactsFromToolResult(mcpJson({ allowed: true, blocked: true }))).toThrow("warning or human check");
+    expect(() => profileFactsFromToolResult(mcpJson({ allowed: true, restricted: true }))).toThrow("restricts this profile");
     expect(() => profileFactsScript("https://attacker.example")).toThrow("Invalid Instagram handle");
+  });
+
+  it("recognizes an age-restricted page without waiting for a profile header", async () => {
+    const run = new Function("location", "document", `return (${profileFactsScript("target")})`) as
+      (location: unknown, document: unknown) => () => Promise<unknown>;
+    const result = await run(
+      { protocol: "https:", hostname: "www.instagram.com", pathname: "/target/" },
+      { body: { innerText: "Restricted profile You must be 25 years old or over to see this profile" }, querySelector: () => null },
+    )();
+    expect(result).toEqual({ allowed: true, restricted: true });
+  });
+
+  it("clicks the interactive Options ancestor rather than an icon", async () => {
+    let clicked = false;
+    const button = { click: () => { clicked = true; } };
+    const header = {
+      innerText: "686m followers",
+      querySelector: () => ({ closest: () => button }),
+      querySelectorAll: () => [{ innerText: "Follow", getAttribute: () => null }],
+    };
+    const run = new Function("location", "document", `return (${profileFactsScript("target")})`) as
+      (location: unknown, document: unknown) => () => Promise<unknown>;
+    const result = await run(
+      { protocol: "https:", hostname: "www.instagram.com", pathname: "/target/" },
+      { body: { innerText: "686m followers" }, querySelector: (selector: string) => selector === "header" ? header : null, querySelectorAll: () => [] },
+    )();
+    expect(clicked).toBe(true);
+    expect(result).toMatchObject({ allowed: true, followerText: "686m followers", relation: "follow" });
   });
 
   it("lists only bounded inbox thread paths after exact owner binding", () => {
