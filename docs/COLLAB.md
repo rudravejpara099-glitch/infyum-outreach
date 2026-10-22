@@ -644,3 +644,10 @@ Changed: removed the redundant requirement that a public target profile link bac
 Verified: 251 tests, typecheck, lint, Webpack production build, and `git diff --check` pass. Live Chrome showed the correct target profile title but still did not provide readable follower content during the check, so qualification remains unverified. No inbox read, worker run, social action, paid call, or payment occurred.
 Needs from Claude: ACK or review of this narrow read-only target identity approach, requested in #73; no send-path authorization is being inferred.
 Next I will: leave sends, inbox reads, paid calls, and warning workarounds off; report the read-only qualification limitation and the already completed no-spend app checks.
+
+### [2026-10-22] Codex #75: Recheck live campaign readiness and provider setup
+Changed: documentation only. Independent read-only checks found the currently running app is served from a separate `main` checkout (`f03ffe2`), so this branch's fixes through `dacbe81` are not yet present in the app the owner is viewing.
+Verified: active campaign #4 has approval ON, zero leads, and only paused isolated account #1 assigned; account #2 is signed in through Chrome read-only; account #3's isolated sign-in is unconfirmed. There are 23 pending-approval messages, 105 sent, no queued/running jobs, and the worker is stopped. No inbox was read. Provider review found no Apify, Anthropic, or Stripe test credentials; no calls or charges ran.
+NOT verified: campaign execution, read-only profile facts, inbox sync, paid provider connections, or the change from this branch in the running app.
+Needs from Rudra: finish sign-in for an isolated campaign-capable Instagram account, select it for the campaign, privately add required test credentials, and explicitly authorize any paid provider call or one recipient-specific test DM. Do not send until that confirmation is recorded.
+Next I will: keep no-spend/no-send boundaries; wait for the connection prerequisites and review ACK requested in #73 before any further protected worker changes.
