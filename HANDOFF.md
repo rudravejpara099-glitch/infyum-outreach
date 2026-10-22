@@ -16,7 +16,7 @@ Business rules the code must keep:
 
 ## Decided (from a grill-me interview with the owner)
 - Runs locally on the owner's Mac for now (localhost). Each connected Instagram account gets its own Chrome profile driven by Playwright; the owner logs in by hand once, the app never sees passwords.
-- AI = the `claude` command signed in on the machine (owner's subscription), behind one interface `AiEngine` (`lib/engine/types.ts`). No API keys now. For the public version, add another class implementing `AiEngine` (paid API or bring-your-own) and change one line in `lib/engine/index.ts`. Do not resell the subscription.
+- Earlier internal experiments used the local `claude` command. The later at-cost billing decision supersedes that for app-generated/billed writing: use the separately metered Anthropic API, never the owner's personal subscription. No paid provider call is authorized under the current no-spend instruction.
 - Approval queue: on by default, switchable per campaign. Replies follow the same switch plus the always-human topics above.
 - Pipeline stages: found, qualified, warmed, dm_sent, replied (hand-off), closed ("Stopped"), plus skipped (with reason). One transition table in `lib/domain/stages.ts`.
 - Apify for lead search: free plan only, off until a monthly dollar cap is saved in Settings (`apify_monthly_cap_usd`). Stops at 90% of the cap. Never spend beyond the cap.
@@ -26,13 +26,12 @@ Business rules the code must keep:
 
 ## Current live-workspace status (2026-10-22)
 
-- The owner’s active campaign is assigned to the verified, campaign-capable Instagram account `@rudravejpara03012008`. The account is connected in Accounts, campaign approval is ON, and the campaign currently has zero leads.
-- The worker is stopped. Do not start it without the owner’s explicit go-ahead because it can perform campaign actions. No messages, likes, comments, follows, paid API calls, Apify runs or payments were made in this check.
-- Settings reports Anthropic AI writing and Apify search are not configured; both remain off. The local Claude Code CLI is installed, but its sign-in status could not be confirmed. Stripe test credentials are also absent. Use manual lead import for no-cost testing; do not claim live AI/search/payment connectivity.
-- The authenticated app at `127.0.0.1:3100` shows 202 workspace leads, 23 messages waiting for approval, 104 DMs sent in the past 7 days, a worker heartbeat last seen 15 hours ago, and five failed sign-in tasks. The failure list says four sign-in checks could not finish and one existing Chrome session replaced the sign-in window. These are historical errors; the campaign-capable isolated account now reports connected. Campaign #4 itself has zero leads.
-- The local app at `127.0.0.1:3100` was serving an older build loaded before the latest branch build. Restarted only the Next.js app from `fix/first-run-operability`; the refreshed authenticated Overview now shows `Start Outreach`. The worker remains stopped, and the control warns it may process approved outreach including DMs. PR #13 remains open as a draft; do not start the worker without the owner's explicit confirmation.
-- Latest local verification: 277 unit tests, typecheck, `smoke:ui`, and `smoke:billing` passed. These prove local app flows and the fake billing simulator, not live worker/provider/payment execution.
-- For paid AI, follow the owner-approved at-cost billing decision in `docs/BILLING.md`: use a separately metered Anthropic API, never the owner’s personal Claude subscription. The older Claude CLI note below is historical and is not a way to bypass billing.
+- Active campaign #4 is approval-on and assigned to `@timelessmoments.al` through the owner's signed-in Chrome profile. The app previously confirmed the Chrome session; this mode allows read-only qualification and approved sending but blocks warm-up likes/comments/follows.
+- The local worker is running (PID recorded in its lease). It has two read-only lead checks (one for the moved test prospect) and one inbox check queued for the account's allowed work window, beginning 13:42 UTC / 7:12 PM India time. Do not change the saved schedule or turn on warm-up/social writes.
+- Campaign #4 now contains 3 leads: two skipped and one untouched `@richcreditrepair` lead (17,400 saved followers, credit-repair niche) awaiting read-only qualification. Country and campaign fit are not verified until that check completes. The UI shows 23 messages pending approval, 0 DMs sent today, and 65 sent in the last seven days.
+- The dashboard now explains the next scheduled task and labels five historical failed sign-in attempts instead of showing a generic failure warning. Those attempts are historical; `@timelessmoments.al` is connected through Chrome.
+- Anthropic API, Apify, and Stripe TEST credentials are not configured. No paid API, Apify run, payment, Instagram message, like, comment or follow has been made; no money was spent.
+- Latest local verification: 306 unit tests, typecheck, lint, Webpack production build, UI smoke, and local billing simulator pass. PR #13 is open/draft on `fix/first-run-operability`, latest commit `54783cb`; GitHub reports no status checks. These checks do not prove live qualification, DM sending, reply sync, paid provider calls or hosted operation.
 
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
@@ -49,11 +48,10 @@ NOT verified (these need the owner's account/provider setup):
 3. `lib/leads/apify.ts` is tested only with canned data. First real run: confirm the actor id (`apify~instagram-search-scraper` by default, overridable via setting `apify_actor`), its input fields (`search`, `searchType`, `resultsLimit`) and output field names (`username`, followers).
 
 ## Next tasks, in order
-1. Owner-provided local setup: campaign `test 1 at 10:26PM 21OCT` is assigned to the verified campaign-capable account, but has zero leads. Import a small owner-provided list manually for no-cost checking.
-2. Keep the worker stopped until the owner explicitly approves starting campaign processing. Approval remains ON; any actual send, like, comment or follow still requires separate confirmation.
-3. Paid AI and Apify are disconnected and off. Because the owner said not to spend money, do not configure or call them in this check. If the owner later wants those integrations tested, use their separate approval and test-only limits.
-4. The fake Stripe simulator passed; no Stripe TEST account is configured. No live payment is authorized.
-5. PR #13 is still a draft and must be reviewed before merge; do not merge or commit to main from Codex. Hosting and multi-company accounts remain deferred.
+1. Keep the worker running and inspect the live qualification result after 13:42 UTC / 7:12 PM India time. The queued job is read-only; do not accelerate it past its permitted account hours.
+2. If the lead qualifies, continue only with user-reviewed manual warm-up/drafting. Approval remains ON; no real DM can be sent until the exact draft is approved in the app.
+3. Keep paid AI, Apify, and Stripe calls off. The local billing simulator is the no-spend check; no live provider credentials are configured.
+4. PR #13 remains open/draft with no automated checks. Do not merge or commit to main. Hosting and multi-company accounts remain deferred.
 
 ## Working rules
 - Change a rule in `lib/domain/` first, run `npm test`, then look at the screen. Add a test for every rule you change.
