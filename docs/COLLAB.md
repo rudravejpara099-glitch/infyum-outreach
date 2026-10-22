@@ -980,3 +980,11 @@ Verified: `npm run smoke:ui` passed the isolated setup/login, campaign, lead, ap
 NOT verified: a repeat live reply check across a restart, new qualified campaign lead, new send-and-reply, Anthropic/Apify/Stripe TEST credentials, hosted operation. No money spent and no social write.
 Needs from Rudra: none for the current free inbox service. Paid connection verification requires credentials set locally and explicit approval for a paid test; no secret in chat. New outbound verification requires an eligible lead and exact message approval.
 Next I will: keep the read-only service running; wait for its permitted inbox time and monitor existing no-spend checks. Keep PR #13 in draft until the unverified requirements are resolved.
+
+### [2026-10-22] Codex #121: Fresh app and sender connection check
+Changed: no code. On `fix/first-run-operability` / PR #13, rechecked the live authenticated Accounts page and saved the owner-provided `@akash_infyum` in signed-in Chrome mode. It is not assigned to a campaign.
+Verified: `npm test` = 317 passed; `npm run typecheck`; `npm run lint`; `npm run smoke:ui` passed; `npm run smoke:billing` passed against the local fake processor. Both isolated smoke flows passed using temporary data and built production output. `/login` returns 200. Current Chrome verifies `@timelessmoments.al`; the app reports sign-in incomplete for `@akash_infyum`. There are zero approved outgoing messages. No social write, paid API call, real payment, or spend.
+NOT verified: `@akash_infyum` until signed in by its owner; a new send/reply cycle; paid integrations; hosted operation; sustained reliability.
+Decisions made: retain approval ON, no-spend, no-send, and no Instagram interaction without explicit confirmation.
+Needs from Rudra: sign into `@akash_infyum` in the signed-in Chrome profile if it is the intended sender; never send the password in chat. If it is a prospect, leave it out of Accounts/campaign senders.
+Next I will: run the read-only sign-in check after the manual sign-in, then continue only with no-cost verification.

@@ -30,6 +30,7 @@ Business rules the code must keep:
 - The local Outreach service is running. Its next read-only inbox check for account #2 is scheduled for tomorrow at 9:42 AM Asia/Kolkata. Do not accelerate it past account hours or pacing.
 - Campaign #4 has 3 leads and all are skipped; there is no eligible lead for a new live campaign send. The dashboard shows 23 drafts awaiting review, 0 approved outgoing messages, and 0 DMs sent today.
 - The app's live read-only inbox job completed, cleared two earlier inbox failures, and showed “Reply check succeeded.” Five older sign-in attempts remain in activity; the connected account is not blocked by them.
+- `@akash_infyum` was added from Accounts using the owner's existing Chrome mode. Chrome currently verifies `@timelessmoments.al`, not `@akash_infyum`; Accounts reports sign-in incomplete for the new account. It is not assigned to a campaign. The account owner must sign in before Outreach can verify it.
 - Settings confirms Anthropic is not connected and Apify is not configured; its monthly cap is unset. Paid work remains off. Real Stripe TEST credentials are not configured.
 - Latest checks: 317 unit tests, typecheck, lint, Webpack production build, isolated UI smoke, local billing smoke, and diff check passed. The UI and billing smokes use temporary data/fake payments. PR #13 is open/draft on `fix/first-run-operability`, with no GitHub status checks. These checks do not prove repeatability, a new live send/reply, paid-provider connectivity, or hosted operation.
 
@@ -871,3 +872,15 @@ Needs from Rudra: no help is needed for the verified read-only flow. Paid-provid
 Changes are committed and pushed on `fix/first-run-operability` to the open draft PR #13. The repository is clean; the local app and read-only reply checker are running.
 
 To verify the rest of the SaaS connections: the owner must configure Anthropic and Apify credentials locally and explicitly authorize a paid test call; no secrets belong in chat. A new send-and-reply test needs a newly eligible prospect, message review, and in-app approval. Real Stripe TEST and hosted operation remain unverified and are not required for this no-spend read-only check.
+
+### 2026-10-22: Fresh no-spend check and sender sign-in status
+
+Verified: local `/login` returns 200 and the authenticated Accounts page loads. `npm test` = 317 passed; `npm run typecheck` and `npm run lint` passed. `npm run smoke:ui` passed its disposable end-to-end UI flow and production build; `npm run smoke:billing` passed against only its local fake processor and production build. The two browser smokes needed the approved local Chromium execution permission. No live paid provider, payment processor, or Instagram write was used.
+
+The owner-provided `@akash_infyum` handle was saved from Accounts in the existing Chrome mode. Current Chrome verification belongs to `@timelessmoments.al`, so the app says sign-in for `@akash_infyum` is incomplete. The new account is not assigned to a campaign. No approved outgoing messages exist. Campaign #4 remains approval-on with its existing leads skipped. No money was spent.
+
+NOT verified: the new sender account until its owner signs in; a new eligible campaign prospect and send/reply cycle; paid Anthropic, Apify or real Stripe TEST; hosted operation; long-term reliability. Do not use credentials from chat or send anything without the owner's confirmation.
+
+Needs from Rudra: sign into `@akash_infyum` in the signed-in Chrome profile if that is the intended sender; then Outreach can run the read-only sign-in check. No password is needed in chat. If this handle was a prospect instead of a sender, do not assign it as an account.
+
+Next: keep the worker running with message approval ON and paid features off; verify the sender after manual sign-in.
