@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, inboxThreadUrl, profileFactsFromToolResult, profileFactsScript } from "@/worker/chrome-read-only-data";
 
 const mcpJson = (value: unknown) => ({ content: [{ type: "text", text: `Script ran on page and returned:\n\`\`\`json\n${JSON.stringify(value)}\n\`\`\`` }] });
-const runPageScript = async (script: string, location: Record<string, unknown>, document: Record<string, unknown>, style: (element: unknown) => { justifyContent: string } = () => ({ justifyContent: "flex-start" })) => {
+const runPageScript = async (script: string, location: Record<string, unknown>, document: Record<string, unknown>, style: (element: unknown) => { justifyContent: string } = () => ({ justifyContent: "flex-start" }), date: unknown = Date, timer: unknown = setTimeout) => {
   const make = new Function("location", "document", "URL", "Date", "setTimeout", "getComputedStyle", `return (${script})`) as (...args: unknown[]) => () => Promise<unknown>;
-  return make(location, document, URL, Date, setTimeout, style)();
+  return make(location, document, URL, date, timer, style)();
 };
 
 class FastDate extends Date {
@@ -158,6 +158,28 @@ describe("Chrome read-only data adapter", () => {
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, blocked: true, indices: [] }))).toThrow("warning or human check");
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: false, indices: [] }))).toThrow("conversation list is not open");
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, listReady: false, indices: [] }))).toThrow("still loading");
+  });
+
+  it("distinguishes a blank loading inbox from a different signed-in account", async () => {
+    class QuickDate extends Date {
+      static calls = 0;
+      static now(): number { return QuickDate.calls++ === 0 ? 0 : 20_000; }
+    }
+    const location = { protocol: "https:", hostname: "www.instagram.com", pathname: "/direct/inbox/" };
+    const run = (readyState: string, hasHeader: boolean) => {
+      QuickDate.calls = 0;
+      return runPageScript(inboxListScript("owner"), location, {
+        readyState,
+        body: Object.defineProperty({}, "innerText", { get: () => { throw new Error("unverified inbox text must not be read"); } }),
+        querySelector: () => hasHeader ? {} : null,
+        querySelectorAll: () => [],
+      }, undefined, QuickDate, (callback: () => void) => { callback(); });
+    };
+    const loading = await run("loading", false);
+    expect(loading).toMatchObject({ allowed: true, ownerMatches: false, isInbox: true, loading: true });
+    const otherAccount = await run("complete", true);
+    expect(otherAccount).toMatchObject({ allowed: true, ownerMatches: false, isInbox: true, loading: false });
+    expect(() => inboxThreadIndicesFromToolResult(mcpJson(otherAccount))).toThrow("saved Instagram account");
   });
 
   it("waits for the signed-in inbox identity and thread list to load", async () => {

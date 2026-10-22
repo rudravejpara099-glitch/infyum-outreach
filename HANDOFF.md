@@ -813,3 +813,13 @@ Decisions made: approval stays ON; stop at the prospect's first reply; no warm-u
 Needs from Rudra: none for the next read-only retry. A real send test still requires a suitable lead and your confirmation of the exact approved message; paid-provider verification would need provider credentials and separate spend authorization.
 
 Next I will: inspect the next scheduled read-only inbox retry and update this handoff with its result.
+
+### [2026-10-22] Codex #113: Recover a stalled read-only inbox tab
+
+Changed: based on the failed live retry, added loading-state detection that does not read page text before the expected account is confirmed. The worker now reloads the exact allowed Instagram inbox tab once only when it is visibly unready, then repeats the existing account, URL, warning and thread checks. A complete page with another account marker fails closed without refresh. No messages were opened or sent during recovery; no spend.
+
+Verified so far: live Chrome showed the expected owner handle and thread list after one manual reload of the blank inbox tab. Focused adapter and Chrome driver tests pass (21). The new worker path must still pass the full suite and a subsequent scheduled read-only check after the worker is restarted.
+
+NOT verified: live retry after this recovery change, Playwright browser smoke on this macOS shell (bundled Chromium could not launch), outbound campaign send/first-reply on a newly eligible lead, or paid AI/Apify/Stripe TEST. No paid calls or spend are allowed.
+
+Next I will: run full checks, restart the worker with the recovery fix, and inspect its next scheduled inbox result.

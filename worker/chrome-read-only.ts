@@ -124,6 +124,17 @@ export class ChromeInstagram implements InstagramDriver {
     if (pages.length === 0) throw new Error("Could not open Instagram replies in Chrome.");
     return pages.slice(0, 5);
   }
+  private async inboxIndices(pageId: number, handle: string): Promise<number[]> {
+    const script = inboxListScript(handle);
+    const read = () => this.evaluate(pageId, script, "Chrome could not read Instagram replies.");
+    try {
+      return inboxThreadIndicesFromToolResult(await read());
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "Instagram's conversation list is still loading.") throw error;
+      ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "navigate_page", arguments: { pageId, type: "reload" } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not refresh the loading Instagram inbox.");
+      return inboxThreadIndicesFromToolResult(await read());
+    }
+  }
   private async evaluate(pageId: number, script: string, fallback: string): Promise<ToolTextResult> {
     return ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
       pageId, waitForStableDom: false, function: script,
@@ -200,9 +211,8 @@ export class ChromeInstagram implements InstagramDriver {
     await this.verifyOwner(account);
     let identityError: Error | null = null;
     for (const page of await this.inboxPages()) {
-      const result = await this.evaluate(page.id, inboxListScript(account.handle), "Chrome could not read Instagram replies.");
       let indices: number[];
-      try { indices = inboxThreadIndicesFromToolResult(result); }
+      try { indices = await this.inboxIndices(page.id, account.handle); }
       catch (error) {
         if (error instanceof InstagramBlockedError) throw error;
         identityError = error instanceof Error ? error : new Error("Instagram replies could not be verified.");

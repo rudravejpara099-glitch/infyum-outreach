@@ -112,7 +112,10 @@ export function inboxListScript(ownerHandle: string): string {
     });
     const ownerDeadline = Date.now() + 12000;
     while (!ownerMatches() && Date.now() < ownerDeadline) await new Promise((resolve) => setTimeout(resolve, 250));
-    if (!ownerMatches()) return { allowed: true, ownerMatches: false, isInbox, blocked: false, indices: [] };
+    if (!ownerMatches()) {
+      const loading = document.readyState !== 'complete' || !document.querySelector('header');
+      return { allowed: true, ownerMatches: false, isInbox, loading, indices: [] };
+    }
     if (!isInbox) {
       const inboxLink = Array.from(document.querySelectorAll('a[href]')).find((link) => {
         try { const url = new URL(link.href); return url.protocol === 'https:' && (url.hostname === 'www.instagram.com' || url.hostname === 'instagram.com') && url.pathname.replace(/\\/$/, '') === '/direct/inbox'; } catch { return false; }
@@ -141,10 +144,12 @@ export function inboxListScript(ownerHandle: string): string {
 
 export function inboxThreadIndicesFromToolResult(result: ToolResult): number[] {
   if (result.isError) throw new Error("Chrome could not read Instagram replies.");
-  const parsed = jsonFromToolResult(result) as { allowed?: unknown; ownerMatches?: unknown; isInbox?: unknown; listReady?: unknown; blocked?: unknown; loggedOut?: unknown; indices?: unknown } | null;
-  if (!parsed || parsed.allowed !== true || parsed.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before reading replies.");
+  const parsed = jsonFromToolResult(result) as { allowed?: unknown; ownerMatches?: unknown; isInbox?: unknown; listReady?: unknown; blocked?: unknown; loggedOut?: unknown; loading?: unknown; indices?: unknown } | null;
+  if (!parsed || parsed.allowed !== true) throw new Error("Chrome is not showing an allowed Instagram inbox page.");
   if (parsed.blocked === true) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
   if (parsed.loggedOut === true) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
+  if (parsed.loading === true || (parsed.ownerMatches === true && parsed.isInbox === true && parsed.listReady !== true)) throw new Error("Instagram's conversation list is still loading.");
+  if (parsed.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before reading replies.");
   if (parsed.isInbox !== true) throw new Error("Instagram's conversation list is not open.");
   if (parsed.listReady !== true) throw new Error("Instagram's conversation list is still loading.");
   if (!Array.isArray(parsed.indices)) throw new Error("Instagram did not return a readable reply list.");

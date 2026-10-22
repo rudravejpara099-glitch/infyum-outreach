@@ -22,6 +22,51 @@ describe("signed-in Chrome DM driver", () => {
     expect(callTool.mock.calls.map(([, , options]) => options?.timeout)).toEqual([60_000, 60_000]);
   });
 
+  it("reloads the exact inbox once when its signed-in page is still loading", async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    let inboxReads = 0;
+    const callTool = vi.fn(async ({ name, arguments: args }: { name: string; arguments: Record<string, unknown> }) => {
+      calls.push({ name, args });
+      if (name === "list_pages") return { structuredContent: { pages: [
+        { id: 7, url: "https://www.instagram.com/owner/" },
+        { id: 8, url: "https://www.instagram.com/direct/inbox/" },
+      ] } };
+      if (name === "evaluate_script") {
+        if (String(args.function).includes("edit profile")) return { structuredContent: { message: JSON.stringify({ allowed: true, loggedIn: true }) } };
+        inboxReads++;
+        return { structuredContent: { message: JSON.stringify(inboxReads === 1
+          ? { allowed: true, ownerMatches: false, isInbox: true, loading: true, indices: [] }
+          : { allowed: true, ownerMatches: true, isInbox: true, listReady: true, indices: [] }) } };
+      }
+      return { structuredContent: { message: "ok" } };
+    });
+    const driver = new ChromeInstagram({ callTool, close: vi.fn(async () => {}) } as unknown as Client);
+
+    await expect(driver.readInbox(owner)).resolves.toEqual([]);
+
+    expect(calls.filter(call => call.name === "navigate_page")).toEqual([
+      { name: "navigate_page", args: { pageId: 8, type: "reload" } },
+    ]);
+    expect(inboxReads).toBe(2);
+  });
+
+  it("does not reload an inbox when the saved account marker does not match", async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const callTool = vi.fn(async ({ name, arguments: args }: { name: string; arguments: Record<string, unknown> }) => {
+      calls.push({ name, args });
+      if (name === "list_pages") return { structuredContent: { pages: [
+        { id: 7, url: "https://www.instagram.com/owner/" },
+        { id: 8, url: "https://www.instagram.com/direct/inbox/" },
+      ] } };
+      if (String(args.function).includes("edit profile")) return { structuredContent: { message: JSON.stringify({ allowed: true, loggedIn: true }) } };
+      return { structuredContent: { message: JSON.stringify({ allowed: true, ownerMatches: false, isInbox: true, loading: false, indices: [] }) } };
+    });
+    const driver = new ChromeInstagram({ callTool, close: vi.fn(async () => {}) } as unknown as Client);
+
+    await expect(driver.readInbox(owner)).rejects.toThrow("saved Instagram account");
+    expect(calls.some(call => call.name === "navigate_page")).toBe(false);
+  });
+
   it("uses the verified owner page, fresh controls, and the approved message text", async () => {
     const calls: { name: string; args: Record<string, unknown> }[] = [];
     const fakeClient = {
