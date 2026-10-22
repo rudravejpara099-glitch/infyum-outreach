@@ -795,3 +795,11 @@ NOT verified: worker job execution, qualification for a lead in campaign #4, liv
 Decisions made: a saved account and active campaign are not sufficient to claim the workflow is ready; the campaign needs a lead and the worker remains stopped until the owner authorizes its test.
 Needs from Rudra: add a fresh lead to campaign #4 when ready, then explicitly approve the specific test DM before any real send. No help is needed for the local server refresh.
 Next I will: continue no-spend verification without starting campaign work.
+
+### [2026-10-22] Codex #94: Re-run production auth and billing simulations
+Changed: no application code or owner data. Added current results to `HANDOFF.md` after the campaign recheck showed campaign #4 still has no leads.
+Verified: `node --import tsx scripts/security-smoke.ts` passed production setup/sign-in, protected routes, sign-out and signed-out redirect using a temporary database. `npm run smoke:billing` passed checkout, signed/replayed webhook, fee reconciliation, export, user-isolation and responsive UI checks using the fake local processor.
+NOT verified: actual Stripe TEST mode, paid AI/Apify, live campaign job or DM. These checks use disposable data and do not prove live integrations.
+Decisions made: keep the app in no-spend mode; local billing simulations do not count as live Stripe verification.
+Needs from Rudra: add a fresh lead to campaign #4 for the next read-only qualification check; explicitly approve a specific DM before any real send. No help is needed to run these local simulations.
+Next I will: continue only no-cost checks until the live campaign prerequisites are supplied.
