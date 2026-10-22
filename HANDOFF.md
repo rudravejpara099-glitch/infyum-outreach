@@ -725,3 +725,12 @@ NOT verified: live qualification of a campaign #4 lead, a real Instagram send, r
 Decisions made: use the owner's existing Chrome profile for campaign DMs, keep approval ON, keep the worker stopped, and do not spend money or send any message during the verification.
 Needs from Rudra: no sign-in help is needed now. Add a suitable lead to campaign #4 when ready; then review and explicitly confirm before the first real send. Paid integrations are optional.
 Next I will: update PR #13 with this verification and keep the local app ready for the owner's test.
+
+### [2026-10-22] Codex #102: Move untouched leads between campaigns
+
+Changed: branch `fix/first-run-operability`, PR #13. Lead detail now offers a move only for untouched leads when another active, approval-required campaign has an active campaign-capable sender. The server action rechecks those conditions in a transaction, blocks DNC leads, non-`found` stages, conversation history and queued/running work, clears the old sender assignment, preserves the single globally deduplicated lead record, logs the move, and refreshes old/new campaign and lead views. The target campaign runs its ordinary qualification checks before any message can be prepared. Expanded the disposable UI smoke to exercise success and the active-job refusal.
+Verified: `npm test` = 296 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `git diff --check`. UI smoke verified a single lead moved, sender assignment cleared, stage remained `found`, activity was recorded, and queued work blocked a move. No owner database was changed, no worker or live Instagram activity was run, no message was sent, and no paid provider or payment was used.
+NOT verified: live qualification on campaign #4, live worker/DM/reply sync, or real AI, Apify, or Stripe connections. Those checks remain constrained by missing real lead/provider configuration and the no-spend/no-send requirement. This code change does not establish the full prospect-to-reply flow as live verified.
+Decisions made: keep global deduplication; move the existing lead record rather than duplicate it. Keep campaign approval on and preserve all existing lead, sender, and send safeguards.
+Needs from Rudra: none for this code change. A live test DM still requires review of and explicit confirmation for its exact text; paid calls still require separate approval.
+Next I will: update the existing PR #13 branch and keep the owner workspace and worker untouched.

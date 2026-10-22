@@ -232,6 +232,29 @@ try {
   await page.goto(campaignUrl);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+  const movableLead = addLead(db, { handle: "move.fixture", campaignId: other.id }, "ui-fixture").lead;
+  await page.goto(`${base}/leads/${movableLead.id}`);
+  await page.getByRole("heading", { name: "Move to another campaign" }).waitFor();
+  await page.getByLabel("Active campaign").selectOption(String(id));
+  db.prepare("INSERT INTO jobs (type,lead_id) VALUES ('qualify',?)").run(movableLead.id);
+  await page.getByRole("button", { name: "Move lead", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "work in progress" }).waitFor();
+  assert.equal((db.prepare("SELECT campaign_id FROM leads WHERE id=?").get(movableLead.id) as { campaign_id: number }).campaign_id, other.id, "A lead with active work must remain in its current campaign");
+  db.prepare("DELETE FROM jobs WHERE lead_id=?").run(movableLead.id);
+  await page.getByRole("button", { name: "Move lead", exact: true }).click();
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const currentCampaign = (db.prepare("SELECT campaign_id FROM leads WHERE id=?").get(movableLead.id) as { campaign_id: number | null }).campaign_id;
+    if (currentCampaign === id) break;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  const movedLead = db.prepare("SELECT campaign_id,account_id,stage FROM leads WHERE id=?").get(movableLead.id) as { campaign_id: number; account_id: number | null; stage: string };
+  assert.equal(movedLead.campaign_id, id, "Moving a lead must retain one record and assign it to the selected campaign");
+  assert.equal(movedLead.account_id, null, "Moving a lead must clear its previous sender assignment");
+  assert.equal(movedLead.stage, "found", "The new campaign must run its usual checks");
+  assert.equal((db.prepare("SELECT count(*) n FROM leads WHERE handle='move.fixture'").get() as { n: number }).n, 1, "Global deduplication must retain one lead record");
+  assert.equal((db.prepare("SELECT count(*) n FROM activity WHERE lead_id=? AND action='lead.campaign_moved'").get(movableLead.id) as { n: number }).n, 1, "A campaign move must be recorded in lead history");
+  await page.goto(`${base}/leads/${movableLead.id}`);
+  await page.getByRole("heading", { name: "Move to another campaign" }).waitFor({ state: "detached" });
   await page.goto(`${base}/campaigns/${other.id}#add-leads`);
   await page.locator('#add-leads').evaluate((element: HTMLDetailsElement) => { element.open = true; });
   const upload = page.getByLabel("Or choose a CSV file", { exact: true });
@@ -262,7 +285,7 @@ try {
   }
   removeDnc(db, "csv.blocked");
   await page.goto(campaignUrl);
-  for (const lead of listLeads(db, { campaignId: id }).filter((lead) => lead.id !== manualLead.id)) {
+  for (const lead of listLeads(db, { campaignId: id }).filter((lead) => lead.id !== manualLead.id && lead.id !== movableLead.id)) {
     db.prepare("UPDATE leads SET stage='warmed',account_id=? WHERE id=?").run(manualAccount.id, lead.id);
     createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"], campaign: { approvalRequired: true } }, "ui-fixture");
   }

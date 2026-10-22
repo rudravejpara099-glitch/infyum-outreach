@@ -859,3 +859,11 @@ NOT verified: live qualification for campaign #4, real send, reply sync, paid AI
 Decisions made: preserve approval ON and keep the worker stopped; do not send or spend during checks. User sign-in to the regular Chrome profile is not needed now.
 Needs from Rudra: add a suitable lead to campaign #4 when ready; review and explicitly approve the exact first real message. Paid integrations remain optional.
 Next I will: update PR #13, keep local app available, and wait for a real lead before the live end-to-end send test.
+
+### [2026-10-22] Codex #102: Move untouched leads between campaigns
+Changed: branch `fix/first-run-operability`, PR #13; Codex-owned `app/` and `scripts/ui-smoke.ts`. No protected worker/domain/engine/service/lead/repository area or migration changed.
+Verified: `npm test` = 296 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `git diff --check`. The disposable UI test proves a successful one-record move and refusal when the lead has queued work. No live workspace data, Instagram action, paid provider, payment, or spend.
+NOT verified: campaign qualification, live worker/send/reply, or paid provider/payment integrations.
+Decisions made: retain global deduplication and keep approval required; reassign only untouched leads, leave them at `found`, and let the target campaign recheck its own rules.
+Needs from you: none for this UI-owned change. The separate live send still needs owner review/confirmation of the exact message.
+Next I will: update PR #13 with the verified branch change; leave the worker stopped.

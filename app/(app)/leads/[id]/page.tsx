@@ -7,13 +7,15 @@ import { listMessages } from "@/lib/db/repos/messages";
 import { failedSendError } from "@/lib/db/repos/jobs";
 import { listActivity } from "@/lib/db/repos/activity";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { getCampaign } from "@/lib/db/repos/campaigns";
+import { getCampaign, listCampaigns, campaignAccountIds } from "@/lib/db/repos/campaigns";
+import { listAccounts } from "@/lib/db/repos/accounts";
+import { browserModeAllowsJob } from "@/lib/domain/browser-mode";
 import { STAGES, canMove } from "@/lib/domain/stages";
 import { ago, number, STAGE_BADGE } from "@/lib/format";
 import { activityLabel, actorLabel, messageKindLabel, messageStatusLabel, stageCopy } from "@/lib/ui/copy";
 import { ActionForm } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
-import { changeStage, createManualFirstDm, doNotContact, resolveUncertainSend, saveNotes } from "../actions";
+import { changeStage, createManualFirstDm, doNotContact, moveLeadToCampaign, resolveUncertainSend, saveNotes } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,11 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
   const options = STAGES.filter((s) => s !== lead.stage && canMove(lead.stage, s));
   const hasFirstDm = messages.some((message) => message.direction === "out" && message.kind === "dm" && message.status !== "rejected");
+  const accounts = listAccounts(db);
+  const movableCampaigns = lead.stage === "found" && !isDnc(db, lead.handle) && messages.length === 0
+    ? listCampaigns(db).filter((candidate) => candidate.id !== lead.campaignId && candidate.status === "active" && candidate.approvalRequired
+      && accounts.some((account) => campaignAccountIds(db, candidate.id).includes(account.id) && account.status === "active" && browserModeAllowsJob(account.browserMode, "send")))
+    : [];
 
   return (
     <>
@@ -80,6 +87,20 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         </section>
 
         <aside className="flex flex-col gap-6">
+          {movableCampaigns.length > 0 && (
+            <section><h2 className="mb-2 text-base font-semibold">Move to another campaign</h2>
+              <p className="mb-3 text-sm text-muted">This lead has no conversation history. The new campaign will check it against its own rules before preparing a message.</p>
+              <ActionForm action={moveLeadToCampaign} className="flex flex-col gap-2">
+                <input type="hidden" name="id" value={lead.id} />
+                <label className="label" htmlFor="moveCampaign">Active campaign</label>
+                <select className="input" id="moveCampaign" name="campaignId" required defaultValue="">
+                  <option value="" disabled>Choose a campaign</option>
+                  {movableCampaigns.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}
+                </select>
+                <button className="btn">Move lead</button>
+              </ActionForm>
+            </section>
+          )}
           {options.length > 0 && (
             <section><h2 className="mb-2 text-base font-semibold">Move to</h2>
               <div className="flex flex-wrap gap-2">

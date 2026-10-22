@@ -10,7 +10,8 @@ import { failedSendError, resolveFailedSendJob } from "@/lib/db/repos/jobs";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { campaignAccountIds, getCampaign } from "@/lib/db/repos/campaigns";
-import { getAccount, leastLoadedAccount } from "@/lib/db/repos/accounts";
+import { getAccount, leastLoadedAccount, listAccounts } from "@/lib/db/repos/accounts";
+import { logActivity } from "@/lib/db/repos/activity";
 import { createOutgoing, listMessages } from "@/lib/db/repos/messages";
 import { getSetting } from "@/lib/db/repos/settings";
 import { manualFirstDmError } from "@/lib/domain/manual-first-dm";
@@ -44,6 +45,39 @@ export async function saveNotes(form: FormData): Promise<ActionResult> {
   if (!validId(id) || !getLead(db, id)) return { error: "This lead could not be found. Refresh the page." };
   setNotes(db, id, String(form.get("notes") ?? ""));
   revalidatePath(`/leads/${id}`); return { message: "Notes saved." };
+}
+
+/** Reassigns a never-contacted lead without creating a second global lead record. */
+export async function moveLeadToCampaign(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const id = Number(form.get("id")), targetId = Number(form.get("campaignId")), db = getDb();
+  if (!validId(id) || !validId(targetId)) return { error: "Choose a valid lead and campaign." };
+  let previousCampaignId: number | null = null;
+  const result = db.transaction((): ActionResult => {
+    const lead = getLead(db, id), target = getCampaign(db, targetId);
+    if (!lead) return { error: "This lead could not be found. Refresh the page." };
+    if (!target || target.status !== "active" || !target.approvalRequired) return { error: "Choose an active campaign with message approval turned on." };
+    if (lead.campaignId === target.id) return { error: "This lead is already in that campaign." };
+    if (lead.stage !== "found") return { error: "Only untouched leads can move. Finish or stop the current lead first." };
+    if (isDnc(db, lead.handle)) return { error: "This handle is on Do not contact." };
+    if (db.prepare("SELECT 1 FROM messages WHERE lead_id=? LIMIT 1").get(id)) return { error: "This lead has conversation history and cannot be moved." };
+    if (db.prepare("SELECT 1 FROM jobs WHERE lead_id=? AND status IN ('queued','running') LIMIT 1").get(id)) return { error: "This lead has work in progress. Wait for it to finish before moving it." };
+    const accounts = listAccounts(db), allowedIds = campaignAccountIds(db, target.id);
+    const hasSender = accounts.some(account => allowedIds.includes(account.id) && account.status === "active" && browserModeAllowsJob(account.browserMode, "send"));
+    if (!hasSender) return { error: "The campaign needs an active sending account before this lead can move." };
+    previousCampaignId = lead.campaignId;
+    const previousName = previousCampaignId ? getCampaign(db, previousCampaignId)?.name ?? "another campaign" : "unassigned leads";
+    assignLead(db, id, target.id, null);
+    logActivity(db, user.email, "lead.campaign_moved", { leadId: id, detail: `${previousName} → ${target.name}` });
+    return { message: `Moved to ${target.name}. The campaign will run its usual lead checks before any message is prepared.` };
+  }).immediate();
+  if (!result.error) {
+    if (previousCampaignId) revalidatePath(`/campaigns/${previousCampaignId}`);
+    const lead = getLead(db, id);
+    if (lead?.campaignId) revalidatePath(`/campaigns/${lead.campaignId}`);
+    revalidatePath(`/leads/${id}`); revalidatePath("/pipeline"); revalidatePath("/"); revalidatePath("/activity");
+  }
+  return result;
 }
 
 /** Creates a human-written first DM in review without using a paid AI call. */
