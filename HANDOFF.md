@@ -30,9 +30,9 @@ Business rules the code must keep:
 - The local Outreach service is running. Its next read-only inbox check for account #2 is scheduled for tomorrow at 9:42 AM Asia/Kolkata. Do not accelerate it past account hours or pacing.
 - Campaign #4 has 3 leads and all are skipped; there is no eligible lead for a new live campaign send. The dashboard shows 23 drafts awaiting review, 0 approved outgoing messages, and 0 DMs sent today.
 - The app's live read-only inbox job completed, cleared two earlier inbox failures, and showed “Reply check succeeded.” Five older sign-in attempts remain in activity; the connected account is not blocked by them.
-- `@akash_infyum` was added from Accounts using the owner's existing Chrome mode. Chrome currently verifies `@timelessmoments.al`, not `@akash_infyum`; Accounts reports sign-in incomplete for the new account. It is not assigned to a campaign. The account owner must sign in before Outreach can verify it.
+- `@akash_infyum` was added from Accounts using the owner's existing Chrome mode. Chrome verifies `@timelessmoments.al`, not `@akash_infyum`; Accounts now labels the new account “Sign-in needed” and the verified account “Connected.” It is not assigned to a campaign. The account owner must sign in before Outreach can verify it.
 - Settings confirms Anthropic is not connected and Apify is not configured; its monthly cap is unset. Paid work remains off. Real Stripe TEST credentials are not configured.
-- Latest checks: 317 unit tests, typecheck, lint, Webpack production build, isolated UI smoke, local billing smoke, and diff check passed. The UI and billing smokes use temporary data/fake payments. PR #13 is open/draft on `fix/first-run-operability`, with no GitHub status checks. These checks do not prove repeatability, a new live send/reply, paid-provider connectivity, or hosted operation.
+- Latest checks: 318 unit tests, typecheck, lint, Webpack production build, isolated UI smoke, local billing smoke, and diff check passed. The UI and billing smokes use temporary data/fake payments. PR #13 is open/draft on `fix/first-run-operability`, with no GitHub status checks. These checks do not prove repeatability, a new live send/reply, paid-provider connectivity, or hosted operation.
 
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
@@ -884,3 +884,15 @@ NOT verified: the new sender account until its owner signs in; a new eligible ca
 Needs from Rudra: sign into `@akash_infyum` in the signed-in Chrome profile if that is the intended sender; then Outreach can run the read-only sign-in check. No password is needed in chat. If this handle was a prospect instead of a sender, do not assign it as an account.
 
 Next: keep the worker running with message approval ON and paid features off; verify the sender after manual sign-in.
+
+### 2026-10-22: Make account readiness status truthful
+
+Changed on `fix/first-run-operability` / PR #13: the Accounts badge now distinguishes `Connecting`, `Sign-in needed`, `Connected`, `Paused`, and `Stopped`; it never displays an unverified active account as connected or ready. Extended the isolated UI smoke to assert both unverified and verified states across responsive layouts. No database, worker, send, or billing behavior changed.
+
+Verified: `npm test` = 318 passed; `npm run typecheck`; `npm run lint`; `npm run smoke:ui`; `npx next build --webpack`; `git diff --check`. The browser smoke passed in light/dark and 1440/1024/390px. Rebuilt and restarted the production app at `http://127.0.0.1:3100`; live Accounts shows `@akash_infyum` as “Sign-in needed” and `@timelessmoments.al` as “Connected.” No outbound message, paid API call, real payment, or spend.
+
+NOT verified: sign-in for `@akash_infyum`; a new eligible campaign send/reply; live paid providers or Stripe TEST; hosted operation. The worker remains running with one scheduled read-only inbox check for account #2 at 2026-10-23 04:12 UTC; do not accelerate it.
+
+Needs from Rudra: sign into `@akash_infyum` in regular Chrome if it is the intended sender; then run the read-only sign-in check. Never send credentials in chat. If it was a prospect, do not use it as a sender.
+
+Next: keep approval ON and paid work off; wait for the owner sign-in before verifying that account.

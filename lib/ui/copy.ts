@@ -99,6 +99,17 @@ export type LoginJobSummary = {
   tone: "neutral" | "waiting" | "attention" | "error" | "success";
 };
 
+export type AccountStatusBadge = { label: string; tone: "ok" | "warn" | "bad" };
+
+/** Show a connected badge only after Instagram confirms the saved account session. */
+export function accountStatusBadge(status: "active" | "paused" | "blocked", signInTone: LoginJobSummary["tone"]): AccountStatusBadge {
+  if (status === "blocked") return { label: "Stopped", tone: "bad" };
+  if (status === "paused") return { label: "Paused", tone: "warn" };
+  if (signInTone === "success") return { label: "Connected", tone: "ok" };
+  if (signInTone === "waiting") return { label: "Connecting", tone: "warn" };
+  return { label: "Sign-in needed", tone: "warn" };
+}
+
 /** Describes the sign-in window job only; it never treats a saved account as authenticated. */
 export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean): LoginJobSummary {
   if (!job) return {

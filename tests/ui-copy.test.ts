@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STAGES } from "@/lib/domain/stages";
-import { activityLabel, actorLabel, jobErrorLabel, jobTypeLabel, loginJobSummary, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
+import { accountStatusBadge, activityLabel, actorLabel, jobErrorLabel, jobTypeLabel, loginJobSummary, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
 
 describe("plain-language UI copy", () => {
   it("covers only the current first-reply pipeline stages", () => {
@@ -39,6 +39,15 @@ describe("plain-language UI copy", () => {
     expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: true } }, false)).toMatchObject({ title: "Instagram is connected", tone: "success" });
     expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: false } }, false)).toMatchObject({ title: "Sign-in wasn’t completed", tone: "attention" });
     expect(loginJobSummary({ status: "done", lastError: "" }, false).title).toBe("Sign-in window opened");
+  });
+
+  it("does not label an unverified or paused account as connected", () => {
+    expect(accountStatusBadge("active", "attention")).toEqual({ label: "Sign-in needed", tone: "warn" });
+    expect(accountStatusBadge("active", "neutral")).toEqual({ label: "Sign-in needed", tone: "warn" });
+    expect(accountStatusBadge("active", "waiting")).toEqual({ label: "Connecting", tone: "warn" });
+    expect(accountStatusBadge("active", "success")).toEqual({ label: "Connected", tone: "ok" });
+    expect(accountStatusBadge("paused", "success")).toEqual({ label: "Paused", tone: "warn" });
+    expect(accountStatusBadge("blocked", "success")).toEqual({ label: "Stopped", tone: "bad" });
   });
 
   it("shows the real sign-in window outcome without claiming the account is authenticated", () => {

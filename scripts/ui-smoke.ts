@@ -339,6 +339,7 @@ try {
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
   await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
+  await page.getByText("Connecting", { exact: true }).waitFor();
   const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
   assert(account.profile_dir.startsWith(temp));
   const reviewAccountCard = page.locator(".card.divide-y > div").filter({ hasText: "@review.account" });
@@ -625,15 +626,23 @@ try {
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.reload();
   await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting to open" }).waitFor();
+  const loginJob = db.prepare("SELECT id FROM jobs WHERE type='open_login' AND account_id=? ORDER BY id DESC LIMIT 1").get(account.id) as { id: number };
+  db.prepare("UPDATE jobs SET status='done',payload=? WHERE id=?").run(JSON.stringify({ authenticated: false }), loginJob.id);
+  await page.reload();
+  await reviewAccountCard.getByText("Sign-in needed", { exact: true }).waitFor();
+  assert.equal(await reviewAccountCard.getByText("active", { exact: true }).count(), 0, "An unverified account must not appear active");
   for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Account login status must fit on screen");
     await screenshot(page, { path: path.join(screenshots, `account-login-request-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
+  db.prepare("UPDATE jobs SET payload=? WHERE id=?").run(JSON.stringify({ authenticated: true }), loginJob.id);
+  await page.reload();
+  await reviewAccountCard.getByText("Connected", { exact: true }).waitFor();
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60_000).toISOString());
   await page.goto(`${base}/accounts`);
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
+  await page.locator('div[role="status"]').filter({ hasText: "Instagram is connected" }).waitFor();
   await reviewAccountCard.getByRole("button", { name: "Pause", exact: true }).click();
   await reviewAccountCard.getByRole("button", { name: "Resume", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "paused");

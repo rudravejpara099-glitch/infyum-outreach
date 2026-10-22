@@ -988,3 +988,11 @@ NOT verified: `@akash_infyum` until signed in by its owner; a new send/reply cyc
 Decisions made: retain approval ON, no-spend, no-send, and no Instagram interaction without explicit confirmation.
 Needs from Rudra: sign into `@akash_infyum` in the signed-in Chrome profile if it is the intended sender; never send the password in chat. If it is a prospect, leave it out of Accounts/campaign senders.
 Next I will: run the read-only sign-in check after the manual sign-in, then continue only with no-cost verification.
+
+### [2026-10-22] Codex #122: Make account readiness status truthful
+Changed: UI-only on `fix/first-run-operability` / PR #13. Accounts now labels states `Connecting`, `Sign-in needed`, `Connected`, `Paused`, or `Stopped`, deriving connection readiness from the actual sign-in check instead of showing an unverified account as `active`. Extended the disposable UI smoke for both unverified and verified states. No protected backend area, migration, send, or billing behavior changed.
+Verified: `npm test` = 318 passed; `npm run typecheck`; `npm run lint`; `npm run smoke:ui` passed including light/dark and 1440/1024/390px; `npx next build --webpack` passed. Rebuilt and restarted localhost app; live Accounts shows `@akash_infyum` as “Sign-in needed” and `@timelessmoments.al` as “Connected.” No social write, paid call, real payment, or spend.
+NOT verified: sign-in for `@akash_infyum`; new live send/reply; paid providers or Stripe TEST; hosted operation. Read-only inbox task remains queued for its normal 2026-10-23 04:12 UTC window.
+Decisions made: keep approval ON; no-spend, no-send, and no social writes remain in force.
+Needs from Rudra: sign into `@akash_infyum` in regular Chrome if it is the intended sender; no password in chat. If it is a prospect, do not use it as a sender.
+Next I will: verify its sign-in read-only after manual login; keep PR #13 in draft.

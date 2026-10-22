@@ -8,7 +8,7 @@ import { sentTodayForAccount } from "@/lib/db/repos/messages";
 import { dailyAllowance } from "@/lib/domain/limits";
 import { getSetting } from "@/lib/db/repos/settings";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
-import { loginJobSummary } from "@/lib/ui/copy";
+import { accountStatusBadge, loginJobSummary } from "@/lib/ui/copy";
 import type { Job } from "@/lib/db/types";
 import { Empty, PageHeader } from "@/components/ui";
 import { changeCap, changeStatus, connectAccount, reopenLogin, useSeparateSignIn, useSignedInChrome } from "./actions";
@@ -40,6 +40,7 @@ export default async function AccountsPage() {
         <div className="card divide-y divide-line">
           {accounts.map((a) => {
             const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running);
+            const statusBadge = accountStatusBadge(a.status, signIn.tone);
             const signInTone = signIn.tone === "error" ? "border-bad bg-bad/5 text-bad" : signIn.tone === "success" ? "border-ok bg-ok/5 text-ok" : signIn.tone === "attention" ? "border-warn bg-warn/5 text-warn" : "border-line bg-panel text-muted";
             return <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div className="min-w-0">
@@ -47,7 +48,7 @@ export default async function AccountsPage() {
                   <p className="text-sm font-medium">{signIn.title}</p>
                   <p className="mt-1 text-xs">{signIn.detail}</p>
                 </div>
-                <div className="font-medium break-words">@{a.handle} <span className={`badge ml-2 ${a.status === "active" ? "badge-ok" : a.status === "paused" ? "badge-warn" : "badge-bad"}`}>{a.status}</span></div>
+                <div className="font-medium break-words">@{a.handle} <span className={`badge ml-2 badge-${statusBadge.tone}`}>{statusBadge.label}</span></div>
                 {a.browserMode === "chrome_read_only" && <p className="mt-2 max-w-lg text-sm text-muted">Uses your existing signed-in Chrome for this account. Campaign approval settings still control whether messages can be sent.</p>}
                 <div className="mt-0.5 text-xs text-muted">
                   Today {sentTodayForAccount(db, a.id, today, timeZone)} of {dailyAllowance(a, today)} allowed{a.statusNote ? ` · ${a.statusNote}` : ""}
