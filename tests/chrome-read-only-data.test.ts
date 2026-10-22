@@ -160,6 +160,32 @@ describe("Chrome read-only data adapter", () => {
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, listReady: false, indices: [] }))).toThrow("still loading");
   });
 
+  it("waits for the signed-in inbox identity and thread list to load", async () => {
+    class DelayedDate extends Date {
+      static tick = 0;
+      static now(): number { DelayedDate.tick += 250; return DelayedDate.tick; }
+    }
+    const owner = { href: "https://www.instagram.com/owner/" };
+    const row = { innerText: "thread row", querySelector: () => ({}), closest: () => null };
+    const list = { querySelectorAll: () => [row] };
+    const document = {
+      querySelectorAll: () => DelayedDate.tick > 7000 ? [owner] : [],
+      querySelector: () => DelayedDate.tick > 9000 ? list : null,
+      body: { innerText: "Inbox" },
+    };
+    const run = new Function("location", "document", "URL", "Date", "setTimeout", `return (${inboxListScript("owner")})`) as
+      (location: unknown, document: unknown, url: unknown, date: unknown, timer: unknown) => () => Promise<unknown>;
+    DelayedDate.tick = 0;
+    const result = await run(
+      { protocol: "https:", hostname: "www.instagram.com", pathname: "/direct/inbox/" },
+      document,
+      URL,
+      DelayedDate,
+      (fn: () => void) => { fn(); return 0; },
+    )();
+    expect(result).toMatchObject({ allowed: true, ownerMatches: true, isInbox: true, listReady: true, indices: [0] });
+  });
+
   it("fails before reading body text when the host, path or owner does not match", async () => {
     const body = Object.defineProperty({}, "innerText", { get: () => { throw new Error("body must not be read"); } });
     const document = { querySelectorAll: () => [], querySelector: () => null, body };

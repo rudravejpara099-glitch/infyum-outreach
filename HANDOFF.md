@@ -790,3 +790,12 @@ NOT verified: a live outbound message and first reply for a newly qualified camp
 Decisions made: message approval stays ON; stop at the first prospect reply; no warm-up/social write and no paid call or spend without the existing explicit authorization.
 Needs from Rudra: none for this read-only verification. To prove the real send path, add a suitable lead, review the exact message, and approve it in the app. Paid credentials are needed only if those paid integrations are intended to be tested.
 Next I will: update PR #13 with this evidence and keep all paid and outbound actions gated.
+
+### [2026-10-22] Codex #111: Wait for the loading Instagram inbox
+
+Changed: branch `fix/first-run-operability`, PR #13. `worker/chrome-read-only-data.ts` now waits up to 12 seconds for the exact signed-in account marker, then up to 8 seconds for the thread list. Added a fake-DOM regression where both arrive after several seconds. The 15-thread cap, exact account/URL checks, warning stops, and first-reply handoff are unchanged. No migration or dependency.
+Verified: focused adapter test and full `npm test` = 311 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `npm run smoke:billing`; `git diff --check`. UI smoke uses disposable data and sent nothing; billing smoke uses a fake processor. Live browser showed the inbox initially blank and then loaded the expected saved account link and thread list. The worker was stopped and restarted through the app after confirming the only queued job was the read-only inbox check and no outgoing message was approved; dashboard confirmed Outreach running. No message text was reported, no outbound write or paid call occurred, and no money was spent.
+NOT verified: next live inbox retry after this change; it is queued for 2026-10-22 13:41:25 UTC / 7:11 PM team time. Real send to a newly qualified campaign lead remains unverified because campaign #4 has no eligible leads. Paid Anthropic, Apify, and real Stripe TEST remain unverified because credentials are not configured and no-spend remains in force.
+Decisions made: keep approval ON, stop at the first real reply, and do not perform warm-up social actions or spend.
+Needs from Rudra: none for this read-only fix. If a real send test is desired, add a suitable prospect, review its exact message, and approve it in the app.
+Next I will: check the worker's scheduled inbox retry and record whether the extended load wait resolves the intermittent failure.

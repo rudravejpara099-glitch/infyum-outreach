@@ -110,8 +110,8 @@ export function inboxListScript(ownerHandle: string): string {
     const ownerMatches = () => Array.from(document.querySelectorAll('a[href]')).some((a) => {
       try { return new URL(a.href).pathname.toLowerCase() === ${JSON.stringify(ownerPath)}; } catch { return false; }
     });
-    const deadline = Date.now() + 6000;
-    while (!ownerMatches() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
+    const ownerDeadline = Date.now() + 12000;
+    while (!ownerMatches() && Date.now() < ownerDeadline) await new Promise((resolve) => setTimeout(resolve, 250));
     if (!ownerMatches()) return { allowed: true, ownerMatches: false, isInbox, blocked: false, indices: [] };
     if (!isInbox) {
       const inboxLink = Array.from(document.querySelectorAll('a[href]')).find((link) => {
@@ -127,7 +127,12 @@ export function inboxListScript(ownerHandle: string): string {
     const text = document.body?.innerText ?? '';
     if (${THREAD_WARNING}.test(text)) return { allowed: true, ownerMatches: true, isInbox, blocked: true, indices: [] };
     if (/log in to continue|you need to log in to continue/i.test(text)) return { allowed: true, ownerMatches: true, isInbox, loggedOut: true, indices: [] };
-    const list = document.querySelector('[aria-label="Thread list"]');
+    const listDeadline = Date.now() + 8000;
+    let list = document.querySelector('[aria-label="Thread list"]');
+    while (!list && Date.now() < listDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      list = document.querySelector('[aria-label="Thread list"]');
+    }
     if (!list) return { allowed: true, ownerMatches: true, isInbox: true, listReady: false, blocked: false, loggedOut: false, indices: [] };
     const rows = Array.from(list.querySelectorAll('div[role="button"]')).filter((row) => !row.closest('li') && row.querySelector('img') && typeof row.innerText === 'string' && row.innerText.trim().length > 0);
     return { allowed: true, ownerMatches: true, isInbox: true, listReady: true, blocked: false, loggedOut: false, indices: rows.slice(0, 15).map((_, index) => index) };
