@@ -7,6 +7,21 @@ const owner: IgAccount = { id: 1, handle: "owner", label: "", profileDir: "/tmp/
 const result = (message: string) => ({ structuredContent: { message } });
 
 describe("signed-in Chrome DM driver", () => {
+  it("allows the read-only Chrome sign-in check enough time for a slow browser response", async () => {
+    const callTool = vi.fn(async ({ name }: { name: string; arguments: Record<string, unknown> }, _extra?: unknown, options?: { timeout?: number }) => {
+      void _extra;
+      void options;
+      if (name === "list_pages") return { structuredContent: { pages: [{ id: 7, url: "https://www.instagram.com/owner/" }] } };
+      return { structuredContent: { message: JSON.stringify({ allowed: true, loggedIn: true, text: "Edit profile" }) } };
+    });
+    const fakeClient = { callTool, close: vi.fn(async () => {}) } as unknown as Client;
+    const driver = new ChromeInstagram(fakeClient);
+
+    await expect(driver.openLogin(owner)).resolves.toBe(true);
+
+    expect(callTool.mock.calls.map(([, , options]) => options?.timeout)).toEqual([60_000, 60_000]);
+  });
+
   it("uses the verified owner page, fresh controls, and the approved message text", async () => {
     const calls: { name: string; args: Record<string, unknown> }[] = [];
     const fakeClient = {

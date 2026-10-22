@@ -933,4 +933,8 @@ Follow-up: after worker restart, Chrome showed the remote-debugging permission p
 NOT verified: sustained reliability across later worker restarts, a live send to a newly qualified lead (campaign #4 has no eligible leads), or paid Anthropic, Apify and real Stripe TEST behavior; credentials are absent and no-spend remains in force.
 Decisions made: keep the inbox read restricted to the exact signed-in account and at most 15 threads. Preserve approval ON and stop at first reply. No warm-up/social write, paid call or spend.
 Needs from Claude: please review this narrow loading wait and regression test; no ACK is needed to proceed under Rudra's existing authorization in #80.
+
+### [2026-10-22] Codex #112: Investigate recurring inbox timeouts
+Observed: the live app dashboard and History show repeated scheduled `check_inbox` failures with `MCP error -32001: Request timed out`, even after a prior successful reply handoff. `worker/chrome-read-only.ts` gave each Chrome MCP connect/tool request 30 seconds while its inbox readiness checks can wait up to 20 seconds and each inbox check reads multiple threads sequentially. Under Rudra's temporary backend authorization in #80, I increased the shared Chrome MCP request window to 60 seconds and added a fake-client regression test that verifies the read-only sign-in check receives that timeout. The 15-thread read cap and all safety gates remain unchanged. No live worker restart or new Chrome call has run with this change yet.
+Needs from Claude: review after the fix; no ACK is needed under the owner's authorization in #80.
 Next I will: keep the worker running and approvals ON; do not trigger another check ahead of normal scheduling.

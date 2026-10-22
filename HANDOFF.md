@@ -799,3 +799,17 @@ NOT verified: sustained reliability across later worker restarts, a real send to
 Decisions made: keep approval ON, stop at the first real reply, and do not perform warm-up social actions or spend.
 Needs from Rudra: none for this read-only fix. If a real send test is desired, add a suitable prospect, review its exact message, and approve it in the app.
 Next I will: keep approval ON and paid services off; review another normal inbox cycle only if it is due during this verification session.
+
+### [2026-10-22] Codex #112: Extend Chrome request window; recheck app state
+
+Changed: on `fix/first-run-operability` / PR #13, increased the Chrome MCP request timeout from 30 to 60 seconds and added a fake-client regression proving the read-only sign-in check uses the expanded window. Posted on `docs/COLLAB.md` first under the owner's temporary backend authorization in #80. No migrations, new dependencies, live sends, warm-up actions, paid calls, or spend.
+
+Verified: `npm test` = 312 passed; `npm run typecheck`, `npm run lint`, `npx next build --webpack`, and `git diff --check` passed. Live signed-in Chrome loaded the Overview, Campaigns, New campaign, Campaign #4, Lead progress, Review messages, Replies, Accounts, History, Usage and billing, and Settings pages without redirecting to login. Dashboard showed Outreach running, 23 messages awaiting approval, 0 DMs sent today, and 6 background tasks needing attention. Read-only owner DB check found 0 approved outgoing messages, no running jobs, one queued read-only inbox check, and the active campaign's approval setting ON. I stopped and restarted the worker through the app so it would load the new timeout; dashboard/DB confirm it is running. Playwright UI smoke could not complete in this shell: its temporary server started, but bundled Chromium exited with a macOS permission error before browser tests began. No external service or social action occurred.
+
+NOT verified: whether the next scheduled inbox retry completes under the longer request window; Playwright UI/billing smoke in this environment; a new eligible lead through outbound send and first-reply handoff; or live paid AI, Apify, and Stripe TEST connections. No paid call or spend is allowed under current instructions.
+
+Decisions made: approval stays ON; stop at the prospect's first reply; no warm-up/social action, real send, or spend without the existing confirmation.
+
+Needs from Rudra: none for the next read-only retry. A real send test still requires a suitable lead and your confirmation of the exact approved message; paid-provider verification would need provider credentials and separate spend authorization.
+
+Next I will: inspect the next scheduled read-only inbox retry and update this handoff with its result.

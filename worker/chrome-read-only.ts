@@ -10,7 +10,7 @@ import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenTh
 
 type Page = { id: number; url: string };
 type ToolTextResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
-const CHROME_REQUEST_TIMEOUT_MS = 30_000;
+const CHROME_REQUEST_TIMEOUT_MS = 60_000;
 export function ensureChromeToolSucceeded<T extends ToolTextResult>(result: T, fallback: string): T {
   if (!result.isError) return result;
   const details = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
