@@ -696,3 +696,19 @@ NOT verified: live incoming-reply extraction, database sync with a real reply, a
 Decisions made: retain the owner's first-real-reply endpoint and human/GHL handoff. Chrome mode remains read-only; warning and send gates remain intact. The owner temporarily authorized these necessary protected-area fixes in #80 while Claude is unavailable.
 Needs from Claude: review these narrow backend commits in PR #13 when available. No live send or paid call is authorized by this entry.
 Next I will: complete full checks and push the reviewable PR; retry inbox verification only when Instagram's conversation pane loads normally.
+
+### [2026-10-22] Codex #82: Verify first reply with live read-only inbox and disposable data
+Changed: documentation only on `fix/first-run-operability` / PR #13. No product code or real app data changed.
+Verified: Instagram's conversation pane was stalled with a stream-establishment error; reloading the signed-in conversation restored its message articles. The approved app-level read-only inbox call returned one incoming reply, with only a count printed. A second call sent the returned reply to `handleIncoming` in an in-memory SQLite database with a disposable `dm_sent` lead: first call counted and handed off, follow-up cleared, replay ignored. A third call ran the actual `runOne` `check_inbox` job with the real Chrome read-only driver and disposable app data: job done, one incoming stored, lead handed off, follow-up stopped. The database was closed. No private text or partner handle was printed.
+NOT verified: a long-running worker, persistent sync in the owner's database, any campaign send, paid providers, or payment. The connected Chrome account remains read-only. No social write or money spent.
+Decisions made: retain the first-real-reply endpoint; report this as live read-only extraction plus disposable worker-job proof, not full campaign operation.
+Needs from you: no immediate action for this check. Claude may review the protected backend commits in PR #13 when available.
+Next I will: continue the no-spend path toward a campaign-capable connection and worker execution; keep all social writes off until a specific live test is approved.
+
+### [2026-10-22] Codex #83: Fence the first-reply boundary and add local worker control
+Changed: `fix/first-run-operability` / PR #13, commits `bb7bf1b` and `c15bdc3`. First incoming DM now ends outreach from any active lead stage; queued sends recheck the lead immediately before dispatch, due inbox checks take precedence, and paused campaigns still sync replies for waiting leads. Dashboard Start/Stop uses a token-fenced SQLite lease and refuses active campaigns without an active isolated sender. No migrations or dependencies.
+Verified: live read-only Chrome inbox reply extracted and the actual `check_inbox` worker job handled it in disposable in-memory app data (see #82); no real worker or social action. `npm test` 276 passed, `npm run typecheck`, changed-file ESLint, `npx next build --webpack`, and `git diff --check` passed. `npm run smoke:ui` could not open its sandbox-local `tsx` pipe (`EPERM`) before launching a browser.
+NOT verified: live Start/Stop in the signed-in dashboard, persistent reply sync in the owner's database, campaign-capable account, any send/like/comment/follow, paid providers, or payments. The Chrome account remains read-only. No money spent.
+Decisions made: preserve the owner's first-real-reply handoff. An approved queue item alone never authorizes an actual send in this task; the worker was not started against the owner's campaign.
+Needs from Claude: review the narrow protected-area changes in PR #13 when available. Needs from owner before a live campaign: an isolated Instagram sender connection and separate, specific approval for social writes and paid calls.
+Next I will: keep PR #13 draft and reviewable, then verify the signed-in local UI and campaign connection when available without starting live outreach.
