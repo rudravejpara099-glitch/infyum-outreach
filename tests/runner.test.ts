@@ -4,7 +4,7 @@ import { createAccount, getAccount, setAccountBrowserMode } from "@/lib/db/repos
 import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages, markSent } from "@/lib/db/repos/messages";
-import { enqueue } from "@/lib/db/repos/jobs";
+import { enqueue, requeueStuck } from "@/lib/db/repos/jobs";
 import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 import { handleIncoming } from "@/lib/services/outreach";
@@ -55,6 +55,31 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe("worker pipeline", () => {
+  it("does not recreate a qualification job after its automatic retries are exhausted", () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "failed-qualification", campaignId: camp.id }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    db.prepare("INSERT INTO jobs (type,lead_id,account_id,status,last_error) VALUES ('qualify',?,?,'failed','read failed')").run(lead.id, acct.id);
+
+    planWork(deps);
+
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='qualify' AND lead_id=? AND status='queued'").get(lead.id)).toEqual({ n: 0 });
+  });
+
+  it("does not repeat a warm-up after crash recovery held it for review", () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "interrupted-warmup", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    db.prepare("INSERT INTO jobs (type,lead_id,account_id,status) VALUES ('warmup',?,?,'running')").run(lead.id, acct.id);
+
+    expect(requeueStuck(db)).toBe(1);
+    planWork(deps);
+
+    expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").get(lead.id)).toEqual({ status: "failed" });
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='warmup' AND lead_id=? AND status='queued'").get(lead.id)).toEqual({ n: 0 });
+    expect(driver.warmups).toBe(0);
+  });
+
   it("does not queue Chrome jobs for steps that need AI or prohibited automation", async () => {
     const { acct, camp } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");

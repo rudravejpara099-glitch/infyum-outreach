@@ -9,7 +9,7 @@ import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failJob, failJobPermanently, type Lane } from "@/lib/db/repos/jobs";
+import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
@@ -54,7 +54,7 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
       const chosen = lead.accountId ?? leastLoadedAccount(db, accounts)!;
       if (!lead.accountId) assignLead(db, lead.id, c.id, chosen);
       const step = { found: "qualify", qualified: "warmup", warmed: "draft_dm" }[lead.stage as "found" | "qualified" | "warmed"];
-      if (!step || activeJobExists(db, step, lead.id)) continue;
+      if (!step || activeJobExists(db, step, lead.id) || failedJobExists(db, step, lead.id)) continue;
       const account = getAccount(db, chosen);
       if (!account || !browserModeAllowsJob(account.browserMode, step)) continue;
       if (step === "draft_dm" && hasOutgoing(db, lead.id, "dm")) continue;

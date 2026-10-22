@@ -209,10 +209,23 @@ describe("jobs", () => {
     const j3 = claimNext(db)!; failJob(db, j3, "boom");
     expect(db.prepare("SELECT status FROM jobs").get()).toEqual({ status: "failed" });
   });
-  it("puts stuck jobs back after a crash", () => {
-    enqueue(db, { type: "x" }); claimNext(db);
+  it("puts an interrupted read-only qualification back after a crash", () => {
+    enqueue(db, { type: "qualify" }); claimNext(db);
     expect(requeueStuck(db)).toBe(1);
     const j = claimNext(db)!; completeJob(db, j.id);
+  });
+  it("holds interrupted warm-up and paid jobs instead of replaying them", () => {
+    for (const type of ["warmup", "find_leads", "draft_dm", "draft_followup", "open_login"])
+      db.prepare("INSERT INTO jobs (type,status) VALUES (?,'running')").run(type);
+
+    expect(requeueStuck(db)).toBe(5);
+    const held = db.prepare("SELECT type,status,last_error FROM jobs ORDER BY id").all() as { type: string; status: string; last_error: string }[];
+    expect(held).toHaveLength(5);
+    for (const job of held) {
+      expect(job.status).toBe("failed");
+      expect(job.last_error).toMatch(job.type === "open_login" ? /sign-in window task was interrupted/ : /Paused after interruption/);
+    }
+    expect(claimNext(db)).toBeNull();
   });
   it("does not retry a send after a crash when its outcome is unknown", () => {
     const { acct, camp, lead } = seed(true);

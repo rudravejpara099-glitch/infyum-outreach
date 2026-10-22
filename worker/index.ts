@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   try {
     // A second process can never re-queue the first process's in-flight send.
     const requeued = requeueStuck(db);
-    if (requeued) console.log(`Recovered ${requeued} interrupted task(s).`);
+    if (requeued) console.log(`Checked ${requeued} interrupted task(s).`);
     const deps: Deps = {
       db, engine: defaultEngine(), driver, now: () => new Date(),
       apify: process.env.APIFY_TOKEN ? new ApifyClient({ token: process.env.APIFY_TOKEN }) : undefined,

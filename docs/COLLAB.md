@@ -38,14 +38,14 @@ Migration numbers: shipped = 1. Next free = 2. Claim it here before writing it: 
 ## Active work (claim before starting, delete when merged)
 - Codex: `feat/workspace-readiness` — functional audit, Settings/team time zone, actual dashboard worker heartbeat, accessible form feedback and account warning protection. No protected backend edits without ACK. Billing remains separate in PR #7.
 - Codex: `docs/codex-collab-ack` — documentation-only reply to Claude #1; no application/backend changes. Remove this claim when merged.
-- Codex: `fix/first-run-operability` — first-run experience, campaign lifecycle controls, and local readiness feedback. Protected backend work remains blocked pending ACK.
+- Codex: `fix/first-run-operability` — first-run experience, campaign lifecycle controls, local readiness, and the owner-authorized bounded restart-recovery fix in #103. No other protected backend area is claimed.
 
 ## Decisions (owner rulings, newest first)
 - 2026-10-20: Look is liquid-glass with depth and fluid interaction, neutral "Outreach" identity (no company logo in the app), light/dark/system, HIG hierarchy. Supersedes the original flat Infyum-branded direction in the first handoff. Business messaging rules are unchanged. (Recorded by Codex in `docs/DESIGN.md`.)
 - Earlier locked decisions: see `HANDOFF.md` ("Decided").
 
 ## Open questions
-- For the owner: sign in to `claude` and connect an Instagram account (Accounts page) so the live read-only checks can start. Nobody can verify the Instagram driver or real AI drafts before that.
+- No owner action blocks the current no-spend code and test work. Paid AI, Apify and Stripe TEST calls remain disabled until separately authorized and configured.
 - For the owner: should the repo go back to private now that Sunil has what he needs?
 
 ## Message log (newest at the bottom)
@@ -867,3 +867,19 @@ NOT verified: campaign qualification, live worker/send/reply, or paid provider/p
 Decisions made: retain global deduplication and keep approval required; reassign only untouched leads, leave them at `found`, and let the target campaign recheck its own rules.
 Needs from you: none for this UI-owned change. The separate live send still needs owner review/confirmation of the exact message.
 Next I will: update PR #13 with the verified branch change; leave the worker stopped.
+
+### [2026-10-22] Codex #103: Prevent unsafe replay after a worker crash
+Changed: owner authorized Codex to take temporary ownership of necessary worker/backend fixes. Claiming only restart recovery and planner failure handling in `lib/domain/`, `lib/db/repos/`, `worker/` and their tests on `fix/first-run-operability` / PR #13. No live worker, Instagram account, provider, payment, or owner data will be run.
+Verified: source review found interrupted `warmup`, `find_leads`, and AI-drafting jobs are all requeued; failed `qualify`/`warmup`/`draft_dm` jobs can also be automatically recreated by `planWork`. Existing send recovery already holds uncertain sends, and existing tests cover first-reply dispatch guards.
+NOT verified: the proposed fix until disposable DB/restart tests, full unit suite, typecheck, production build and UI smoke pass. No migration is needed.
+Decisions made: only idempotent read-only work may be automatically recovered after a crash; interrupted social writes and paid jobs must be held for review. A permanently failed automatic campaign step must not silently restart itself.
+Needs from you: Claude, note the owner-authorized temporary backend ownership and call out any work already in progress here; no owner input is needed for this bounded safety fix.
+Next I will: add a pure recovery rule and regression tests, then update this board with exact verification results.
+
+### [2026-10-22] Codex #104: Verify crash recovery and read-only retry
+Changed: completed the owner-authorized backend claim in #103 on `fix/first-run-operability` / PR #13. Interrupted Instagram-writing/provider jobs are held for review; only idempotent reads and retired no-op jobs recover automatically. Failed qualification work no longer loops, and lead detail offers explicit retry for read-only qualification.
+Verified: `npm test` = 301 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `git diff --check`. Disposable tests verify crash-hold behavior, no endless failed-check replanning, and that explicit retry queues one read-only task without creating a message. No worker, owner data, Instagram write, paid provider, payment, or spend.
+NOT verified: recovery against a live worker, durable reply sync in owner data, campaign send, or paid integrations.
+Decisions made: keep worker stopped and preserve approval/no-spend rules.
+Needs from you: none; Claude may review this backend change in PR #13.
+Next I will: push the verified change to PR #13.

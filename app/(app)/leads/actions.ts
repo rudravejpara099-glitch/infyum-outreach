@@ -6,7 +6,7 @@ import { canMove, isStage } from "@/lib/domain/stages";
 import { assignLead, getLead, moveStage, setNotes } from "@/lib/db/repos/leads";
 import { afterSent, markDoNotContact } from "@/lib/services/outreach";
 import { getMessage, returnFailedSendForReview } from "@/lib/db/repos/messages";
-import { failedSendError, resolveFailedSendJob } from "@/lib/db/repos/jobs";
+import { activeJobExists, enqueue, failedJobExists, failedSendError, resolveFailedSendJob } from "@/lib/db/repos/jobs";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { campaignAccountIds, getCampaign } from "@/lib/db/repos/campaigns";
@@ -17,6 +17,7 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { manualFirstDmError } from "@/lib/domain/manual-first-dm";
 import { browserModeAllowsJob } from "@/lib/domain/browser-mode";
 import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
+import { workerStatus } from "@/lib/queries/worker-status";
 const validId = (id: number) => Number.isSafeInteger(id) && id > 0;
 function refresh(id: number) { revalidatePath(`/leads/${id}`); revalidatePath("/pipeline"); revalidatePath("/"); }
 
@@ -77,6 +78,31 @@ export async function moveLeadToCampaign(form: FormData): Promise<ActionResult> 
     if (lead?.campaignId) revalidatePath(`/campaigns/${lead.campaignId}`);
     revalidatePath(`/leads/${id}`); revalidatePath("/pipeline"); revalidatePath("/"); revalidatePath("/activity");
   }
+  return result;
+}
+
+/** Explicitly retries a failed read-only qualification check; it can never contact the lead. */
+export async function retryQualification(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const id = Number(form.get("id")), db = getDb();
+  if (!validId(id)) return { error: "This lead could not be found. Refresh the page." };
+  const result = db.transaction((): ActionResult => {
+    const lead = getLead(db, id), campaign = lead?.campaignId ? getCampaign(db, lead.campaignId) : null;
+    if (!lead || !campaign) return { error: "This lead needs a campaign before its check can run." };
+    if (campaign.status !== "active") return { error: "Start the campaign before retrying this check." };
+    if (lead.stage !== "found" || isDnc(db, lead.handle)) return { error: "This lead is not eligible for another profile check." };
+    if (!failedJobExists(db, "qualify", id) || activeJobExists(db, "qualify", id)) return { error: "There is no failed check to retry. Refresh the page." };
+    const accountIds = campaignAccountIds(db, campaign.id);
+    const accountId = lead.accountId ?? leastLoadedAccount(db, accountIds);
+    const account = accountId ? getAccount(db, accountId) : null;
+    if (!account || !accountIds.includes(account.id) || account.status !== "active" || !browserModeAllowsJob(account.browserMode, "qualify")) {
+      return { error: "Choose an active campaign account before retrying this check." };
+    }
+    enqueue(db, { type: "qualify", leadId: lead.id, accountId: account.id });
+    logActivity(db, user.email, "job.retry_requested", { leadId: lead.id, accountId: account.id, detail: "Read-only lead check" });
+    return { message: workerStatus(db, new Date()).running ? "Lead check retried. The background service will check the profile." : "Retry saved. This read-only check will wait until the background service is running." };
+  }).immediate();
+  if (!result.error) { revalidatePath(`/leads/${id}`); revalidatePath("/activity"); revalidatePath("/"); }
   return result;
 }
 

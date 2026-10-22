@@ -9,13 +9,14 @@ import { listActivity } from "@/lib/db/repos/activity";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { getCampaign, listCampaigns, campaignAccountIds } from "@/lib/db/repos/campaigns";
 import { listAccounts } from "@/lib/db/repos/accounts";
+import { activeJobExists, failedJobExists } from "@/lib/db/repos/jobs";
 import { browserModeAllowsJob } from "@/lib/domain/browser-mode";
 import { STAGES, canMove } from "@/lib/domain/stages";
 import { ago, number, STAGE_BADGE } from "@/lib/format";
 import { activityLabel, actorLabel, messageKindLabel, messageStatusLabel, stageCopy } from "@/lib/ui/copy";
 import { ActionForm } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
-import { changeStage, createManualFirstDm, doNotContact, moveLeadToCampaign, resolveUncertainSend, saveNotes } from "../actions";
+import { changeStage, createManualFirstDm, doNotContact, moveLeadToCampaign, resolveUncertainSend, retryQualification, saveNotes } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,11 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
     ? listCampaigns(db).filter((candidate) => candidate.id !== lead.campaignId && candidate.status === "active" && candidate.approvalRequired
       && accounts.some((account) => campaignAccountIds(db, candidate.id).includes(account.id) && account.status === "active" && browserModeAllowsJob(account.browserMode, "send")))
     : [];
+  const hasFailedQualification = failedJobExists(db, "qualify", lead.id);
+  const hasActiveQualification = activeJobExists(db, "qualify", lead.id);
+  const canManageQualificationRetry = lead.stage === "found" && campaign?.status === "active" && !isDnc(db, lead.handle)
+    && (hasFailedQualification || hasActiveQualification)
+    && accounts.some((account) => campaignAccountIds(db, campaign.id).includes(account.id) && account.status === "active" && browserModeAllowsJob(account.browserMode, "qualify"));
 
   return (
     <>
@@ -87,6 +93,15 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         </section>
 
         <aside className="flex flex-col gap-6">
+          {canManageQualificationRetry && (hasActiveQualification
+            ? <section><h2 className="mb-2 text-base font-semibold">Lead check queued</h2><p className="text-sm text-muted">This read-only check will run when the background service is available.</p></section>
+            : <section><h2 className="mb-2 text-base font-semibold">Lead check stopped</h2>
+              <p className="mb-3 text-sm text-muted">Retry runs a read-only profile check. It won’t contact this person or use a paid provider.</p>
+              <ActionForm action={retryQualification} className="flex flex-col gap-2">
+                <input type="hidden" name="id" value={lead.id} />
+                <button className="btn">Retry lead check</button>
+              </ActionForm>
+            </section>)}
           {movableCampaigns.length > 0 && (
             <section><h2 className="mb-2 text-base font-semibold">Move to another campaign</h2>
               <p className="mb-3 text-sm text-muted">This lead has no conversation history. The new campaign will check it against its own rules before preparing a message.</p>

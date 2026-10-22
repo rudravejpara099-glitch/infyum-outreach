@@ -734,3 +734,12 @@ NOT verified: live qualification on campaign #4, live worker/DM/reply sync, or r
 Decisions made: keep global deduplication; move the existing lead record rather than duplicate it. Keep campaign approval on and preserve all existing lead, sender, and send safeguards.
 Needs from Rudra: none for this code change. A live test DM still requires review of and explicit confirmation for its exact text; paid calls still require separate approval.
 Next I will: update the existing PR #13 branch and keep the owner workspace and worker untouched.
+
+### [2026-10-22] Codex #103: Prevent unsafe replay after a worker crash
+
+Changed: branch `fix/first-run-operability`, PR #13. Added `mayRecoverAfterCrash` as a pure rule: only read-only `qualify`/`check_inbox` and retired no-op `draft_reply` jobs are automatically recovered. Interrupted warm-up, lead search, AI-draft, follow-up-draft, login-window and unknown tasks are held as failed for review; uncertain sends retain their existing special handling. The planner now stops silently recreating terminal failed qualification work. Lead detail provides a manual retry for a failed read-only qualification, with a visible queued state. Updated the full functionality audit to replace stale first-reply, Chrome and smoke claims. No migration/dependency.
+Verified: `npm test` = 301 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `git diff --check`. Tests cover the recovery allow-list, interrupted paid/social jobs, terminal failure not replanned, and one explicit read-only retry with zero messages. The smoke uses temporary data and sends nothing. Local `/login` returned HTTP 200 after production build. No worker, owner data, Instagram write, paid provider, payment, or money was used.
+NOT verified: crash recovery against an actual running worker, durable replies in the owner database, any real DM, paid AI/Apify, or Stripe TEST.
+Decisions made: never automatically repeat a partially completed Instagram write or paid task after a crash. Keep only idempotent reads and retired no-ops in automatic recovery. Existing message approval and send safeguards remain unchanged.
+Needs from Rudra: none for this code change. No-spend work can continue; live paid tests remain intentionally off.
+Next I will: push this verified recovery fix to PR #13 and keep the live worker stopped.

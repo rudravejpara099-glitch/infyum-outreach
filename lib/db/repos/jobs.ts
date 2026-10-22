@@ -1,6 +1,7 @@
 import type { Db } from "../core";
 import type { Job } from "../types";
 import { getMessage, markFailed } from "./messages";
+import { mayRecoverAfterCrash } from "@/lib/domain/job-recovery";
 
 const MAX_ATTEMPTS = 3;
 
@@ -65,13 +66,21 @@ export function resolveFailedSendJob(db: Db, messageId: number): void {
   db.prepare(`UPDATE jobs SET status='done',last_error='' WHERE type='send' AND status='failed'
     AND json_extract(payload,'$.messageId')=?`).run(messageId);
 }
-/** A worker that crashed mid-job leaves it 'running'. On start, put those back in the queue. */
+/** Recover only idempotent reads; hold interrupted writes and paid jobs for human review. */
 export function requeueStuck(db: Db): number {
   return db.transaction(() => {
     const stuck = db.prepare("SELECT id,type,payload FROM jobs WHERE status='running'").all() as { id: number; type: string; payload: string }[];
     const requeue = db.prepare("UPDATE jobs SET status='queued' WHERE id=?");
     for (const job of stuck) {
-      if (job.type !== "send") { requeue.run(job.id); continue; }
+      if (job.type !== "send" && mayRecoverAfterCrash(job.type)) { requeue.run(job.id); continue; }
+      if (job.type !== "send") {
+        const reason = job.type === "open_login"
+          ? "The sign-in window task was interrupted. Check Accounts before requesting another window."
+          : "Paused after interruption. This task may already have changed Instagram or used a paid provider. Review it before trying again.";
+        db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=?")
+          .run(reason, job.id);
+        continue;
+      }
       let messageId = 0;
       try { messageId = Number((JSON.parse(job.payload) as { messageId?: unknown }).messageId); } catch { /* malformed send payloads are still held for review */ }
       const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(db, messageId) : undefined;
@@ -97,6 +106,11 @@ export function activeJobExists(db: Db, type: string, leadId: number | null, acc
   return !!db.prepare(
     `SELECT 1 FROM jobs WHERE type = ? AND status IN ('queued','running') AND COALESCE(lead_id,0) = COALESCE(?,0) ${byAccount} LIMIT 1`,
   ).get(...args);
+}
+
+/** A terminal failed task is not silently recreated by the planner on every pass. */
+export function failedJobExists(db: Db, type: string, leadId: number | null): boolean {
+  return !!db.prepare("SELECT 1 FROM jobs WHERE type=? AND status='failed' AND COALESCE(lead_id,0)=COALESCE(?,0) LIMIT 1").get(type, leadId);
 }
 
 /** Try again later without counting it as a failure (used when a daily limit is reached). */

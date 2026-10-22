@@ -199,6 +199,21 @@ try {
   setCampaignAccounts(db, id, [manualAccount.id]);
   await page.getByRole("button", { name: "Start campaign", exact: true }).click();
   await page.getByRole("heading", { name: "US business coaches" }).waitFor();
+  const retryLead = addLead(db, { handle: "retry-check.fixture", campaignId: id }, "ui-fixture").lead;
+  db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(manualAccount.id, retryLead.id);
+  db.prepare("INSERT INTO jobs (type,lead_id,account_id,status,last_error) VALUES ('qualify',?,?,'failed','temporary read failure')").run(retryLead.id, manualAccount.id);
+  await page.goto(`${base}/leads/${retryLead.id}`);
+  await page.getByRole("button", { name: "Retry lead check", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Retry lead check", exact: true }).click();
+  await page.getByRole("heading", { name: "Lead check queued" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='qualify' AND lead_id=? AND status='queued'").get(retryLead.id) as { n: number }).n, 1, "Manual retry should queue exactly one read-only qualification");
+  assert.equal((db.prepare("SELECT count(*) n FROM messages WHERE lead_id=?").get(retryLead.id) as { n: number }).n, 0, "Read-only qualification retry must not create messages");
+  db.transaction(() => {
+    db.prepare("DELETE FROM jobs WHERE lead_id=?").run(retryLead.id);
+    db.prepare("DELETE FROM activity WHERE lead_id=?").run(retryLead.id);
+    db.prepare("DELETE FROM leads WHERE id=?").run(retryLead.id);
+  })();
+  await page.goto(campaignUrl);
   await page.getByRole("link", { name: "Add leads", exact: true }).click();
   assert(await page.locator("#add-leads").getAttribute("open") !== null, "In-page link must open the disclosure");
   await page.getByLabel("Instagram handles").fill("maya.coaches\ngrowthwithalex\nstudio.sarah");
