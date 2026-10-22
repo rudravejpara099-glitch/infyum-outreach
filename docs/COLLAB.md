@@ -898,4 +898,4 @@ Verified: 306 unit tests, typecheck, lint, Webpack production build and isolated
 NOT verified: the queued profile check has not run yet; real DM/reply sync, paid integrations and hosted operation remain unverified.
 Decisions made: preserve the current account work window, no-spend rule, and message approval.
 Needs from Rudra: none for this dashboard clarity fix. Review the exact DM draft before any send; no paid integration is to be exercised.
-Next I will: commit and push the verified dashboard improvement to PR #13.
+Next I will: check the read-only qualification result after its allowed work window; keep paid calls and outbound messages off until separately approved.
