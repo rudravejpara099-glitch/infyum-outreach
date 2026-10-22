@@ -118,6 +118,38 @@ describe("incoming messages", () => {
     expect(getLead(db, lead.id)).toMatchObject({ stage: "replied", nextFollowupAt: null });
     expect(claimNext(db)).toBeNull();
   });
+  it("counts the first real reply once across repeated inbox checks", () => {
+    const { lead } = toDmSent();
+    const first = "Interesting, what do you do exactly?";
+    expect(handleIncoming(db, lead.id, first).counted).toBe(true);
+    expect(handleIncoming(db, lead.id, first).counted).toBe(false);
+    expect(handleIncoming(db, lead.id, "Another message after hand-off").counted).toBe(false);
+    const activity = listActivity(db, { leadId: lead.id });
+    expect(activity.filter((row) => row.action === "lead.handoff")).toHaveLength(1);
+    expect(activity.filter((row) => row.action === "message.received")).toHaveLength(1);
+    expect(listMessages(db, { leadId: lead.id }).filter((message) => message.direction === "in")).toHaveLength(1);
+    expect(listMessages(db, { leadId: lead.id }).filter((message) => message.kind === "reply")).toHaveLength(0);
+  });
+  it("deduplicates automatic replies and waits for a real person", () => {
+    const { lead } = toDmSent();
+    const automatic = "Hi, thanks for contacting us. We've received your message.";
+    expect(handleIncoming(db, lead.id, automatic).counted).toBe(false);
+    expect(handleIncoming(db, lead.id, automatic).counted).toBe(false);
+    expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
+    expect(handleIncoming(db, lead.id, "I'd like to know more").counted).toBe(true);
+    const activity = listActivity(db, { leadId: lead.id });
+    expect(activity.filter((row) => row.action === "message.auto_reply_ignored")).toHaveLength(1);
+    expect(activity.filter((row) => row.action === "lead.handoff")).toHaveLength(1);
+    expect(activity.filter((row) => row.action === "message.received")).toHaveLength(2);
+  });
+  it("never reopens a handed-off conversation that was later stopped", () => {
+    const { lead } = toDmSent();
+    expect(handleIncoming(db, lead.id, "Please send details").counted).toBe(true);
+    markDoNotContact(db, lead.id, "asked to stop", "t");
+    expect(handleIncoming(db, lead.id, "New text from the same person").counted).toBe(false);
+    expect(getLead(db, lead.id)!.stage).toBe("closed");
+    expect(listActivity(db, { leadId: lead.id }).filter((row) => row.action === "lead.handoff")).toHaveLength(1);
+  });
   it("do-not-contact closes the lead and blocks the handle", () => {
     const { lead } = toDmSent();
     markDoNotContact(db, lead.id, "asked to stop", "t");

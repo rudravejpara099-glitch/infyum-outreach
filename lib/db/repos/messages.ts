@@ -48,6 +48,12 @@ export function recordIncoming(db: Db, leadId: number, accountId: number | null,
   return getMessage(db, Number(info.lastInsertRowid))!;
 }
 
+/** Inbox checks can return the same latest message repeatedly. */
+export function hasIncomingText(db: Db, leadId: number, text: string): boolean {
+  return !!db.prepare("SELECT 1 FROM messages WHERE lead_id=? AND direction='in' AND kind='incoming' AND parts=? LIMIT 1")
+    .get(leadId, JSON.stringify([text]));
+}
+
 export function getMessage(db: Db, id: number): Message | null {
   const r = db.prepare("SELECT * FROM messages WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   return r ? map(r) : null;
