@@ -787,3 +787,11 @@ NOT verified: live campaign execution or live daily-cap enforcement. A fresh lea
 Decisions made: retain the dispatch-time campaign and sender guards. The remaining proof is a live owner-approved flow, not an assumption based on UI persistence.
 Needs from Rudra: when ready, provide a fresh lead; approve a specific test DM before any real send. No action needed for this regression check.
 Next I will: continue with no-spend integration checks that do not trigger campaign actions.
+
+### [2026-10-22] Codex #93: Refresh and inspect the local app
+Changed: no application code or owner data. Gracefully refreshed the stale local Next.js web server on port 3100 so it serves the latest built branch; the worker remained stopped. Updated `HANDOFF.md` with a read-only snapshot.
+Verified: the signed-in Overview and Accounts pages render with team-local daily labels. UI reports 202 workspace leads, 23 pending approvals, five failed background tasks, and the worker stopped. Active campaign #4 has zero leads. `@rudravejpara03012008` is active/connected; `@timelessmoments.al` is Chrome read-only; `@rudravejpara` is paused. No campaign, account, approval, or lead was changed. No social action, paid provider, payment, or spending occurred.
+NOT verified: worker job execution, qualification for a lead in campaign #4, live send/cap enforcement, or paid integrations.
+Decisions made: a saved account and active campaign are not sufficient to claim the workflow is ready; the campaign needs a lead and the worker remains stopped until the owner authorizes its test.
+Needs from Rudra: add a fresh lead to campaign #4 when ready, then explicitly approve the specific test DM before any real send. No help is needed for the local server refresh.
+Next I will: continue no-spend verification without starting campaign work.

@@ -628,3 +628,9 @@ Still unverified: live campaign send/cap enforcement, paid provider integrations
 The worker already rechecks campaign status and sender assignment immediately before Instagram dispatch. Added regression tests proving an approved queued send remains unsent if the campaign is paused or its sender is removed during the final pacing wait. Updated `docs/FUNCTIONAL-AUDIT.md` to replace its stale claim that this guard was missing.
 
 Verified: `npm test` = 286 passed; `npm run typecheck`, `npm run lint`, `npx next build --webpack`, and `git diff --check` pass. Test-only addition; no worker, Instagram action, provider, payment, or owner database was touched.
+
+### Live local app check after refreshing the build (Codex, 2026-10-22)
+
+The local app on `127.0.0.1:3100` was serving an older build. I gracefully restarted only the Next.js web server; the worker remained stopped. In the signed-in app, the refreshed Overview and Accounts pages render the team-local labels. Current UI shows 202 workspace leads, 23 messages awaiting approval, five failed background tasks, and a stopped worker. Active campaign #4 (“test 1 at 10:26PM 21OCT”) has zero leads; its page clearly says work waits for the background service and invites adding leads. Accounts shows `@rudravejpara03012008` active and connected, `@timelessmoments.al` active but Chrome read-only, and `@rudravejpara` paused. No settings, leads, approvals, or campaign state were changed during this check.
+
+This confirms the local screens and saved state only. No live campaign job, real DM, paid provider, or payment was run. To test the campaign workflow, add a fresh lead to campaign #4; before any DM, the owner must explicitly approve that specific send. Keep the worker stopped until the test is intentionally authorized.
