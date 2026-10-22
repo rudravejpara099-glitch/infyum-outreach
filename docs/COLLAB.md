@@ -819,3 +819,11 @@ NOT verified: a real isolated Instagram context open during worker shutdown, liv
 Decisions made: the worker's no-job graceful-stop path is verified; keep the live worker stopped in the owner's database.
 Needs from Rudra: no help needed for the local stop check. A fresh lead in campaign #4 is still needed for read-only qualification; any DM requires explicit approval.
 Next I will: continue only no-cost product verification.
+
+### [2026-10-22] Codex #97: Verify the existing Chrome account and local app
+Changed: `HANDOFF.md` records the current sign-in and whole-app local check. No application code or owner data changed. Work remains on `fix/first-run-operability` / PR #13.
+Verified: the owner's Rudra099 Chrome profile is signed into Instagram as `@timelessmoments.al`. The app's own `ChromeReadOnlyInstagram.openLogin` returned `authenticated: true` for that exact handle after the owner-approved remote-debugging prompt; the initial unsandboxed check was denied from this task because it could not reach Chrome's local debugging socket. The signed-in app shows campaign #4 active, approval ON, zero leads, worker stopped, and sender `@rudravejpara03012008`; `@timelessmoments.al` remains read-only. `npm test` = 287 passed, `npm run typecheck`, `npm run lint`, `npx next build --webpack`, `npm run smoke:ui`, and `npm run smoke:billing` passed. The latter two use disposable local data and the fake billing provider.
+NOT verified: a campaign-capable sender on the existing Chrome profile, qualification of a campaign #4 lead, worker execution, live sends/reply sync, paid AI/Apify/Stripe, or payment. No social action or money spent.
+Decisions made: preserve the current `chrome_read_only` behavior until the owner explicitly changes it. This follows the repository's locked product decision; the user's request to reuse signed-in Chrome exposed a conflict with campaign sending.
+Needs from Rudra, NEEDS ACK: decide whether to let the existing signed-in Chrome account run campaign actions while leaving campaign message approval ON, or retain read-only Chrome and use a separate signed-in campaign account.
+Next I will: wait for that product ruling before changing the browser-mode policy; continue no-cost work that does not depend on it.
