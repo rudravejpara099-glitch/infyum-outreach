@@ -110,10 +110,16 @@ export function inboxListScript(ownerHandle: string): string {
     const ownerMatches = () => Array.from(document.querySelectorAll('a[href]')).some((a) => {
       try { return new URL(a.href).pathname.toLowerCase() === ${JSON.stringify(ownerPath)}; } catch { return false; }
     });
-    const ownerDeadline = Date.now() + 12000;
+    const ownerDeadline = Date.now() + 20000;
     while (!ownerMatches() && Date.now() < ownerDeadline) await new Promise((resolve) => setTimeout(resolve, 250));
     if (!ownerMatches()) {
-      const loading = document.readyState !== 'complete' || !document.querySelector('header');
+      const hasProfileLink = Array.from(document.querySelectorAll('a[href]')).some((a) => {
+        try {
+          const segment = new URL(a.href).pathname.toLowerCase().replace(/^\\//, '').replace(/\\/$/, '');
+          return /^[a-z0-9._]{1,30}$/.test(segment) && !/^(about|accounts|direct|explore|reels|stories|privacy|legal|developer|emails|challenge|api)$/.test(segment);
+        } catch { return false; }
+      });
+      const loading = document.readyState !== 'complete' || !hasProfileLink;
       return { allowed: true, ownerMatches: false, isInbox, loading, indices: [] };
     }
     if (!isInbox) {
@@ -130,7 +136,7 @@ export function inboxListScript(ownerHandle: string): string {
     const text = document.body?.innerText ?? '';
     if (${THREAD_WARNING}.test(text)) return { allowed: true, ownerMatches: true, isInbox, blocked: true, indices: [] };
     if (/log in to continue|you need to log in to continue/i.test(text)) return { allowed: true, ownerMatches: true, isInbox, loggedOut: true, indices: [] };
-    const listDeadline = Date.now() + 8000;
+    const listDeadline = Date.now() + 12000;
     let list = document.querySelector('[aria-label="Thread list"]');
     while (!list && Date.now() < listDeadline) {
       await new Promise((resolve) => setTimeout(resolve, 250));

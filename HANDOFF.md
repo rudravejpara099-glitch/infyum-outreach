@@ -823,3 +823,11 @@ Verified so far: live Chrome showed the expected owner handle and thread list af
 NOT verified: live retry after this recovery change, Playwright browser smoke on this macOS shell (bundled Chromium could not launch), outbound campaign send/first-reply on a newly eligible lead, or paid AI/Apify/Stripe TEST. No paid calls or spend are allowed.
 
 Next I will: run full checks, restart the worker with the recovery fix, and inspect its next scheduled inbox result.
+
+### [2026-10-22] Codex #114: Distinguish a loading inbox from another account
+
+Follow-up evidence: the worker's first #113 retry still failed before reading, with the same saved-account mismatch. The inbox tab could be loaded successfully by a manual refresh and visibly showed the saved handle. That means the header-only readiness signal was too weak. I changed the detection to look only for a profile-shaped Instagram link (no message/body text) and extended the bounded owner and thread-list waits to 20 and 12 seconds. It refreshes once only when no profile link exists; a different profile link still fails closed. The driver regression verifies one refresh for a loading page and no refresh for a wrong-account marker.
+
+Focused adapter/driver tests: 21 passed. Full test/typecheck/lint/build and live worker verification after this update are pending. Owner DB still has one queued read-only inbox task and zero approved outgoing messages; active campaign approval remains ON. No sends or spend.
+
+Next I will: run full checks, load this update into the worker, and inspect its next allowed inbox attempt.

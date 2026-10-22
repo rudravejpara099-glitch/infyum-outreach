@@ -166,18 +166,18 @@ describe("Chrome read-only data adapter", () => {
       static now(): number { return QuickDate.calls++ === 0 ? 0 : 20_000; }
     }
     const location = { protocol: "https:", hostname: "www.instagram.com", pathname: "/direct/inbox/" };
-    const run = (readyState: string, hasHeader: boolean) => {
+    const run = (readyState: string, links: { href: string }[]) => {
       QuickDate.calls = 0;
       return runPageScript(inboxListScript("owner"), location, {
         readyState,
         body: Object.defineProperty({}, "innerText", { get: () => { throw new Error("unverified inbox text must not be read"); } }),
-        querySelector: () => hasHeader ? {} : null,
-        querySelectorAll: () => [],
+        querySelector: () => null,
+        querySelectorAll: () => links,
       }, undefined, QuickDate, (callback: () => void) => { callback(); });
     };
-    const loading = await run("loading", false);
+    const loading = await run("loading", []);
     expect(loading).toMatchObject({ allowed: true, ownerMatches: false, isInbox: true, loading: true });
-    const otherAccount = await run("complete", true);
+    const otherAccount = await run("complete", [{ href: "https://www.instagram.com/otheraccount/" }]);
     expect(otherAccount).toMatchObject({ allowed: true, ownerMatches: false, isInbox: true, loading: false });
     expect(() => inboxThreadIndicesFromToolResult(mcpJson(otherAccount))).toThrow("saved Instagram account");
   });
