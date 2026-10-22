@@ -658,3 +658,10 @@ Needs from Claude, NEEDS ACK: review a local-only, explicit Start/Stop control f
 Needs from Rudra: no new product decision is required for this request; existing instructions still require read-only validation first, approval ON, and explicit confirmation before any social write or paid call.
 Verified: no worker was started and no Instagram/paid-provider action occurred. Existing full local checks remain as recorded in #74/#75.
 Next I will: continue only with independent no-spend checks and UI-area improvements until the protected worker design receives ACK.
+
+### [2026-10-22] Codex #77: Diagnose unstable signed-in Chrome check
+Changed: posted the diagnosis and requested review before editing. The app's Chrome adapter now passes the platform-specific explicit Chrome profile path to `--auto-connect`; added regression coverage for macOS, Windows, and Linux path selection and for the MCP arguments. Claude review is still requested; the change is on `fix/first-run-operability`.
+Verified: with the explicit path, the app adapter's read-only sign-in check returned `authenticated: true` for the saved account, and the Accounts page showed “Instagram is connected.” Chrome's documented `--browser-url` connection did not work for this permission-proxy endpoint. No inbox/profile facts were read, no likes, follows, comments, or messages occurred, and no paid-provider or payment call ran. `npm test` (251), `npm run typecheck`, targeted ESLint, disposable UI smoke, Webpack production build, and `git diff --check` pass.
+Needs from Claude: please review the explicit-path fix and regression test in `worker/chrome-read-only.ts` / `tests/browser-mode.test.ts` for the current Chrome connection failure. No broader worker or send behavior changed.
+Needs from Rudra: none. Keep no-spend/no-send rules in force.
+Next I will: finish review and deliver the update through the existing pull request.

@@ -555,3 +555,11 @@ Owner step when ready: open Chrome's `chrome://inspect/#remote-debugging` in the
 Chrome's remote-debugging permission prompt was accepted under the owner's prior session approval; `chrome://inspect/#remote-debugging` shows the setting enabled. The product's `readFacts` flow then stopped at its fail-closed account-identity guard with "The saved Instagram account could not be confirmed before reading this profile." It returned no profile facts. This could mean the target page does not expose a link to the owner's profile, or that the page/result identity did not match; do not weaken the guard without reviewing the exact identity proof. No inbox was read, no worker or campaign ran, and no social write or paid call occurred.
 
 Next: request backend-owner ACK in COLLAB before changing `worker/` profile identity logic. Keep all sends off.
+
+### Signed-in Chrome connection restored (Codex, 2026-10-22)
+
+Changed: the Chrome read-only adapter now passes the platform's explicit Chrome user-data directory to Chrome DevTools MCP `--auto-connect`. The adapter previously relied on implicit profile discovery, which failed on this machine even after remote debugging was enabled. Added a regression assertion for the explicit profile argument. The collaboration board entry #77 now includes the reproduction and narrow-fix evidence.
+
+Verified: the exact app adapter check returned signed-in for the saved Instagram account; the Accounts page then showed “Instagram is connected.” Read-only only: no inbox/profile facts, likes, follows, comments, or messages were accessed or sent. `npm test` = 251 passed; `npm run typecheck`, targeted ESLint, disposable `npm run smoke:ui`, `npx next build --webpack`, and `git diff --check` pass. No paid provider or payment call ran; no money was spent.
+
+Still unverified: campaign-capable isolated Instagram sign-in and sending; Chrome read-only profile facts/inbox; worker start/stop control and campaign execution; live Anthropic, Apify, and Stripe TEST integrations (credentials are not configured). The connected account remains Chrome read-only, so campaign actions are intentionally disabled for it. Changes are uncommitted on `fix/first-run-operability`; do not claim the full SaaS is production-ready from these checks alone.
