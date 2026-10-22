@@ -65,12 +65,11 @@ describe("local worker ownership", () => {
 });
 
 describe("worker Start readiness", () => {
-  it("refuses an active campaign without an active isolated sender", () => {
+  it("allows an active signed-in Chrome sender and refuses a paused sender", () => {
     const account = createAccount(db, { handle: "sender", profileDir: "/tmp/sender", browserMode: "chrome_read_only" }, "test");
     const campaign = createCampaign(db, { name: "Test campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [account.id], "test");
     setCampaignStatus(db, campaign.id, "active", "test");
-    expect(workerStartProblem(db)).toMatch(/separate sign-in/);
-    db.prepare("UPDATE ig_accounts SET browser_mode='isolated'").run();
+    expect(workerStartProblem(db)).toBeNull();
     setAccountStatus(db, account.id, "paused", "", "test");
     expect(workerStartProblem(db)).toMatch(/active Instagram account/);
     setAccountStatus(db, account.id, "active", "", "test");

@@ -677,6 +677,17 @@ Decisions made: the owner explicitly allowed campaign use in signed-in Chrome an
 Needs from Rudra: add a suitable lead to campaign #4 and explicitly confirm before the first live test DM. Configure paid AI or Apify only if you want those features enabled and approve their costs first.
 Next I will: keep the worker stopped and the app available locally; do not send, like, follow, comment, or call paid services.
 
+### Worker readiness for signed-in Chrome (Codex, 2026-10-22)
+
+Changed: removed the worker-start restriction that required a separate isolated Instagram browser. The active campaign can now start with its selected signed-in Chrome account. A regression test covers allowing an active Chrome sender and refusing a paused sender.
+
+Verified: rebuilt the production app and exercised the real local Start/Stop controls. Outreach moved from stopped to running and then back to stopped. Before start, the database had no queued/running jobs, no approved messages (23 were pending approval), and no leads in the active campaign. After the smoke check, the message counts were unchanged and no send occurred. One scheduled `check_inbox` job was queued by the worker and deferred until its allowed work window; worker is stopped. No paid integration or money was used. `npm test` = 290 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`.
+
+NOT verified: actual live inbox read for that deferred job, campaign qualification and message generation for a fresh lead, or live send/reply. The Chrome path intentionally blocks warm-up likes/comments/follows; draft generation/search need separately configured paid providers, currently absent. Do not say the whole live prospect-to-reply workflow is 100% verified.
+
+Needs from Rudra: add a suitable campaign lead; confirm any first live DM after reviewing its text. Paid AI/Apify configuration is only needed if those functions are wanted and their costs approved.
+Next I will: leave worker stopped, no money spent, and no social write performed.
+
 The campaign-capable isolated account's own profile was also opened through `PlaywrightInstagram`. Its browser showed Instagram's sign-in gate, and the old `looksLoggedOut` copy check missed this specific public-profile sign-up prompt, causing a 30-second wait for an Options control. Added that exact prompt to the pure logout detector and its parser test so future checks fail with the existing actionable sign-in message. That separate sign-in attempt was stopped after the owner identified it as the wrong Chrome window. Do not ask the owner to sign into that window again; use the later Chrome connection check below as current evidence.
 
 ### Current Chrome connection and no-spend check (Codex, 2026-10-22)

@@ -835,3 +835,11 @@ NOT verified: live Instagram input behavior, live campaign, reply handoff, lead 
 Decisions made: keep Chrome campaign DMs enabled by the owner's explicit instruction; preserve message approval ON. Do not enable likes, comments, follows, or paid services without separate authorization. Keep shipped migrations unchanged.
 Needs from Rudra: add a suitable lead and explicitly confirm the first live test DM. Paid AI/Apify setup is only needed if those paid features are wanted.
 Next I will: keep worker stopped and the updated local app available without external actions.
+
+### [2026-10-22] Codex #99: Allow worker start with signed-in Chrome
+Changed: worker readiness no longer requires an isolated browser; the active campaign may start with a selected active Chrome account. Added a readiness regression test.
+Verified: production app Start/Stop controls moved the actual local worker from stopped to running and back to stopped. At start there were no queued/running jobs or approved messages (23 pending approvals), and the active campaign had zero leads. Final message counts were unchanged; no DM was sent. One `check_inbox` task was planned and deferred until its account's work window. Worker remains stopped. `npm test` = 290 passed; typecheck, lint, production build passed. No provider/payment call or spend.
+NOT verified: execution of the deferred inbox read, lead qualification/drafting, or live send/reply. AI and Apify are not configured; Chrome warm-up social writes remain disabled.
+Decisions made: use signed-in Chrome for campaign DMs with approval ON; keep campaign worker stopped after lifecycle check. No social write or paid call without separate authorization.
+Needs from Rudra: add a suitable campaign lead and confirm a live test DM after reviewing its text. Authorize paid AI/Apify only if desired.
+Next I will: keep local app available and avoid outbound actions/spend.
