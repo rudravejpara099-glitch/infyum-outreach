@@ -29,6 +29,8 @@ Business rules the code must keep:
 - The owner’s active campaign is assigned to the verified, campaign-capable Instagram account `@rudravejpara03012008`. The account is connected in Accounts, campaign approval is ON, and the campaign currently has zero leads.
 - The worker is stopped. Do not start it without the owner’s explicit go-ahead because it can perform campaign actions. No messages, likes, comments, follows, paid API calls, Apify runs or payments were made in this check.
 - Settings reports Anthropic AI writing and Apify search are not configured; both remain off. The local Claude Code CLI is installed, but its sign-in status could not be confirmed. Stripe test credentials are also absent. Use manual lead import for no-cost testing; do not claim live AI/search/payment connectivity.
+- The authenticated app at `127.0.0.1:3100` shows 202 workspace leads, 23 messages waiting for approval, 104 DMs sent in the past 7 days, a worker heartbeat last seen 15 hours ago, and five failed sign-in tasks. The failure list says four sign-in checks could not finish and one existing Chrome session replaced the sign-in window. These are historical errors; the campaign-capable isolated account now reports connected. Campaign #4 itself has zero leads.
+- The running app does not show the Start/Stop controls present on `fix/first-run-operability`; it is still the separate main checkout. PR #13 is open as a draft. Do not alter main or start the worker from the running app; owner review/merge is needed before these branch controls become available there.
 - Latest local verification: 277 unit tests, typecheck, `smoke:ui`, and `smoke:billing` passed. These prove local app flows and the fake billing simulator, not live worker/provider/payment execution.
 - For paid AI, follow the owner-approved at-cost billing decision in `docs/BILLING.md`: use a separately metered Anthropic API, never the owner’s personal Claude subscription. The older Claude CLI note below is historical and is not a way to bypass billing.
 
@@ -48,10 +50,11 @@ NOT verified (these need the owner's account/provider setup):
 
 ## Next tasks, in order
 1. Owner-provided local setup: campaign `test 1 at 10:26PM 21OCT` is assigned to the verified campaign-capable account, but has zero leads. Import a small owner-provided list manually for no-cost checking.
-2. Keep the worker stopped until the owner explicitly approves starting campaign processing. Approval remains ON; any actual send, like, comment or follow still requires separate confirmation.
-3. Paid AI and Apify are disconnected and off. Because the owner said not to spend money, do not configure or call them in this check. If the owner later wants those integrations tested, use their separate approval and test-only limits.
-4. The fake Stripe simulator passed; no Stripe TEST account is configured. No live payment is authorized.
-5. Hosting and multi-company accounts remain deferred.
+2. PR #13 must be reviewed and merged by its owner before the running main checkout receives its Start/Stop controls. Do not merge or commit to main from Codex.
+3. Keep the worker stopped until the owner explicitly approves starting campaign processing. Approval remains ON; any actual send, like, comment or follow still requires separate confirmation.
+4. Paid AI and Apify are disconnected and off. Because the owner said not to spend money, do not configure or call them in this check. If the owner later wants those integrations tested, use their separate approval and test-only limits.
+5. The fake Stripe simulator passed; no Stripe TEST account is configured. No live payment is authorized.
+6. Hosting and multi-company accounts remain deferred.
 
 ## Working rules
 - Change a rule in `lib/domain/` first, run `npm test`, then look at the screen. Add a test for every rule you change.

@@ -737,3 +737,12 @@ NOT verified: lead qualification for this campaign, worker execution, AI draftin
 Decisions made: keep approval ON; preserve the campaign-capable isolated account; do not start the worker without the owner’s explicit go-ahead; do not use paid providers while the owner’s no-spend instruction is in force.
 Needs from owner: provide a small lead list for no-cost manual import and explicitly approve campaign processing when ready. Paid integrations need separate authorization before any provider call.
 Next I will: keep working only on no-spend verification that cannot trigger campaign actions; do not claim the full app is live-ready.
+
+### [2026-10-22] Codex #87: Inspect the running app's worker and failed tasks
+
+Changed: read-only inspection of the authenticated app at `127.0.0.1:3100`; updated the current-state notes in `HANDOFF.md`. No source, database, campaign, account or worker state changed.
+Verified: Overview reports 202 workspace leads, 23 messages waiting for approval, 104 DMs sent in the last 7 days, and a worker heartbeat last seen 15 hours ago. It does not show the Start/Stop controls available on this feature branch. History lists five failed `Open Instagram sign-in` tasks: four say the sign-in check could not finish; one says an existing Chrome session replaced the sign-in window. Accounts now independently shows the campaign-capable isolated account as connected. Campaign #4 has 0 leads. No paid call, payment, worker, inbox read or social write ran.
+NOT verified: why the old sign-in tasks failed, a long-running worker, campaign execution, or whether PR #13 has been merged into the separate checkout currently serving port 3100. Read-only `gh pr view 13` reports PR #13 OPEN, DRAFT, MERGEABLE, head `78ea9fc`; its status-check rollup is empty. Production Webpack build passed, alongside `npm test` (277), `npm run typecheck`, and both local smoke checks.
+Decisions made: do not alter main, start the worker or treat historical sign-in failures as a current connection failure. The verified account is saved to campaign #4; approval is on.
+Needs from owner: review/merge PR #13 before expecting its branch-only worker controls in the running main checkout; supply leads for a no-cost campaign test and separately approve any real campaign actions.
+Next I will: keep PR #13 reviewable and continue only with checks that do not start campaign work or spend money.
