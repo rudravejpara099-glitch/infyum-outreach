@@ -1,6 +1,7 @@
 import type { Db } from "@/lib/db/core";
 import { completeJob, failJobPermanently } from "@/lib/db/repos/jobs";
 import { getAccount } from "@/lib/db/repos/accounts";
+import { loginCheckFailure } from "@/lib/domain/browser-mode";
 import type { InstagramDriver } from "@/worker/driver";
 
 export async function openLoginWindowJob(db: Db, jobId: number, accountId: number, driver: Pick<InstagramDriver, "openLogin">): Promise<void> {
@@ -17,8 +18,9 @@ export async function openLoginWindowJob(db: Db, jobId: number, accountId: numbe
     const authenticated = await driver.openLogin(account);
     db.prepare("UPDATE jobs SET payload=? WHERE id=?").run(JSON.stringify({ authenticated }), jobId);
     completeJob(db, jobId);
-  } catch {
-    failJobPermanently(db, jobId, "The sign-in window could not finish. Try again from Accounts.");
-    throw new Error("The sign-in window could not finish. Try again from Accounts.");
+  } catch (error) {
+    const message = loginCheckFailure(error instanceof Error ? error.message : "");
+    failJobPermanently(db, jobId, message);
+    throw new Error(message);
   }
 }

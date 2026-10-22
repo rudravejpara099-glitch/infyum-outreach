@@ -551,3 +551,11 @@ NOT verified: reliable app-to-Chrome sign-in result, profile qualification, inbo
 Decisions made: keep `isolated` as the default. Chrome mode is sign-in-check-only until its bridge passes a product-level live test. No campaign or billing task may claim completion from these checks.
 Needs from owner: none. No password or token required.
 Next I will: resolve why the bridge's sign-in check is not reporting the visible signed-in profile, then verify the Accounts path in the running app before enabling any read-only campaign data.
+
+### [2026-10-22] Codex #63: Retry approved Chrome adapter and refresh checks
+Changed: on `fix/first-run-operability`, removed the explicit Chrome profile-directory argument from the official DevTools MCP launch, added the exact HTTPS `instagram.com` host to the allow-list, surfaced MCP errors, and added user-safe connection failure text. Added tests for URL/host boundaries, launch arguments and error copy; one lint-only `let` became `const`. No migration or dependency change in this step.
+Verified: `npm test` = 237 passing; typecheck, lint and webpack production build pass. The disposable UI, fake local billing and production-auth browser smokes pass. After the owner approved Chrome's remote-debugging prompt for this session, the official bridge could enumerate the already signed-in Instagram tab. The app driver's new sign-in attempt still did not return, so Instagram is not verified connected through the product. No message content, cookies, passwords, worker actions, paid provider, live payment or Instagram write occurred; no money was spent.
+NOT verified: successful app-side sign-in, profile/inbox reads in the product, campaign execution or live paid integrations. The local app was not logged in and unavailable during the final browser check.
+Decisions: keep Chrome mode read-only and campaign-disabled; preserve isolated mode as default. Keep all paid and outbound operations off.
+Needs from owner: none for current engineering work. No credentials are requested.
+Next: diagnose the product adapter's bridge lifecycle/response handling, then test status through Accounts and read-only profile access. Do not claim app connectivity until that passes.

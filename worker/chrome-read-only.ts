@@ -1,5 +1,3 @@
-import os from "node:os";
-import path from "node:path";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -9,7 +7,7 @@ import { InstagramBlockedError, type InstagramDriver, type ProfileFacts, type Wa
 import { looksBlocked, looksLoggedOut } from "./parse";
 
 type Page = { id: number; url: string };
-type ToolTextResult = { content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
+type ToolTextResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
 export function jsonFromToolResult(result: ToolTextResult): unknown {
   const raw = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join("\n");
   const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)?.[1];
@@ -17,15 +15,18 @@ export function jsonFromToolResult(result: ToolTextResult): unknown {
   if (!candidate) return null;
   try { return JSON.parse(candidate) as unknown; } catch { return null; }
 }
-const allowed = (url: string) => /^https:\/\/www\.instagram\.com\//i.test(url);
-export function chromeProfileDirectory(): string {
-  if (process.platform === "darwin") return path.join(os.homedir(), "Library/Application Support/Google/Chrome");
-  if (process.platform === "win32") return path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData/Local"), "Google/Chrome/User Data");
-  return path.join(os.homedir(), ".config/google-chrome");
+export function chromeMcpArgs(bin: string): string[] {
+  return [bin, "--auto-connect", "--channel=stable", "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-input", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+}
+export function isAllowedInstagramUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && (url.hostname === "www.instagram.com" || url.hostname === "instagram.com");
+  } catch { return false; }
 }
 export function bindInstagramPage(pages: Page[], handle: string): Page | null {
   const exactPath = `/${handle.replace(/^@/, "").toLowerCase()}/`;
-  return pages.find((page) => allowed(page.url) && new URL(page.url).pathname.toLowerCase() === exactPath) ?? null;
+  return pages.find((page) => isAllowedInstagramUrl(page.url) && new URL(page.url).pathname.toLowerCase() === exactPath) ?? null;
 }
 export function instagramProfileUrl(handle: string): string {
   const normalized = handle.replace(/^@/, "");
@@ -43,8 +44,8 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     const bin = join(dirname(entry), "bin", "chrome-devtools-mcp.js");
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: [bin, "--auto-connect", `--user-data-dir=${chromeProfileDirectory()}`, "--allowed-url-pattern=https://www.instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-input", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"],
-      env: { PATH: process.env.PATH ?? "", HOME: os.homedir(), CI: "1", CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1" },
+      args: chromeMcpArgs(bin),
+      env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", CI: "1", CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1" },
       stderr: "ignore",
     });
     const client = new Client({ name: "infyum-instagram-read-only", version: "1.0.0" });
@@ -54,7 +55,11 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     return client;
   }
   private async pages(): Promise<Page[]> {
-    const result = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }) as { content?: { type: string; text: string }[]; structuredContent?: { pages?: Page[] } };
+    const result = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }) as ToolTextResult & { structuredContent?: { pages?: Page[]; message?: string } };
+    if (result.isError) {
+      const message = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
+      throw new Error(message || "Chrome could not list its open pages.");
+    }
     if (result.structuredContent?.pages?.length) return result.structuredContent.pages.map((page) => ({ id: Number(page.id), url: page.url })).filter((page) => Number.isSafeInteger(page.id));
     const text = result.content?.filter((part) => part.type === "text").map((part) => part.text).join("\n") ?? "";
     return [...text.matchAll(/(?:^|\n)\s*(\d+):\s*(.*?)\s+\((https?:\/\/[^)]+)\)/g)].map((m) => ({ id: Number(m[1]), url: m[3].trim() }));
@@ -68,7 +73,7 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
       page = bindInstagramPage(await this.pages(), handle);
     }
     if (!page) throw new Error("Could not open the Instagram profile in Chrome.");
-    return { pageId: page.id, url };
+    return { pageId: page.id, url: page.url };
   }
   private async inspect(account: IgAccount, handle = account.handle): Promise<{ pageId: number; text: string; controls: string; url: string }> {
     const page = await this.openProfile(account, handle);
@@ -80,7 +85,7 @@ export class ChromeReadOnlyInstagram implements InstagramDriver {
     if (!parsed) throw new Error("Instagram did not return readable profile information.");
     const text = typeof parsed.text === "string" ? parsed.text : "";
     const controls = typeof parsed.controls === "string" ? parsed.controls : "";
-    if (!allowed(page.url)) throw new Error("Chrome is not showing an allowed Instagram page.");
+    if (!isAllowedInstagramUrl(page.url)) throw new Error("Chrome is not showing an allowed Instagram page.");
     if (looksBlocked(text, page.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
     if (looksLoggedOut(page.url, text) || !/edit profile/i.test(`${text} ${controls}`)) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
     return { ...page, text, controls };
