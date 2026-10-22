@@ -842,3 +842,14 @@ NOT verified: receipt/persistence of a new reply (there was no new incoming mess
 Decisions remain: approval ON; stop at the prospect's first reply; no warm-up, outbound send, or paid call without the existing explicit approvals.
 
 Next: push these documentation and stale-error changes to the existing PR #13 branch. Keep the recurring worker stopped and report the verification boundary plainly.
+### [2026-10-22] Codex #116: Recheck app routes and disposable end-to-end flows
+
+Verified current live state: all 11 authenticated routes load in the owner's signed-in Chrome profile without redirecting to login. `@timelessmoments.al` is connected through that profile. Campaign #4 has approval ON and all 3 of its leads are skipped; there are no queued/running jobs and 0 approved outgoing messages. Started Outreach from the dashboard and confirmed the dashboard reports it running. It remains running for normal read-only inbox checks. The current run did not find a new incoming reply. No DM, like, comment, follow, paid provider call, or spend occurred.
+
+`npm run smoke:ui` passed its isolated flow through account setup/login, campaign creation, leads, campaign-scoped approval, routes, theme/responsive states, worker heartbeats, settings, DNC, teammate auth, account controls, and permission checks. `npm run smoke:billing` passed against the local fake payment provider, including paid/declined test sessions, duplicate webhooks, fee reconciliation, exports, and access checks. These use temporary databases and cannot send Instagram messages or charge a real card. Full suite = 316 tests; typecheck, lint, Webpack build, and diff check passed.
+
+Remaining connection gap: Settings shows Anthropic AI “not connected on this computer” and Apify “not set up on this computer”; paid work is off and the Apify monthly limit is unset. The fake billing run does not verify a real Stripe TEST account. No spending or credentials were used. The Playwright Chromium run required the approved local execution permission because the sandbox blocks Chromium's Mac process setup; the run completed successfully after that.
+
+NOT verified: a newly received reply stored in this run, an outbound DM and first-reply handoff for a newly eligible campaign lead, real AI/Apify/Stripe TEST connections, sustained operation over time, or hosting. The campaign's existing leads are all skipped so no valid live send can be prepared from campaign #4 now.
+
+Next: keep the worker running with campaign approvals ON and paid work off. Full paid integrations require the owner to configure provider credentials in the local environment and explicitly authorize any actual paid call; no secret should be sent in chat. A real outbound test needs a valid eligible prospect, an AI connection or reviewed draft, and the owner's message approval in the app.
