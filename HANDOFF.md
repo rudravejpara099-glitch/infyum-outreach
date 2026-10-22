@@ -644,3 +644,9 @@ Rechecked campaign #4 in the signed-in local app: still active with zero leads; 
 The worker now closes its account driver after active lanes drain and before it releases the worker lease. Driver shutdown closes all persistent isolated Playwright contexts as well as signed-in Chrome DevTools clients; repeated cleanup is safe, and cleanup errors do not prevent the remaining contexts from closing or the worker lease from being released. Regression tests cover the isolated context lifecycle and its inclusion in account-driver cleanup.
 
 Verified: `npm test` = 288 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `git diff --check`. No live browser was opened, worker was started, or Instagram action/provider/payment performed as part of these tests. Live worker shutdown with an open Instagram context remains unverified.
+
+### Worker shutdown check against a disposable database (Codex, 2026-10-22)
+
+Strengthened the browser cleanup regression to go through `AccountInstagramDriver`, close two persistent contexts, and confirm a failure in one context does not prevent cleanup of the other. Then started the actual worker process against a temporary empty SQLite database, sent SIGINT after its ready message, and verified it exited and wrote a stopped lease. No accounts, campaigns, jobs, or provider credentials were present in the fixture.
+
+Verified: `npm test` = 287 passed; `npm run typecheck`, `npm run lint`, and `git diff --check`. This verifies an idle graceful stop and mocked context cleanup; it does not verify an open real Instagram browser during worker shutdown. No real integration or spend occurred.

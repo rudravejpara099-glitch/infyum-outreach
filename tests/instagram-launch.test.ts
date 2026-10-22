@@ -55,7 +55,10 @@ describe("Instagram login browser launch", () => {
   });
 
   it("closes persistent isolated browser contexts during driver shutdown", async () => {
-    const account = { id: 4, profileDir: "/profiles/instagram-4" } as IgAccount;
+    const account = { id: 4, profileDir: "/profiles/instagram-4", browserMode: "isolated" } as IgAccount;
+    const secondAccount = { id: 5, profileDir: "/profiles/instagram-5", browserMode: "isolated" } as IgAccount;
+    const secondContext = { ...browserMocks.context, close: vi.fn().mockRejectedValue(new Error("already closed")) };
+    browserMocks.launchPersistentContext.mockResolvedValueOnce(browserMocks.context).mockResolvedValueOnce(secondContext);
     browserMocks.page.goto.mockResolvedValue(undefined);
     browserMocks.page.url.mockReturnValue("https://www.instagram.com/public.profile/");
     browserMocks.page.locator.mockImplementation((selector: string) => {
@@ -63,22 +66,15 @@ describe("Instagram login browser launch", () => {
       if (selector === "header") return { first: () => ({ innerText: vi.fn().mockResolvedValue("Public profile\n1,234 followers") }) };
       return { evaluateAll: vi.fn().mockResolvedValue([]) };
     });
-    const driver = new PlaywrightInstagram();
+    const driver = new AccountInstagramDriver();
 
     await driver.readProfileNotes(account, "public.profile");
+    await driver.readProfileNotes(secondAccount, "public.profile");
     expect(browserMocks.context.close).not.toHaveBeenCalled();
     await driver.close();
     await driver.close();
 
     expect(browserMocks.context.close).toHaveBeenCalledOnce();
-  });
-
-  it("includes isolated browser contexts in account-driver cleanup", async () => {
-    const close = vi.spyOn(PlaywrightInstagram.prototype, "close").mockResolvedValue();
-    const driver = new AccountInstagramDriver();
-
-    await driver.close();
-
-    expect(close).toHaveBeenCalledOnce();
+    expect(secondContext.close).toHaveBeenCalledOnce();
   });
 });

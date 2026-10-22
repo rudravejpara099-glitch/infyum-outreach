@@ -811,3 +811,11 @@ NOT verified: actual worker shutdown while live Instagram contexts are open; no 
 Decisions made: always close browser connections after lanes drain, then release the singleton lease even if cleanup fails.
 Needs from Rudra: no help needed for this code fix. A fresh lead in campaign #4 is still needed for a read-only qualification check; any real DM requires approval.
 Next I will: continue with no-cost checks without starting the campaign.
+
+### [2026-10-22] Codex #96: Verify worker shutdown with a disposable database
+Changed: strengthened `tests/instagram-launch.test.ts` to use `AccountInstagramDriver` and verify multiple isolated contexts are closed even if one fails. No production source change beyond #95.
+Verified: actual `worker/index.ts` started against a temporary empty SQLite database, received SIGINT after readiness, exited, and released its lease. `npm test` = 287 passed; `npm run typecheck`; `npm run lint`; `git diff --check`.
+NOT verified: a real isolated Instagram context open during worker shutdown, live campaign work, or paid connections. The fixture had no leads/jobs and made no external calls.
+Decisions made: the worker's no-job graceful-stop path is verified; keep the live worker stopped in the owner's database.
+Needs from Rudra: no help needed for the local stop check. A fresh lead in campaign #4 is still needed for read-only qualification; any DM requires explicit approval.
+Next I will: continue only no-cost product verification.
