@@ -967,4 +967,5 @@ Verified: in the owner's signed-in Chrome profile, the direct local WebSocket ch
 NOT verified: repeatability across future Chrome restarts or multiple replies; a new outbound campaign DM; Anthropic, Apify, or real Stripe TEST connections; hosted operation. The worker remains stopped, so no background campaign work is running.
 Needs from Rudra: no help for the current free read-only check. Provider credentials and explicit paid-test approval are only needed to verify paid AI or lead search; don't send secrets in chat.
 Verified after the live check: `npm test` = 317 passed; `npm run typecheck`, `npm run lint`, `npx next build --webpack`, and `git diff --check` passed. Restarted the local production app at `http://127.0.0.1:3100`; the refreshed Overview now labels the event “Reply check succeeded” and shows five older sign-in attempts needing attention. The Outreach worker remains stopped.
-Next I will: commit the verified changes on `fix/first-run-operability` and push them to PR #13.
+Committed and pushed as `e80ea98` to the existing draft PR #13. No further code change is needed for the current free read-only flow.
+Next: leave PR #13 in draft until repeatability and any paid-provider checks can be completed under the owner's no-spend rule.

@@ -868,4 +868,6 @@ NOT verified: repeatability across Chrome restarts or multiple incoming replies;
 
 Needs from Rudra: no help is needed for the verified read-only flow. Paid-provider credentials and explicit authorization are required only for paid AI/lead-search checks; keep credentials out of chat.
 
-Next: commit the verified changes on `fix/first-run-operability` and push them to PR #13.
+Committed as `e80ea98` on `fix/first-run-operability`, pushed to the open draft PR #13. The repository is clean and the local app is running; the background worker remains stopped.
+
+To verify the rest of the SaaS connections: the owner must configure Anthropic and Apify credentials locally and explicitly authorize a paid test call; no secrets belong in chat. A new send-and-reply test needs a newly eligible prospect, message review, and in-app approval. Real Stripe TEST and hosted operation remain unverified and are not required for this no-spend read-only check.
