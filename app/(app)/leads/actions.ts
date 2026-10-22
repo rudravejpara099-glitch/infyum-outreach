@@ -3,13 +3,19 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { canMove, isStage } from "@/lib/domain/stages";
-import { getLead, moveStage, setNotes } from "@/lib/db/repos/leads";
+import { assignLead, getLead, moveStage, setNotes } from "@/lib/db/repos/leads";
 import { afterSent, markDoNotContact } from "@/lib/services/outreach";
 import { getMessage, returnFailedSendForReview } from "@/lib/db/repos/messages";
 import { failedSendError, resolveFailedSendJob } from "@/lib/db/repos/jobs";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { isDnc } from "@/lib/db/repos/dnc";
 import { campaignAccountIds, getCampaign } from "@/lib/db/repos/campaigns";
+import { getAccount, leastLoadedAccount } from "@/lib/db/repos/accounts";
+import { createOutgoing, listMessages } from "@/lib/db/repos/messages";
+import { getSetting } from "@/lib/db/repos/settings";
+import { manualFirstDmError } from "@/lib/domain/manual-first-dm";
+import { browserModeAllowsJob } from "@/lib/domain/browser-mode";
+import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 const validId = (id: number) => Number.isSafeInteger(id) && id > 0;
 function refresh(id: number) { revalidatePath(`/leads/${id}`); revalidatePath("/pipeline"); revalidatePath("/"); }
 
@@ -38,6 +44,42 @@ export async function saveNotes(form: FormData): Promise<ActionResult> {
   if (!validId(id) || !getLead(db, id)) return { error: "This lead could not be found. Refresh the page." };
   setNotes(db, id, String(form.get("notes") ?? ""));
   revalidatePath(`/leads/${id}`); return { message: "Notes saved." };
+}
+
+/** Creates a human-written first DM in review without using a paid AI call. */
+export async function createManualFirstDm(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const id = Number(form.get("id")), db = getDb();
+  if (!validId(id)) return { error: "This lead could not be found. Refresh the page." };
+  const parts = [1, 2, 3].map((index) => String(form.get(`part${index}`) ?? "").trim());
+  const portfolioLink = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
+  const writingError = manualFirstDmError(parts, portfolioLink);
+  if (writingError) return { error: writingError, field: "part1" };
+
+  const result: ActionResult = db.transaction(() => {
+    const lead = getLead(db, id), campaign = lead?.campaignId ? getCampaign(db, lead.campaignId) : null;
+    if (!lead || !campaign) return { error: "This lead needs an active campaign before a message can be prepared." };
+    if (campaign.status !== "active") return { error: "Start this campaign before preparing a message." };
+    if (!campaign.approvalRequired) return { error: "Turn on message approval before creating a manual draft." };
+    if (lead.stage !== "warmed") return { error: "Complete the lead checks and mark it ready for a first message first." };
+    if (isDnc(db, lead.handle)) return { error: "This handle is on Do not contact." };
+    if (listMessages(db, { leadId: lead.id, limit: 100 }).some((message) => message.direction === "out" && message.kind === "dm" && message.status !== "rejected")) {
+      return { error: "A first message already exists for this lead. Review that message instead." };
+    }
+    const accountIds = campaignAccountIds(db, campaign.id);
+    const accountId = lead.accountId ?? leastLoadedAccount(db, accountIds);
+    const account = accountId ? getAccount(db, accountId) : null;
+    if (!account || !accountIds.includes(account.id) || account.status !== "active" || !browserModeAllowsJob(account.browserMode, "send")) {
+      return { error: "Choose an active campaign account that can send before preparing a message." };
+    }
+    if (!lead.accountId) assignLead(db, lead.id, campaign.id, account.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: account.id, kind: "dm", parts, campaign }, user.email);
+    return message.status === "pending_approval"
+      ? { message: "Draft created. Review and approve every part before it can be sent." }
+      : { error: "This draft did not enter the approval queue. Check campaign approval settings." };
+  }).immediate();
+  refresh(id); revalidatePath("/approvals"); revalidatePath("/activity");
+  return result;
 }
 export async function doNotContact(form: FormData): Promise<ActionResult> {
   const user = await requireUser();

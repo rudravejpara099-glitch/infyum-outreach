@@ -843,3 +843,11 @@ NOT verified: execution of the deferred inbox read, lead qualification/drafting,
 Decisions made: use signed-in Chrome for campaign DMs with approval ON; keep campaign worker stopped after lifecycle check. No social write or paid call without separate authorization.
 Needs from Rudra: add a suitable campaign lead and confirm a live test DM after reviewing its text. Authorize paid AI/Apify only if desired.
 Next I will: keep local app available and avoid outbound actions/spend.
+
+### [2026-10-22] Codex #100: Manual first message and supported Chrome queue
+Changed: branch `fix/first-run-operability`, PR #13. Added a no-cost manual first-DM composer for warmed leads under active approval-required campaigns. It validates three nonempty parts, 380 characters per part, and the exact campaign URL once in part 2; it creates a pending-approval message only. Added server-side checks for campaign, lead stage, DNC, duplicates, approval setting, and eligible sender. Worker planning now avoids unsupported Chrome-mode AI drafting and warm-up jobs instead of repeatedly queuing them.
+Verified: `npm test` = 296 passed; `npm run typecheck`; `npm run lint`; `git diff --check`; `npx next build --webpack`; `npm run smoke:ui` passed using disposable local data and sent no messages. The signed-in Chrome profile is `Rudra099`, already authenticated to Instagram as `@timelessmoments.al`; no Google Chrome for Testing window or user sign-in step is needed. No inbox text was read, no DM sent, no paid API or payment used, and no money spent.
+NOT verified: fresh-lead qualification, manual message review/approval in campaign #4, live send or reply sync, and paid AI/Apify/Stripe. Campaign #4 has zero leads, approval ON, and worker stopped; 23 messages remain pending approval. One previously scheduled inbox check remains deferred to its allowed work window.
+Decisions made: continue with the user's campaign-in-Chrome authorization, preserve approval ON, keep worker stopped after the lifecycle check, and make no paid calls without explicit approval. Do not perform likes, comments, or follows.
+Needs from Rudra: add a suitable lead to campaign #4. For an actual test send, review its message and confirm before sending. Paid AI/Apify setup is only needed if those features are wanted.
+Next I will: update PR #13 and keep live sends paused until the user approves one.

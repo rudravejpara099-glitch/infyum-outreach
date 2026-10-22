@@ -55,6 +55,21 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe("worker pipeline", () => {
+  it("does not queue Chrome jobs for steps that need AI or prohibited automation", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "manual-first-dm", campaignId: camp.id }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+
+    planWork(deps);
+    expect(db.prepare("SELECT type FROM jobs WHERE lead_id=? AND status='queued'").all(lead.id)).toContainEqual({ type: "qualify" });
+    await runUntilIdle(deps);
+    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+
+    planWork(deps);
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE lead_id=? AND type IN ('warmup','draft_dm','draft_followup') AND status='queued'").get(lead.id)).toEqual({ n: 0 });
+  });
+
   it("allows Chrome mode to qualify, sync replies, and dispatch send jobs while keeping warm-up and drafting disabled", async () => {
     const { acct, camp } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");

@@ -657,6 +657,18 @@ Re-ran the current branch checks: 287 tests passed, `npm run typecheck`, `npm ru
 
 The signed-in local app still shows campaign #4 active with zero leads and the background service stopped. The application cannot verify that campaign's real prospect-to-first-reply path without a lead; continue with read-only qualification after a fresh lead is added, and require specific owner approval before any send. No campaign settings or owner data were changed during this refresh.
 
+### Manual first-DM path and Chrome queue cleanup (Codex, 2026-10-22)
+
+Added a no-cost manual first-message composer for warmed leads in active campaigns with approval ON. It requires three nonempty parts, limits each to 380 characters, and requires the configured campaign link exactly once in part 2. Creating it adds a pending-approval message; it never sends. The action rechecks ownership, campaign state, approval, lead stage, DNC, duplicate messages, and sender eligibility. Chrome worker planning now skips jobs that the selected account mode cannot run, preventing unsupported AI drafting/warm-up tasks from being repeatedly queued.
+
+Verified: `npm test` = 296 passed; `npm run typecheck`; `npm run lint`; `git diff --check`; `npx next build --webpack`; `npm run smoke:ui`. The UI smoke used disposable local data and sent no messages. The owner's regular Chrome profile `Rudra099` is already signed in to Instagram as `@timelessmoments.al`; the Google Chrome for Testing window is unnecessary. No inbox message content was read during this browser check. No live DM, paid API, Apify, or payment call occurred; no money was spent.
+
+NOT verified: a new lead's live qualification, manual message review/approval in the actual campaign, live send, inbox reply sync, or paid AI/Apify/Stripe. Campaign #4 has zero leads, approval ON, and worker stopped; 23 messages remain pending approval. Do not start the campaign or send a message for this verification. The saved `check_inbox` job remains deferred until the account's allowed work window.
+
+Decisions made: use the owner's signed-in Chrome profile for campaign DMs, keep message approval ON, keep the worker stopped after lifecycle verification, and spend nothing on paid integrations without owner approval.
+Needs from Rudra: add a suitable lead to campaign #4. For the first actual outbound test, review the composed message and explicitly confirm the send. Paid AI/Apify configuration is optional and only required if those paid features are desired.
+Next I will: finish checks, update PR #13, and keep live messaging paused until the owner confirms the first send.
+
 ### Current campaign and integration readiness (Codex, 2026-10-22)
 
 Rechecked the live local Accounts, campaign #4 settings, Pipeline, and Settings pages. `@rudravejpara03012008` is connected and selected for campaign #4; `@timelessmoments.al` is read-only and `@rudravejpara` is paused. Campaign #4 is active, approval-required is ON, and follow-ups are ON; it has zero leads and the worker is stopped. The separate Anthropic API connection and Apify connection are not configured; paid message writing and lead search remain paused, with no paid calls made.

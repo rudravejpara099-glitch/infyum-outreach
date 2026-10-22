@@ -55,6 +55,8 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
       if (!lead.accountId) assignLead(db, lead.id, c.id, chosen);
       const step = { found: "qualify", qualified: "warmup", warmed: "draft_dm" }[lead.stage as "found" | "qualified" | "warmed"];
       if (!step || activeJobExists(db, step, lead.id)) continue;
+      const account = getAccount(db, chosen);
+      if (!account || !browserModeAllowsJob(account.browserMode, step)) continue;
       if (step === "draft_dm" && hasOutgoing(db, lead.id, "dm")) continue;
       enqueue(db, { type: step, leadId: lead.id, accountId: chosen });
     }
@@ -62,6 +64,8 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   for (const lead of dueFollowups(db, now().toISOString().replace("T", " ").slice(0, 19))) {
     const c = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
     if (c?.status !== "active" || !c.followupsEnabled || isDnc(db, lead.handle)) continue;
+    const account = lead.accountId ? getAccount(db, lead.accountId) : null;
+    if (!account || !browserModeAllowsJob(account.browserMode, "draft_followup")) continue;
     if (!activeJobExists(db, "draft_followup", lead.id) && !hasOutgoing(db, lead.id, "followup", ["pending_approval", "approved", "failed"])) {
       enqueue(db, { type: "draft_followup", leadId: lead.id, accountId: lead.accountId });
     }
@@ -69,6 +73,8 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   for (const m of approvedQueue(db)) {
     const lead = getLead(db, m.leadId);
     if (!lead || !canSendAtStage(lead.stage, m.kind)) continue;
+    const account = m.accountId ? getAccount(db, m.accountId) : null;
+    if (!account || !browserModeAllowsJob(account.browserMode, "send")) continue;
     if (!activeJobExists(db, "send", m.leadId) ) enqueue(db, { type: "send", leadId: m.leadId, accountId: m.accountId, payload: { messageId: m.id } });
   }
   const inboxAccounts = new Set(active.flatMap((c) => campaignAccountIds(db, c.id)));
@@ -77,6 +83,8 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
     inboxAccounts.add(row.account_id);
   }
   for (const accountId of inboxAccounts) {
+    const account = getAccount(db, accountId);
+    if (!account || !browserModeAllowsJob(account.browserMode, "check_inbox")) continue;
     const key = `inbox_checked_${accountId}`;
     const last = Number(getSetting(db, key) ?? 0);
     if (now().getTime() - last >= INBOX_EVERY_MINUTES * 60_000 && !activeJobExists(db, "check_inbox", null, accountId)) {
