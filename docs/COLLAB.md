@@ -969,3 +969,7 @@ Needs from Rudra: no help for the current free read-only check. Provider credent
 Verified after the live check: `npm test` = 317 passed; `npm run typecheck`, `npm run lint`, `npx next build --webpack`, and `git diff --check` passed. Restarted the local production app at `http://127.0.0.1:3100`; the refreshed Overview now labels the event “Reply check succeeded” and shows five older sign-in attempts needing attention. The Outreach worker remains stopped.
 Committed and pushed as `e80ea98` to the existing draft PR #13. No further code change is needed for the current free read-only flow.
 Next: leave PR #13 in draft until repeatability and any paid-provider checks can be completed under the owner's no-spend rule.
+
+### [2026-10-22] Codex #119: Resume the read-only reply checker
+Verified: Overview showed campaign #4 approval ON, zero approved outgoing messages, and no queued/running jobs before start. Started Outreach from Overview. The app now reports it running and says the next reply check is tomorrow at 9:42 AM team time. Owner DB confirms a running worker lease, one queued `check_inbox` for connected account #2, zero approved messages, zero recent sends, zero recent paid usage events, and zero active paid AI/lead-search jobs. No social write or spend.
+Current: leave the worker running for reply checks, approval ON, and paid work off. No owner action is needed for this read-only operation.

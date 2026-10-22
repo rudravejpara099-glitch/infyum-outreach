@@ -862,12 +862,12 @@ Verified against the real signed-in Chrome profile: a read-only MCP check connec
 
 Validation: `npm test` = 317 passed; `npm run lint`, `npm run typecheck`, `npx next build --webpack`, and `git diff --check` passed. Restarted the production app at `http://127.0.0.1:3100`; the refreshed Overview visibly labels the activity “Reply check succeeded” and shows the five remaining sign-in attempts.
 
-Current state: local app is running at `http://127.0.0.1:3100`; Outreach worker is stopped after the isolated check. Twenty-three messages await human approval. The current campaign has no newly eligible leads. Do not start the worker during a CEO demo unless all pending messages are reviewed; approval is ON but approving a message queues a real send.
+Current state: local app is running at `http://127.0.0.1:3100`; Outreach is running and the Overview shows its next reply check tomorrow at 9:42 AM team time. Owner DB confirms one queued `check_inbox` for connected account #2, zero approved outgoing messages, zero recent sends, and zero recent paid usage. Campaign #4 approval is ON. Twenty-three messages still await human review; approval is ON, and only a human-approved message can be queued for sending.
 
 NOT verified: repeatability across Chrome restarts or multiple incoming replies; a new outbound campaign DM; paid Anthropic, Apify, or real Stripe TEST connectivity; hosted operation. No paid credentials were available and no spending was authorized.
 
 Needs from Rudra: no help is needed for the verified read-only flow. Paid-provider credentials and explicit authorization are required only for paid AI/lead-search checks; keep credentials out of chat.
 
-Committed as `e80ea98` on `fix/first-run-operability`, pushed to the open draft PR #13. The repository is clean and the local app is running; the background worker remains stopped.
+Committed as `63c615a` on `fix/first-run-operability`, pushed to the open draft PR #13. The repository is clean and the local app and read-only reply checker are running.
 
 To verify the rest of the SaaS connections: the owner must configure Anthropic and Apify credentials locally and explicitly authorize a paid test call; no secrets belong in chat. A new send-and-reply test needs a newly eligible prospect, message review, and in-app approval. Real Stripe TEST and hosted operation remain unverified and are not required for this no-spend read-only check.
