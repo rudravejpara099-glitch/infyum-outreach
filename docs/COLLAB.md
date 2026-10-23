@@ -1109,3 +1109,11 @@ NOT verified: future inbox result, authenticated browser route check after resta
 Decisions made: keep the scheduled inbox check on its normal cadence; approval ON and paid/outbound writes off.
 Needs from you: none for the scheduled read-only check. A new outbound test remains subject to the existing prospect, warm-up, and exact-message approval gates.
 Next I will: inspect the existing job after it is due if this session continues; no live send or paid request is queued.
+
+### [2026-10-23] Codex #138: Add periodic billing reconciliation to the existing worker
+Changed: under the owner's backend authorization in #80 and the at-cost integration contract, `worker/index.ts` invokes `syncConsentedBilling` every 15 minutes. The helper syncs only users with recorded billing consent, isolates per-user failures, and returns failed user IDs for a sanitized log. Added a regression proving nonconsenting users remain untouched and one user's failed statement does not block other users. Updated `docs/BILLING.md` and `docs/FUNCTIONAL-AUDIT.md`. No migration, dependency, provider call, or external service.
+Verified: `npm test` = 329 passed; lint, typecheck, Webpack production build, billing simulator smoke, and `git diff --check` passed. Billing smoke used disposable data and the local fake processor. Owner DB currently has 0 consenting profiles, 0 fixed expenses, and no integration-review marker. The already-running worker was not restarted; it has not loaded this code.
+NOT verified: recurring sync after a live worker restart, real AI/Apify, Stripe TEST, a new live first-message handoff, or hosting.
+Decisions made: keep paid work gated until independent integration review; keep approval ON and no-spend settings unchanged.
+Needs from you: none for this change.
+Next I will: preserve the running service and let a controlled restart load this code; no campaign writes or provider calls are involved in the sync.

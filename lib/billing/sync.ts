@@ -21,3 +21,15 @@ export function syncBilling(db: Db, userId: number, now = new Date().toISOString
     for (const period of closedPeriods(consent, now)) finalizeStatement(db, userId, period, now);
   }).immediate();
 }
+
+/** Keep opted-in users' confirmed fixed costs and closed statements current from existing worker infrastructure. */
+export function syncConsentedBilling(db: Db, now = new Date().toISOString()): { synced: number; failedUserIds: number[] } {
+  const users = db.prepare("SELECT user_id FROM billing_profiles WHERE consented_at IS NOT NULL ORDER BY user_id").all() as { user_id: number }[];
+  let synced = 0;
+  const failedUserIds: number[] = [];
+  for (const { user_id: userId } of users) {
+    try { syncBilling(db, userId, now); synced++; }
+    catch { failedUserIds.push(userId); }
+  }
+  return { synced, failedUserIds };
+}

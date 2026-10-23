@@ -10,6 +10,7 @@ import { beat } from "@/lib/queries/worker-status";
 import { adoptWorker, heartbeatWorker, markOwnedWorkerStopping, releaseWorker, reserveWorker, workerMayClaim } from "@/lib/services/worker-lifecycle";
 import { AccountInstagramDriver } from "./instagram-driver";
 import { currentLanes, planWork, runOne, type Deps } from "./runner";
+import { syncConsentedBilling } from "@/lib/billing";
 
 const db = openDb(config.dbPath);
 let token: string | null = null;
@@ -23,6 +24,7 @@ process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const BILLING_SYNC_INTERVAL_MS = 15 * 60_000;
 
 async function main(): Promise<void> {
   token = process.env.OUTREACH_WORKER_LEASE_TOKEN ?? reserveWorker(db);
@@ -45,11 +47,18 @@ async function main(): Promise<void> {
     };
     console.log("Outreach is running, one lane per Instagram account.");
     const running = new Map<string, Promise<void>>();
+    let lastBillingSyncAt = 0;
     while (!stopping) {
       try {
         const state = heartbeatWorker(db, token, process.pid);
         if (state !== "running") { stopping = true; break; }
-        beat(db, new Date());
+        const now = new Date();
+        beat(db, now);
+        if (now.getTime() - lastBillingSyncAt >= BILLING_SYNC_INTERVAL_MS) {
+          const result = syncConsentedBilling(db, now.toISOString());
+          if (result.failedUserIds.length) console.error("Periodic billing sync failed for consenting user IDs:", result.failedUserIds.join(", "));
+          lastBillingSyncAt = now.getTime();
+        }
         planWork(deps);
         for (const lane of currentLanes(db)) {
           if (stopping || heartbeatWorker(db, token, process.pid) !== "running") { stopping = true; break; }

@@ -1031,3 +1031,11 @@ NOT verified: that future inbox job's result, an authenticated browser route che
 Decisions made: leave the read-only check on its normal schedule; keep approvals ON and spend/write actions off.
 Needs from Rudra: none for the scheduled read-only check. A real new first message still needs an eligible prospect and the established warm-up/exact-message approvals.
 Next: inspect job #32 only after its scheduled time if work continues; preserve the first-contact and no-spend gates.
+
+### [2026-10-23] Codex #138: Add periodic billing reconciliation
+Changed: under the owner's backend authorization in #80 and the at-cost integration contract, `worker/index.ts` now invokes `syncConsentedBilling` every 15 minutes. The helper synchronizes only users with recorded billing consent, isolates individual failures, and returns failed user IDs for a sanitized worker log. Added a database regression proving an unconsented user is untouched and one user's failure does not prevent other users from syncing. Updated billing docs to distinguish implemented metering hooks from provider/live-review verification. No migration, new dependency, paid call, or external service.
+Verified: `npm test` = 329 passed; `npm run lint`; `npm run typecheck`; `npx next build --webpack`; and `npm run smoke:billing` passed. Billing smoke used disposable data and a local fake processor. `git diff --check` passed. The owner DB has 0 consenting billing profiles, 0 fixed expenses, and no integration-review marker. The already-running worker was not restarted; its current process has not loaded this change.
+NOT verified: recurring sync after a live worker restart, actual AI/Apify use, Stripe TEST, or any new Instagram first-message handoff. No user data changed and no scheduled inbox check was accelerated.
+Decisions made: paid campaign starts/assignments remain blocked until independent review; keep approval ON and no-spend settings intact.
+Needs from Rudra: none for this periodic sync. A live outbound proof still needs the established eligible-lead, warm-up and exact-message approvals.
+Next: leave the running process undisturbed; the new source will load on a controlled worker restart, then sync behavior can be observed without changing any provider or social-action gate.

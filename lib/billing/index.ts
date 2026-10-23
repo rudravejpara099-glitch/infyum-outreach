@@ -2,7 +2,7 @@ export { reserveUsage, settleUsage, releaseUsage, billingHold, budgetSnapshot } 
 export { recordUsage, tokenEvent } from "./ledger";
 export { payerFor, claimResource, assertAttribution } from "./attribution";
 export { attachApifyRun } from "./apify";
-export { syncBilling } from "./sync";
+export { syncBilling, syncConsentedBilling } from "./sync";
 export { verifiedModelRate, tokenRate, integrationReady } from "./config";
 export { tokenCostMicros, parseUsd } from "./money";
 export type { UsageEvent, UsageKind, Source } from "./types";
