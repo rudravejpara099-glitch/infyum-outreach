@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { posix, win32 } from "node:path";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch, loginCheckFailure } from "@/lib/domain/browser-mode";
-import { bindInstagramPage, chromeMcpArgs, chromeUserDataDir, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, isInstagramInboxUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
+import { bindInstagramPage, chromeMcpArgs, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, isInstagramInboxUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
 import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 
@@ -78,22 +77,15 @@ describe("signed-in Chrome mode", () => {
     expect(() => instagramLoginCheckScript("https://attacker.example")).toThrow("Invalid Instagram handle");
   });
 
-  it("auto-connects to the selected Chrome profile instead of trusting a stale debugging address", () => {
-    const profilePath = "/test/chrome-profile";
-    const args = chromeMcpArgs("chrome-devtools-mcp.js", profilePath);
+  it("uses Chrome's approved auto-connect flow instead of a stale profile debugging file", () => {
+    const args = chromeMcpArgs("chrome-devtools-mcp.js");
     expect(args).toContain("--auto-connect");
     expect(args).toContain("--channel=stable");
-    expect(args[args.indexOf("--user-data-dir") + 1]).toBe(profilePath);
+    expect(args).not.toContain("--user-data-dir");
+    expect(args.some((arg) => arg.startsWith("--browser-url"))).toBe(false);
     expect(args.some((arg) => arg.startsWith("--ws-endpoint"))).toBe(false);
     expect(args).toContain("--allowed-url-pattern=https://www.instagram.com/*");
     expect(args).toContain("--allowed-url-pattern=https://instagram.com/*");
-    const defaultArgs = chromeMcpArgs("chrome-devtools-mcp.js");
-    expect(defaultArgs).toContain("--auto-connect");
-    expect(defaultArgs).toContain("--channel=stable");
-    expect(defaultArgs[defaultArgs.indexOf("--user-data-dir") + 1]).toBe(chromeUserDataDir());
-    expect(chromeUserDataDir("darwin", "/Users/test")).toBe(posix.join("/Users/test", "Library", "Application Support", "Google", "Chrome"));
-    expect(chromeUserDataDir("linux", "/home/test")).toBe(posix.join("/home/test", ".config", "google-chrome"));
-    expect(chromeUserDataDir("win32", "C:\\Users\\test", "C:\\Users\\test\\AppData\\Local")).toBe(win32.join("C:\\Users\\test\\AppData\\Local", "Google", "Chrome", "User Data"));
   });
 
   it("keeps migrated accounts isolated until the owner opts into Chrome", () => {

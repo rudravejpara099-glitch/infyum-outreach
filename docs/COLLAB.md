@@ -1339,3 +1339,11 @@ NOT verified: the scheduled inbox job #36, a new app-sent first message and real
 Decisions made: approval ON; no-spend and existing Instagram-action boundaries remain in force; draft start remains on campaign details.
 Needs from Rudra: none for this UI improvement.
 Next I will: continue the no-spend project checklist; job #36 remains scheduled for `2026-10-24 04:12:59 UTC`.
+
+### [2026-10-23] Codex #171: Fix Chrome 155 auto-connect for account checks
+Changed: owner-authorized read-only Chrome connection work on `fix/first-run-operability` / PR #13. Chrome 155 showed remote debugging enabled and listening at the expected local endpoint, but Outreach passed both `--auto-connect` and `--user-data-dir`; Chrome DevTools MCP prioritizes the latter and reads a stale `DevToolsActivePort`, so the connection timed out. Removed the profile-folder flag and kept `--auto-connect`, stable channel, and Instagram-only URL allowlist. Updated regression coverage to forbid stale `--user-data-dir` and explicit endpoint flags. No dependency, migration, credential handling, or Instagram write.
+Verified: Chrome 155.0.8059.85 on profile `Rudra099`; remote debugging setting is enabled. Worker stopped cleanly with no running jobs and restarted with the fix loaded. `npm test` = 370; focused Chrome-mode tests = 8; `npm run typecheck`; `npm run lint`; `npm run build` (Webpack); `npm run smoke:ui`; `npm audit` = 0 vulnerabilities; `git diff --check`. Isolated UI smoke uses disposable data and sends nothing. Account check #38 remains queued at its scheduled retry, `2026-10-23 18:41:21 UTC`.
+NOT verified: whether job #38 succeeds using auto-connect; inbox job #36 at `2026-10-24 04:12:59 UTC`; real app-sent first-contact and fresh reply/handoff; paid providers or Stripe. No Instagram write, paid call, payment, or spend occurred.
+Decisions made: keep approval ON, no-spend and explicit Instagram-action gates; do not accelerate #36.
+Needs from Rudra: none for this no-cost read-only connector fix.
+Next I will: observe job #38 after its existing retry, then job #36 at its scheduled time.

@@ -1,5 +1,4 @@
-import { dirname, join, win32 } from "node:path";
-import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -31,14 +30,8 @@ export function jsonFromToolResult(result: ToolTextResult): unknown {
   if (!candidate) return null;
   try { return JSON.parse(candidate) as unknown; } catch { return null; }
 }
-export function chromeUserDataDir(platform: NodeJS.Platform = process.platform, home = process.env.HOME || homedir(), localAppData = process.env.LOCALAPPDATA || home): string {
-  const pathJoin = platform === "win32" ? win32.join : join;
-  if (platform === "darwin") return pathJoin(home, "Library", "Application Support", "Google", "Chrome");
-  if (platform === "win32") return pathJoin(localAppData, "Google", "Chrome", "User Data");
-  return pathJoin(home, ".config", "google-chrome");
-}
-export function chromeMcpArgs(bin: string, userDataDir = chromeUserDataDir()): string[] {
-  return [bin, "--auto-connect", "--channel=stable", "--user-data-dir", userDataDir, "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+export function chromeMcpArgs(bin: string): string[] {
+  return [bin, "--auto-connect", "--channel=stable", "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
 }
 export function isAllowedInstagramUrl(value: string): boolean {
   try {
@@ -81,10 +74,9 @@ export class ChromeInstagram implements InstagramDriver {
     if (this.client) return this.client;
     const entry = createRequire(import.meta.url).resolve("chrome-devtools-mcp");
     const bin = join(dirname(entry), "bin", "chrome-devtools-mcp.js");
-    const userDataDir = chromeUserDataDir();
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: chromeMcpArgs(bin, userDataDir),
+      args: chromeMcpArgs(bin),
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", CI: "1", CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1" },
       stderr: "ignore",
     });
