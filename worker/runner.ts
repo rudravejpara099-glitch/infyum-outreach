@@ -23,6 +23,7 @@ import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import { payerFor } from "@/lib/billing/attribution";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch } from "@/lib/domain/browser-mode";
 import { canSendAtStage } from "@/lib/domain/stages";
+import { accountNeedsSignIn, canResumeAfterVerifiedSignIn } from "@/lib/domain/account-recovery";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
 import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
@@ -158,7 +159,8 @@ async function process(deps: Deps, job: Job): Promise<void> {
       return;
     }
   }
-  if (job.accountId && account?.status !== "active" && job.type !== "open_login") {
+  const recoverableInboxCheck = job.type === "check_inbox" && account?.status === "blocked" && accountNeedsSignIn(account.statusNote);
+  if (job.accountId && account?.status !== "active" && job.type !== "open_login" && !recoverableInboxCheck) {
     deferJob(db, job, 60); // paused or blocked: wait until the team resumes it
     return;
   }
@@ -280,6 +282,14 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
     case "check_inbox": {
       if (!account) return;
+      if (account.status === "blocked" && accountNeedsSignIn(account.statusNote)) {
+        const authenticated = await driver.openLogin(account);
+        if (!canResumeAfterVerifiedSignIn(account.status, account.statusNote, authenticated)) {
+          deferJob(db, job, 60);
+          return;
+        }
+        setAccountStatus(db, account.id, "active", "", "worker");
+      }
       let handoffs = 0;
       for (const incoming of await driver.readInbox(account)) {
         const known = findLeadByHandle(db, incoming.handle);

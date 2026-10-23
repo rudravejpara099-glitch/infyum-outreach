@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { createAccount, getAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
+import { createAccount, getAccount, setAccountBrowserMode, setAccountStatus } from "@/lib/db/repos/accounts";
 import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages, markSent } from "@/lib/db/repos/messages";
@@ -16,11 +16,12 @@ class FakeDriver implements InstagramDriver {
   sent: { handle: string; parts: string[] }[] = [];
   inbox: { handle: string; text: string }[] = [];
   factsRead = 0; warmups = 0; inboxReads = 0;
+  authenticated = true;
   facts = { isPublic: true, country: "United States", followers: 5000, linkedToInfyum: false };
   blockOnSend = false;
   uncertainOnSend = false;
   errorOnSend = false;
-  async openLogin() { return true; }
+  async openLogin() { return this.authenticated; }
   async readFacts(account?: unknown) { void account; this.factsRead++; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
   async warmUp() { this.warmups++; return { likes: 10, comments: 10, followed: true }; }
@@ -375,6 +376,50 @@ describe("worker pipeline", () => {
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(2);
     expect(getLead(db, lead.id)!.followupsSent).toBe(1);
+  });
+
+  it("recovers a sign-in-only stop during the scheduled read-only inbox check", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    setAccountStatus(db, acct.id, "blocked", "The saved Instagram account is not signed in in Chrome.", "worker");
+    const { lead } = addLead(db, { handle: "known-lead", stage: "dm_sent" }, "t");
+    driver.inbox = [{ handle: "known-lead", text: "Can you explain the funnel?" }];
+    const jobId = enqueue(db, { type: "check_inbox", accountId: acct.id });
+
+    await runOne(deps);
+
+    expect(driver.authenticated).toBe(true);
+    expect(driver.inboxReads).toBe(1);
+    expect(getAccount(db, acct.id)?.status).toBe("active");
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(db.prepare("SELECT status FROM jobs WHERE id=?").get(jobId)).toEqual({ status: "done" });
+  });
+
+  it("keeps a sign-in stop blocked and defers replies when Chrome does not confirm the account", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    setAccountStatus(db, acct.id, "blocked", "The saved Instagram account is not signed in in Chrome.", "worker");
+    driver.authenticated = false;
+    const jobId = enqueue(db, { type: "check_inbox", accountId: acct.id });
+
+    await runOne(deps);
+
+    expect(driver.inboxReads).toBe(0);
+    expect(getAccount(db, acct.id)?.status).toBe("blocked");
+    expect(db.prepare("SELECT status,run_after FROM jobs WHERE id=?").get(jobId)).toMatchObject({ status: "queued" });
+  });
+
+  it("does not retry Chrome for an Instagram warning during inbox recovery", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    setAccountStatus(db, acct.id, "blocked", "Instagram showed a warning or human check.", "worker");
+    const jobId = enqueue(db, { type: "check_inbox", accountId: acct.id });
+
+    await runOne(deps);
+
+    expect(driver.inboxReads).toBe(0);
+    expect(getAccount(db, acct.id)?.status).toBe("blocked");
+    expect(db.prepare("SELECT status,run_after FROM jobs WHERE id=?").get(jobId)).toMatchObject({ status: "queued" });
   });
 });
 

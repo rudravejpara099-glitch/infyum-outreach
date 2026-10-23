@@ -1079,3 +1079,15 @@ The owner confirms the Instagram session is signed in in Chrome and Safari. The 
 On `fix/first-run-operability`, the connector now falls back to checking the exact saved account marker in the signed-in Instagram inbox when the profile page omits its “Edit profile” control. A different inbox account is rejected. `npm test` (338), typecheck, lint, `npx next build --webpack`, UI smoke, and billing smoke passed. No live send, social action, paid API request, real charge, or spend occurred.
 
 The updated code has not been loaded by the live worker, which runs from a separate main checkout. The live Chrome verification therefore remains unverified. Campaign approval remains ON; paid providers remain off. See PR #13 for the branch.
+
+## Live Chrome proof and automatic recovery update (2026-10-23)
+
+The live service checkout was already on `fix/first-run-operability`, one commit behind. I fast-forwarded it to `cf2070f`, then gracefully restarted its idle worker after confirming there were no running jobs, zero approved messages, and only one future `check_inbox` job. The worker is now running from the updated checkout. A direct test of that branch's actual Chrome connector confirmed `@timelessmoments.al` and read one inbox thread; it reported only the count. No message text, cookie, password, or other private content was printed.
+
+The durable app DB still has account #2 blocked for the earlier sign-in failure. The account recovery UI requires an Outreach login, and the currently open Chrome window is at `/login`; no credential was read or entered. The existing queued inbox check is scheduled for `2026-10-23 13:50:34 UTC`. I did not change its schedule.
+
+Pending code change: the scheduled inbox job now rechecks Chrome only when the account was blocked for a sign-in-specific reason. It resumes the account and reads the inbox only if the saved account is confirmed; a warning or human-check stop remains blocked. Added runner tests for successful recovery, unconfirmed sign-in, and preserving a warning stop.
+
+Verified on this pending change: `npm test` = 341; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `npm run smoke:billing`; and `git diff --check` pass. The UI smoke uses disposable data and sends no messages; billing smoke uses a local fake processor. Direct Chrome verification is read-only. No live Instagram write, paid API request, charge, or spend occurred.
+
+Still NOT verified: the updated recovery code has not been committed/pushed/loaded by the live worker; durable account recovery and reply sync; any first-message/first-reply handoff; paid Anthropic/Apify/Stripe TEST. Campaign #4 remains approval ON with all three leads skipped and zero approved messages. Chrome warm-up actions and AI drafting remain disabled under the existing decision; do not run a live send without approval of the exact message.
