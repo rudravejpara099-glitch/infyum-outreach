@@ -24,7 +24,7 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
-## Current live-workspace status (2026-10-23, refreshed at 17:45 UTC)
+## Current live-workspace status (2026-10-23, refreshed after 17:47 UTC)
 
 - The owner workspace and worker are running locally. The live Overview says Outreach is running and the next reply check is tomorrow at 09:42 IST. Read-only inbox job #36 for account #2 remains queued for `2026-10-24 04:12:59 UTC`; do not accelerate it. The Overview and Campaign #2 both reloaded successfully in the owner’s browser.
 - Four Instagram accounts are saved; `@timelessmoments.al` is Connected in signed-in Chrome profile `Rudra099`, two other accounts need sign-in, and one is paused. App sign-in check #37 completed with `authenticated:true`. Safari’s Instagram session was not verified.
@@ -34,6 +34,8 @@ Business rules the code must keep:
 - Anthropic and Apify are not connected, the Apify monthly cap is unset, and Stripe TEST is not configured. Paid calls and payments remain off. Hosting and multi-company accounts remain deferred under the decided scope.
 - Current local verification on `fix/first-run-operability` (pushed to PR #13): 362 tests, typecheck, lint, `npm run build` (Webpack), isolated UI and billing smokes, and `npm audit` (0 vulnerabilities) pass. The exact `npx next build` command still fails when Turbopack tries to bind an internal port in this environment; the configured Webpack build passes. PR #13 remains OPEN/DRAFT with no hosted checks.
 - This does not verify a real first message sent by the app followed by a fresh real reply/handoff, live paid-provider behavior, or payment. No Instagram message or engagement action, paid call, or spend occurred in the latest checks.
+
+- The Overview's AI setup card now distinguishes the zero-prepared-lead state from when manual writing is available: it no longer implies a user can write for a warmed lead when none are prepared. The wording also says the first message still waits for approval. Tests and the isolated UI smoke cover the empty state; this does not change sending or approval behavior.
 
 Latest live check (2026-10-23 17:47 UTC): Rudra confirmed Chrome remote debugging is enabled and allowed for profile `Rudra099`. A manual read-only scan opened six recent conversations and found no new incoming reply; the already-known reply remained handled without a duplicate handoff. The live app Overview reports 204 leads, 23 messages awaiting approval, 0 DMs sent today, 0 warmed leads, and Outreach running. The approval page shows 23 pending drafts, three flagged for sensitive price/guarantee/date topics; none were approved or rejected. This manual Chrome scan is not the app's scheduled inbox job #36; leave it at its scheduled time.
 

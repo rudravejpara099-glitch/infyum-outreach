@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { automaticWritingCopy, failedWorkCopy, runningWorkerCopy } from "@/lib/ui/worker-status-copy";
 
 describe("running worker status copy", () => {
-  it("explains the manual fallback when paid AI is not connected", () => {
-    expect(automaticWritingCopy(false)).toMatch(/Claude does not need to be installed/);
-    expect(automaticWritingCopy(false)).toMatch(/write a message yourself/);
-    expect(automaticWritingCopy(true)).toBeNull();
+  it("explains when manual writing becomes available without paid AI", () => {
+    expect(automaticWritingCopy(false, 0)).toMatch(/Claude does not need to be installed/);
+    expect(automaticWritingCopy(false, 0)).toMatch(/No leads are ready for manual message writing yet/);
+    expect(automaticWritingCopy(false, 1)).toMatch(/write a first message yourself/);
+    expect(automaticWritingCopy(false, 1)).toMatch(/waits for your approval/);
+    expect(automaticWritingCopy(true, 0)).toBeNull();
   });
 
   it("explains a scheduled task in the team's time zone", () => {

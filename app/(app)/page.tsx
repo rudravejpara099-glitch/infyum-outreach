@@ -28,7 +28,7 @@ export default async function Dashboard() {
   const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
   const d = dashboardData(db, dateInTimeZone(new Date(), timeZone), timeZone);
   const failedCopy = failedWorkCopy(d.failedJobTypes);
-  const writingCopy = automaticWritingCopy(Boolean(process.env.ANTHROPIC_API_KEY));
+  const writingCopy = automaticWritingCopy(Boolean(process.env.ANTHROPIC_API_KEY), d.stages.warmed ?? 0);
   const recent = d.recentActivity;
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
@@ -61,7 +61,7 @@ export default async function Dashboard() {
         </ol>
       </section>
       {writingCopy && <section className="card mb-4 p-4" aria-labelledby="automatic-writing-title">
-        <h2 id="automatic-writing-title" className="font-semibold">Automatic message writing needs setup</h2>
+        <h2 id="automatic-writing-title" className="font-semibold">Automatic message drafts are off</h2>
         <p className="mt-1 text-sm text-muted">{writingCopy}</p>
         <Link href="/settings" className="mt-2 inline-block text-sm text-accent underline">See AI setup in Settings</Link>
       </section>}

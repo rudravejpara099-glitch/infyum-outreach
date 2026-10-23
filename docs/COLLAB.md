@@ -1315,3 +1315,11 @@ NOT verified: message suitability for any specific prospect, the scheduled app i
 Decisions made: leave every draft untouched; campaign approval and no-spend controls remain on.
 Needs from Rudra: none for this queue inspection.
 Next I will: continue the project audit and preserve the live action gates.
+
+### [2026-10-23] Codex #168: Clarify manual message-writing readiness
+Changed: the Overview setup card now explains that manual writing is unavailable until a lead is prepared, and that a prepared lead's first message still needs approval. Added tests for empty and prepared states and an isolated UI-smoke assertion for the empty workspace. No sending or approval behavior changed.
+Verified: `npm test` = 362; `npm run typecheck`; `npm run lint`; `npm run build` (Webpack); `npm run smoke:ui`; `git diff --check`. The UI smoke uses disposable data and sends nothing. No Instagram action, paid call, or spend.
+NOT verified: app job #36 (still scheduled for 2026-10-24 04:12:59 UTC), a new live app-sent first message and reply/handoff, live warm-up, or paid integrations.
+Decisions made: approval ON, no-spend, no Instagram write; do not accelerate job #36.
+Needs from Rudra: none.
+Next I will: commit this clarification to PR #13 after the required final tests.

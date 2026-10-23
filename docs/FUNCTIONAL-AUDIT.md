@@ -39,6 +39,10 @@ Regression tests cover both cases: the same account's later success hides the ol
 
 The Overview now plainly tells users that Claude does not need to be installed. Automatic message drafts require a separate billed AI connection; while it is off, users can still check replies and write a message themselves for a warmed lead. The card links to Settings and appears only when `ANTHROPIC_API_KEY` is absent. Unit and browser-smoke assertions cover the copy and link.
 
+### 2026-10-23: Clarify manual writing readiness
+
+The Overview setup card now checks the prepared-lead count. With no prepared leads, it says manual writing is not available yet and explains when it becomes available; with a prepared lead, it states that the first message still waits for approval. Tests cover both states, and isolated UI smoke checks the empty state. This is a copy/clarity change only. `npm test` (362), typecheck, lint, Webpack build, and UI smoke pass. No Instagram action, paid call, or spend occurred.
+
 Validation on the final code: 328 unit tests, typecheck, lint, Webpack production build, isolated Playwright UI smoke, and `git diff --check` passed. No provider credentials, provider calls, Instagram writes, or spend. The current browser tab is at login after the web-server restart; the worker and saved app database were left running/untouched.
 
 | Requirement | Evidence | State |

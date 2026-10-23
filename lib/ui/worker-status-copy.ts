@@ -39,8 +39,11 @@ export function failedWorkCopy(failedByType: Record<string, number>): string | n
   return `${total} background tasks need attention. View activity for details.`;
 }
 
-/** Explain the manual fallback when independently metered automatic writing is off. */
-export function automaticWritingCopy(configured: boolean): string | null {
+/** Explain automatic writing setup and the manual path that is available now. */
+export function automaticWritingCopy(configured: boolean, warmedLeadCount: number): string | null {
   if (configured) return null;
-  return "Claude does not need to be installed. Automatic message drafts need a separately billed AI connection, which is off. You can still check replies and write a message yourself for a warmed lead.";
+  const setup = "Claude does not need to be installed. Automatic message drafts use a separately billed AI connection, which is off.";
+  return warmedLeadCount > 0
+    ? `${setup} You can write a first message yourself for a prepared lead; it still waits for your approval.`
+    : `${setup} No leads are ready for manual message writing yet. Once a lead is prepared, you can write its first message yourself.`;
 }
