@@ -1307,3 +1307,11 @@ NOT verified: the result of app inbox job #36; a new app-sent first DM and fresh
 Decisions made: preserve no-spend, approval, and Instagram-action gates; leave the scheduled job unchanged and PR #13 open/draft.
 Needs from Rudra: none for this refresh.
 Next I will: continue locally verifiable completion work and inspect #36 after its normal scheduled run.
+
+### [2026-10-23] Codex #167: Audit the approval queue without changing it
+Changed: no application or owner data. Refreshed the current handoff/audit evidence and returned the owner's app tab to Overview.
+Verified: read-only review shows 23 pending first-message drafts; three are flagged for price, guarantee, or date topics and cannot be bulk-approved. No draft was edited, approved, rejected, or sent. Overview still reports 0 warmed leads, 23 pending drafts, 0 DMs sent today, and Outreach running.
+NOT verified: message suitability for any specific prospect, the scheduled app inbox check #36, or a new app-sent first-message/reply handoff.
+Decisions made: leave every draft untouched; campaign approval and no-spend controls remain on.
+Needs from Rudra: none for this queue inspection.
+Next I will: continue the project audit and preserve the live action gates.
