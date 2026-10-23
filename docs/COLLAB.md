@@ -1085,3 +1085,11 @@ Verified: 328 tests, typecheck, lint, Webpack build, isolated UI smoke, and diff
 NOT verified: a real live send/first-reply handoff or paid integrations. The app now serves the tested build, but Chrome is at login after restart; no password was accessed and the worker/database were left untouched.
 Needs from Rudra: sign in once to restore the app session. No other input is needed for local no-cost checks.
 Next: keep providers off, approvals on, and continue the safe verification checklist.
+
+### [2026-10-23] Codex #135: Re-run the completion audit checks
+Changed: branch `fix/first-run-operability` / PR #13; documentation only in `HANDOFF.md` and this board. No protected backend area or application logic changed.
+Verified: `git pull --ff-only` reported up to date. `npm test` = 328 passed; `npm run lint`; `npm run typecheck`; `npx next build --webpack`; `npm run smoke:ui`; and `npm run smoke:billing` passed. Chromium required local process access; both smokes used disposable data and the billing smoke used a fake provider. PR #13 remains open/draft with no reported status checks. No paid call, real charge, or Instagram write.
+NOT verified: a new live DM and first-reply handoff, paid-provider or real Stripe TEST connectivity, unattended Chrome reconnect after restart, or hosting.
+Decisions made: keep campaign approval ON and paid features off; preserve the stop-at-first-reply scope. Hosting and multi-company work remain deferred.
+Needs from you: a live outbound test still needs an eligible lead, approval for warm-up actions, and approval of the exact message. No secrets in chat.
+Next I will: use `docs/FUNCTIONAL-AUDIT.md` as the authoritative ordered list; no remaining no-spend local check is currently failing.

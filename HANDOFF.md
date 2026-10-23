@@ -1007,3 +1007,11 @@ Verified: `npm test` = 328 passed; `npm run typecheck`; `npm run lint`; isolated
 NOT verified: full automatic AI drafting or sending without a paid provider; a new live first-message handoff; unattended Chrome reconnect after restart; or paid providers/real Stripe TEST.
 Current app state: the updated server is running at `127.0.0.1:3100`, but the Chrome tab is at login because the server restart invalidated the active browser session. Rudra must sign in again; no password was accessed or changed. The separate worker was not restarted.
 Next I will: preserve no-spend settings and approval ON; complete only read-only checks that do not violate pacing or require credentials.
+
+### [2026-10-23] Codex #135: Re-run the completion audit checks
+Changed: no application logic. Refreshed the repository with `git pull --ff-only` (already up to date), checked the current completion checklist and PR #13, and verified the current branch again.
+Verified: `npm test` = 328 passed across 50 files; `npm run lint`; `npm run typecheck`; `npx next build --webpack`; `npm run smoke:ui`; and `npm run smoke:billing` passed. Browser smokes required local process access because Chromium is blocked by the restricted macOS shell; both passed with access, using disposable data and a local fake billing provider. No Instagram write, paid call, or charge. PR #13 remains open/draft with no reported status checks.
+NOT verified: one fresh live outbound DM followed by first-reply handoff; paid Anthropic/Apify connections; real Stripe TEST; unattended Chrome reconnect after restart; or hosted operation. The app's regular browser session may need the owner to sign in again after the preview restart.
+Decisions made: retain approval ON, no-spend mode, and stop-at-first-reply; hosting and multi-company remain deferred.
+Needs from Rudra: the live outbound proof still requires an eligible prospect, authorization for the necessary warm-up actions, and approval of its exact message. No secrets are requested in chat.
+Next: keep the ranked checklist in `docs/FUNCTIONAL-AUDIT.md` as the remaining work plan; do not claim 100% live readiness until each live gate has direct evidence.
