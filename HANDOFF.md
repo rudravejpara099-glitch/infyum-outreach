@@ -1059,3 +1059,9 @@ Changed: no application code. Restarted the worker only after confirming there w
 Verified: SIGINT stopped the worker cleanly; `npm run worker` started it again with a fresh running control record. The worker remains running; #33 is queued for 11:50:26 UTC. There are zero billing usage events and no new handoff. No job was accelerated and no social write or payment occurred.
 NOT verified: the result of #33 or whether Chrome reconnects without a permission prompt after the restart.
 Next: allow #33 to run on schedule and inspect its saved result. Keep all paid and outbound actions disabled.
+
+### [2026-10-23] Codex #142: Record the post-restart sign-in gate
+Changed: refreshed the current status and remaining reliability task in `docs/FUNCTIONAL-AUDIT.md`; no application code or account data changed.
+Verified: after the clean worker restart, job #33 did not connect to Chrome. `ig_accounts` shows `@timelessmoments.al` as `blocked` with note `The saved Instagram account is not signed in in Chrome.` The worker safely deferred the job until 12:50:30 UTC. No login state was changed, and no Chrome or Instagram restriction was bypassed. Billing usage remains zero; no outbound message was approved or sent.
+NOT verified: the account's app-confirmed sign-in state, Chrome reconnection after restart, and any live first-message handoff.
+Next: keep the blocked-account gate intact. A sign-in check through the app must confirm the account before the worker can use it; all paid and outbound actions stay off.
