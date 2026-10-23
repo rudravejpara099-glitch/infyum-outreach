@@ -9,6 +9,7 @@ import { dailyAllowance } from "@/lib/domain/limits";
 import { getSetting } from "@/lib/db/repos/settings";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { accountStatusBadge, loginJobSummary } from "@/lib/ui/copy";
+import { accountNeedsSignIn } from "@/lib/domain/account-recovery";
 import type { Job } from "@/lib/db/types";
 import { Empty, PageHeader } from "@/components/ui";
 import { changeCap, changeStatus, connectAccount, reopenLogin, useSeparateSignIn, useSignedInChrome } from "./actions";
@@ -39,8 +40,9 @@ export default async function AccountsPage() {
       {accounts.length === 0 ? <Empty title="No accounts yet">Connect the Instagram account that will send the DMs.</Empty> : (
         <div className="card divide-y divide-line">
           {accounts.map((a) => {
-            const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running, a.browserMode);
-            const statusBadge = accountStatusBadge(a.status, signIn.tone);
+            const signInRequired = accountNeedsSignIn(a.statusNote);
+            const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running, a.browserMode, a.statusNote);
+            const statusBadge = accountStatusBadge(a.status, signIn.tone, a.statusNote);
             const signInTone = signIn.tone === "error" ? "border-bad bg-bad/5 text-bad" : signIn.tone === "success" ? "border-ok bg-ok/5 text-ok" : signIn.tone === "attention" ? "border-warn bg-warn/5 text-warn" : "border-line bg-panel text-muted";
             return <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div className="min-w-0">
@@ -53,7 +55,7 @@ export default async function AccountsPage() {
                 <div className="mt-0.5 text-xs text-muted">
                   Today {sentTodayForAccount(db, a.id, today, timeZone)} of {dailyAllowance(a, today)} allowed{a.statusNote ? ` · ${a.statusNote}` : ""}
                 </div>
-                {a.status === "blocked" && <p className="mt-2 max-w-lg text-sm text-bad">Instagram showed a warning. Outreach stays stopped. Opening the login window does not clear this warning.</p>}
+                {a.status === "blocked" && !signInRequired && <p className="mt-2 max-w-lg text-sm text-bad">Instagram showed a warning. Outreach stays stopped. Opening the login window does not clear this warning.</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <ActionForm action={changeCap} className="flex flex-wrap items-center gap-2">
@@ -67,7 +69,7 @@ export default async function AccountsPage() {
                 <ActionForm action={changeStatus}>
                   <input type="hidden" name="id" value={a.id} />
                   <input type="hidden" name="status" value={a.status === "active" ? "paused" : "active"} />
-                  <button className="btn" disabled={a.status === "blocked"}>{a.status === "blocked" ? "Stopped by Instagram" : a.status === "active" ? "Pause" : "Resume"}</button>
+                  <button className="btn" disabled={a.status === "blocked"}>{a.status === "blocked" ? signInRequired ? "Sign-in needed" : "Stopped by Instagram" : a.status === "active" ? "Pause" : "Resume"}</button>
                 </ActionForm>
               </div>
             </div>;

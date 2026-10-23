@@ -1,4 +1,5 @@
 import { STAGES, type Stage } from "@/lib/domain/stages";
+import { accountNeedsSignIn } from "@/lib/domain/account-recovery";
 
 /** UI wording only; the stored stage and activity codes stay unchanged. */
 export const stageCopy: Record<Stage, { label: string; description: string }> = {
@@ -103,7 +104,8 @@ export type LoginJobSummary = {
 export type AccountStatusBadge = { label: string; tone: "ok" | "warn" | "bad" };
 
 /** Show a connected badge only after Instagram confirms the saved account session. */
-export function accountStatusBadge(status: "active" | "paused" | "blocked", signInTone: LoginJobSummary["tone"]): AccountStatusBadge {
+export function accountStatusBadge(status: "active" | "paused" | "blocked", signInTone: LoginJobSummary["tone"], statusNote = ""): AccountStatusBadge {
+  if (status === "blocked" && accountNeedsSignIn(statusNote)) return { label: "Sign-in needed", tone: "warn" };
   if (status === "blocked") return { label: "Stopped", tone: "bad" };
   if (status === "paused") return { label: "Paused", tone: "warn" };
   if (signInTone === "success") return { label: "Connected", tone: "ok" };
@@ -112,8 +114,15 @@ export function accountStatusBadge(status: "active" | "paused" | "blocked", sign
 }
 
 /** Describes the sign-in window job only; it never treats a saved account as authenticated. */
-export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean, browserMode: "isolated" | "chrome_read_only" = "isolated"): LoginJobSummary {
+export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean, browserMode: "isolated" | "chrome_read_only" = "isolated", statusNote = ""): LoginJobSummary {
   const usesChrome = browserMode === "chrome_read_only";
+  if (accountNeedsSignIn(statusNote) && job?.status !== "queued" && job?.status !== "running") return {
+    title: usesChrome ? "Chrome isn’t signed in as this account" : "Sign-in needed",
+    detail: usesChrome
+      ? "Sign in to this Instagram account in Chrome, then choose Check Chrome sign-in. Outreach will resume only after that check succeeds."
+      : "Sign in to Instagram, then check this account again. Outreach will resume only after that check succeeds.",
+    tone: "attention",
+  };
   if (!job) return {
     title: "Sign-in status not checked",
     detail: usesChrome

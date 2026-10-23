@@ -7,11 +7,13 @@ import os from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
 import { openDb } from "@/lib/db/core";
-import { createAccount } from "@/lib/db/repos/accounts";
+import { createAccount, setAccountStatus } from "@/lib/db/repos/accounts";
+import { enqueue } from "@/lib/db/repos/jobs";
 import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { createOutgoing } from "@/lib/db/repos/messages";
 import { addLead, listLeads } from "@/lib/db/repos/leads";
 import { addDnc, removeDnc } from "@/lib/db/repos/dnc";
+import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import { buildIsolatedNextApp, cleanupIsolatedNextApp, type IsolatedNextBuild } from "./isolated-next-build";
 
 async function stopServer(child: ChildProcess) {
@@ -643,7 +645,7 @@ try {
   const loginJob = db.prepare("SELECT id FROM jobs WHERE type='open_login' AND account_id=? ORDER BY id DESC LIMIT 1").get(account.id) as { id: number };
   db.prepare("UPDATE jobs SET status='done',payload=? WHERE id=?").run(JSON.stringify({ authenticated: false }), loginJob.id);
   await page.reload();
-  await reviewAccountCard.getByText("Sign-in needed", { exact: true }).waitFor();
+  await reviewAccountCard.locator(".badge").filter({ hasText: "Sign-in needed" }).waitFor();
   assert.equal(await reviewAccountCard.getByText("active", { exact: true }).count(), 0, "An unverified account must not appear active");
   for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
@@ -666,6 +668,17 @@ try {
   await reviewAccountCard.getByRole("button", { name: "Set cap", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Daily limit saved" }).waitFor();
   assert.equal((db.prepare("SELECT daily_cap FROM ig_accounts WHERE id=?").get(account.id) as { daily_cap: number }).daily_cap, 20);
+  setAccountStatus(db, account.id, "blocked", "The saved Instagram account is not signed in in Chrome.", "ui-fixture");
+  await page.reload();
+  await reviewAccountCard.getByText("Chrome isn’t signed in as this account", { exact: true }).waitFor();
+  await reviewAccountCard.locator(".badge").filter({ hasText: "Sign-in needed" }).waitFor();
+  assert.equal(await reviewAccountCard.getByText("Instagram showed a warning.", { exact: false }).count(), 0, "A sign-in problem must not be described as an Instagram warning");
+  const recoveryJobId = enqueue(db, { type: "open_login", accountId: account.id });
+  db.prepare("UPDATE jobs SET status='running' WHERE id=?").run(recoveryJobId);
+  await openLoginWindowJob(db, recoveryJobId, account.id, { openLogin: async () => true });
+  await page.reload();
+  await reviewAccountCard.getByText("Connected", { exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "active");
   setCampaignStatus(db, id, "paused", "ui-fixture");
   await page.goto(campaignUrl);
   await page.getByRole("link", { name: "Edit audience", exact: true }).click();

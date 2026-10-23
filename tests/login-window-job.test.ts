@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { createAccount } from "@/lib/db/repos/accounts";
+import { createAccount, getAccount, setAccountStatus } from "@/lib/db/repos/accounts";
 import { enqueue } from "@/lib/db/repos/jobs";
 import { openLoginWindowJob } from "@/lib/services/login-window-job";
 
@@ -34,6 +34,30 @@ describe("login-only job", () => {
     const job = db.prepare("SELECT status,payload FROM jobs WHERE id=?").get(id) as { status: string; payload: string };
     expect(job.status).toBe("done");
     expect(JSON.parse(job.payload)).toEqual({ authenticated: false });
+  });
+
+  it("reactivates an account stopped only for missing sign-in after the check verifies sign-in", async () => {
+    const account = createAccount(db, { handle: "owner", profileDir: "/tmp/owner", dailyCap: 35 }, "test");
+    setAccountStatus(db, account.id, "blocked", "The saved Instagram account is not signed in in Chrome.", "worker");
+    const id = enqueue(db, { type: "open_login", accountId: account.id });
+    db.prepare("UPDATE jobs SET status='running' WHERE id=?").run(id);
+
+    await openLoginWindowJob(db, id, account.id, { openLogin: vi.fn(async () => true) });
+
+    expect(getAccount(db, account.id)).toMatchObject({ status: "active", statusNote: "" });
+    expect(db.prepare("SELECT status FROM jobs WHERE id=?").get(id)).toEqual({ status: "done" });
+    expect(db.prepare("SELECT action,detail FROM activity WHERE account_id=? ORDER BY id DESC LIMIT 1").get(account.id)).toEqual({ action: "account.active", detail: "" });
+  });
+
+  it("never clears an Instagram warning after a successful sign-in check", async () => {
+    const account = createAccount(db, { handle: "owner", profileDir: "/tmp/owner", dailyCap: 35 }, "test");
+    setAccountStatus(db, account.id, "blocked", "Instagram showed a warning or a human check. Review the account in Chrome.", "worker");
+    const id = enqueue(db, { type: "open_login", accountId: account.id });
+    db.prepare("UPDATE jobs SET status='running' WHERE id=?").run(id);
+
+    await openLoginWindowJob(db, id, account.id, { openLogin: vi.fn(async () => true) });
+
+    expect(getAccount(db, account.id)).toMatchObject({ status: "blocked", statusNote: "Instagram showed a warning or a human check. Review the account in Chrome." });
   });
 
   it("fails the login check when Chrome itself returns an error", async () => {
