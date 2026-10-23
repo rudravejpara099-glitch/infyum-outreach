@@ -172,6 +172,37 @@ describe("worker pipeline", () => {
     expect(getLead(db, lead.id)?.stage).toBe("dm_sent");
   });
 
+  it("sends an approved Chrome-mode first DM then durably hands off the first reply", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "first-contact-cycle", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, {
+      leadId: lead.id, accountId: acct.id, kind: "dm",
+      parts: ["Relevant observation.", "Who I am and the permitted portfolio link.", "One simple question."],
+      campaign: { approvalRequired: true },
+    }, "t");
+    expect(message.status).toBe("pending_approval");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+
+    await runOne(deps);
+
+    expect(driver.sent).toEqual([{ handle: "first-contact-cycle", parts: message.parts }]);
+    expect(getMessage(db, message.id)?.status).toBe("sent");
+    expect(getLead(db, lead.id)?.stage).toBe("dm_sent");
+
+    driver.inbox = [{ handle: "first-contact-cycle", text: "Yes, please tell me more." }];
+    enqueue(db, { type: "check_inbox", accountId: acct.id });
+    await runOne(deps);
+
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(listMessages(db, { leadId: lead.id }).filter((item) => item.direction === "in")).toHaveLength(1);
+    expect(db.prepare("SELECT count(*) n FROM activity WHERE lead_id=? AND action='lead.handoff'").get(lead.id)).toEqual({ n: 1 });
+    expect(db.prepare("SELECT next_followup_at FROM leads WHERE id=?").get(lead.id)).toEqual({ next_followup_at: null });
+    expect(driver.sent).toHaveLength(1);
+  });
+
   it("does not dispatch an already queued approved message after its campaign is finished", async () => {
     const { acct, camp } = setup(true);
     const { lead } = addLead(db, { handle: "finish-before-send", campaignId: camp.id, stage: "warmed" }, "t");

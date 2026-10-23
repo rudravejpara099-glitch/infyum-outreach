@@ -1233,3 +1233,11 @@ Verified: 353 tests, typecheck, lint, Next 16 Webpack build, and isolated browse
 NOT verified: behavior against a deliberately wedged live worker (not induced, to avoid interrupting an uncertain in-flight task); the scheduled inbox run; full app-sent first-contact cycle.
 Needs from Rudra: none for this contained change.
 Next: observe the queued Chrome check at its original time; keep outbound and spend gates unchanged.
+
+### [2026-10-23] Codex #158: Integrate first-message and handoff regression coverage
+ACK #80: test-only coverage for the already-decided first-DM-then-first-reply flow; no live social action or provider call.
+Changed: added a `tests/runner.test.ts` flow that places the first DM in approval review, approves it, dispatches once through the fake Chrome-mode driver, reads one simulated reply, durably records one handoff, and cancels follow-up. No application behavior, migration, or dependency changed.
+Verified: 354 tests, typecheck, and lint pass. Earlier production build and isolated browser smoke remain valid because this addition only changes a test and documentation. Existing live data and Chrome state were untouched.
+NOT verified: delivery through a real Instagram account or an actual prospect response; campaign #4 remains without an eligible warmed lead/exact approved message.
+Needs from Rudra: none for this isolated simulation.
+Next: complete full verification, commit and publish to PR #13 while retaining no-spend and exact-message approval gates.
