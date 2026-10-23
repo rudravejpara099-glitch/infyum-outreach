@@ -963,3 +963,11 @@ The browser on `localhost:3100` was served from a different checkout at `Documen
 Verified against the running `:3103` app: all nine main pages render while signed in; empty draft shows Delete empty draft; campaign #4 shows Pause and Stop controls with “Ask me before anything is sent” checked; `@timelessmoments.al` is Connected; billing is in test mode with $0.00 recorded and paid work off; dashboard shows 0 DMs sent today and a successful reply check. `npm test` = 325 passed; `npm run typecheck` passed. No campaign action was clicked, no DM or other Instagram write occurred, and no paid request, payment, or spend occurred.
 
 Still unverified: real outbound delivery (requires an exact message approval), paid Anthropic/Apify, and Stripe TEST integrations. Current app: `:3100`; the extra verification server on `:3103` was stopped.
+
+### 2026-10-23 follow-up: restore writable app and current worker
+
+The verified frontend initially had read-only access to the workspace database, so a worker-control action failed. Granted the app process access to the existing local `data/` directory and restarted only the frontend; the same user session and database now work at `http://127.0.0.1:3100`. Rechecked all nine authenticated routes and the empty-draft delete control. A live “Stop after current task” then “Start Outreach” cycle succeeded, proving that the app can write its worker lease and launch the worker from this current checkout.
+
+The former worker was running from the older `Documents/Codex/...` checkout. Before restarting it, confirmed there were no queued jobs, 23 messages were still `pending_approval`, campaign #4 still required approval, and 0 DMs had been sent today. It stopped cleanly; current worker PID 23157 is running from this branch. Post-start database check still shows no queued jobs, 23 pending approvals, 0 DMs today, and 0 billing events. No Instagram write, paid provider request, or spend occurred.
+
+Verified on this checkout: `npm test` = 325 passed; `npm run typecheck`, isolated UI smoke, and local fake billing smoke passed. Anthropic, Apify, and Stripe credentials remain absent, so paid provider calls and live outbound delivery remain unverified and off.
