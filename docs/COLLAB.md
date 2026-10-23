@@ -1033,3 +1033,10 @@ Verified: `npm test` = 325 passed; `npm run typecheck`, `npm run lint`, and `npx
 NOT verified: the running app still uses its existing separate worktree and has not loaded this change. The fresh Chrome auto-connect remains blocked by the visible “Allow remote debugging?” prompt, which did not respond to computer-control clicks. The live inbox check and `npm run smoke:ui` are not verified in this turn; the smoke script cannot create the restricted `tsx` Unix socket in this shell.
 Needs from Rudra: manually click **Allow** in the visible Chrome prompt, then retry the app's read-only inbox check. No further confirmation is needed for the read-only check.
 Next I will: keep PR #13 on its branch and rerun the live read-only check once the Chrome prompt is accepted.
+
+### [2026-10-23] Codex #128: Verify the signed-in Chrome profile
+Changed: no application code. Follow-up to #127: accepted the Chrome remote-debugging prompt and found that the native Chrome window was on the signed-out `Rudra2008` profile. Switched to the owner's requested `Rudra099` profile (`Default`), confirmed Instagram is signed in and remote debugging is enabled, then ran the updated driver's read-only `readInbox` for `@timelessmoments.al`.
+Verified: inbox read succeeded with 1 thread; all nine primary app routes loaded in the user's Chrome; `npm test` = 325 passed and `npm run typecheck` passed. Existing dashboard remains approval ON and 0 DMs sent today. No message, like, follow, comment, paid call, real payment, or spend.
+NOT verified: the already-running app worker has not yet recorded a successful inbox check after the profile switch. `npm run smoke:ui` cannot launch its Playwright Chromium under this Mac sandbox (Mach port permission denial); manual browser route smoke passed. Anthropic and Apify paid flows remain unconfigured and off.
+Needs from Rudra: no help for read-only inbox verification. Paid integration checks still require credentials and explicit authorization; no secrets in chat.
+Next I will: preserve approval ON; the scheduled worker should perform a fresh inbox check on the corrected profile, then update the record if it succeeds.
