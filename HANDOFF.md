@@ -922,3 +922,14 @@ NOT verified: paid Anthropic, Apify, or real Stripe TEST connections; live campa
 Added an action-level regression proving that an active campaign with a positive saved cap still refuses lead search when the Apify connection is missing. The action creates no search job. This is a no-network test; no product runtime behavior was changed.
 
 Verified: `npm test` = 324 passed; `npm run typecheck`, `npm run lint`, and `git diff --check` passed. Current Settings and environment still show Anthropic, Apify, and Stripe credentials absent. No provider call or spend.
+
+
+### No-spend full check, 2026-10-23
+
+Verified on `fix/first-run-operability` / draft PR #13. Installed the locked dependencies (`npm install`); no dependency or lockfile changes. `npm test` passed: 324 tests across 50 files. `npm run typecheck`, `npm run lint`, `npm run smoke:ui`, `npm run smoke:billing`, `npx next build --webpack`, and `npm audit --omit=dev` all passed. The UI and billing browser smokes used disposable databases and the local fake processor; the billing smoke explicitly does not verify Stripe. Production dependency audit reports zero vulnerabilities. Full audit reports five high findings only in the development ESLint dependency tree (`braces`/`micromatch`); `npm audit fix --force` would downgrade `eslint-config-next` to 14.2.35, so I did not apply that breaking change.
+
+Live app check in the signed-in Chrome profile: all requested screens load; `@timelessmoments.al` is connected. The draft campaign “a” now has that sender selected and “Ask me before anything is sent” remains checked. The draft has no leads; the workspace dashboard reports 204 leads overall, 23 waiting drafts, 0 DMs today, 65 in the last 7 days, 2 replies, and Outreach running with its next reply check at 9:42 AM team time. Settings reports Anthropic not connected and Apify not set up; lead search stays off. No Instagram write, paid API call, Apify call, real payment, or spend occurred.
+
+NOT verified: a fresh prospect from qualification through a new approved first DM and reply handoff; real Anthropic generation, Apify search, or Stripe TEST; reliability across a later restart. The isolated flows prove the product UI and local fake billing path, not every live integration.
+
+Help needed to complete the live paid-provider checks: configure Anthropic and Apify credentials privately on this machine, then explicitly authorize any paid request. Do not send secrets in chat. A new outbound test also needs a suitable eligible lead and the owner’s approval of its exact message.

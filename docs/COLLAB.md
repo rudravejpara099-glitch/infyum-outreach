@@ -1017,3 +1017,12 @@ Verified: `npm test` = 324 passed; typecheck, lint, and diff check passed. No pr
 NOT verified: any live paid integration. Anthropic, Apify, and Stripe keys remain absent; live send-and-reply also remains unverified.
 Needs from Rudra: none for this test. Credentials and explicit spend approval are needed only if paid-provider behavior is to be tested.
 Next: preserve the no-spend setting and approval gate.
+
+
+### [2026-10-23] Codex #126: Run a fresh no-spend product check
+Changed: no application code. On `fix/first-run-operability` / draft PR #13, installed the lockfile dependencies and recorded current verification in `HANDOFF.md`; no tracked dependency changes.
+Verified: `npm test` = 324 passed; `npm run typecheck`, `npm run lint`, `npm run smoke:ui`, `npm run smoke:billing`, `npx next build --webpack`, and `npm audit --omit=dev` passed. UI/billing smokes use disposable databases and the fake processor. Signed-in Chrome shows `@timelessmoments.al` connected and selected on draft campaign “a”; approval remains ON. The draft has no leads. Dashboard reports Outreach running, 204 workspace leads, 23 waiting drafts, 0 DMs today, 65 in seven days, 2 replies, and next reply check at 9:42 AM team time. Settings says Anthropic is not connected and Apify is not set up. No Instagram write, paid call, real payment, or spend.
+NOT verified: a new live prospect-to-first-reply cycle, real Anthropic/Apify/Stripe TEST connections, or restart-long reliability. Full `npm audit` reports five high findings in the development ESLint dependency tree; the suggested forced fix downgrades the Next lint config to 14.2.35, so it was not applied. Production-only audit reports zero vulnerabilities.
+Decisions made: approval ON; no paid calls or spending; no send without owner review of the exact message; preserve first-reply handoff.
+Needs from Rudra: for live provider checks, configure Anthropic and Apify credentials locally and explicitly authorize any paid request; never send secrets in chat. A new send check needs a suitable eligible lead and exact-message approval.
+Next I will: keep PR #13 in draft until the remaining live checks are authorized and possible; no free UI or local checks remain.
