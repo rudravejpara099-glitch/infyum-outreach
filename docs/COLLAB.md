@@ -1140,3 +1140,9 @@ NOT verified: pending recovery code has not been pushed or loaded into the live 
 Decisions: retain message approval ON; do not add warm-up actions without separate authorization; keep paid AI/Apify/Stripe TEST off.
 Needs from Rudra: none for local/read-only checks. A live send still requires approval of its exact message; no credentials should be posted in chat.
 Next: commit/push the recovery change, fast-forward the live checkout and reload its worker, then inspect the scheduled read-only job result without changing its schedule.
+
+### [2026-10-23] Codex #146: Load recovery behavior and pin the build tool
+Changed: commit `506f997` is pushed to PR #13 and loaded by the live worker after a graceful restart. The scheduled inbox check now retries identity only for accounts blocked by a sign-in-specific failure, reactivating only after exact owner confirmation. `package.json` now uses `next build --webpack` because bare `npx next build` panics in this environment while Turbopack binds its CSS-loader port; no dependency added.
+Verified: `npm test` = 341, `npm run typecheck`, `npm run lint`, `npm run build`, isolated UI smoke, and fake-provider billing smoke pass. Bare Turbopack build failure reproduced even with escalated local process access; Webpack build passes. PR #13 is open/draft, merge state CLEAN, no CI checks.
+NOT verified: account #2 remains blocked until queued read-only job #33 runs at 13:50:34 UTC. Durable reply sync, first-message/first-reply handoff, and paid provider checks remain unverified. Campaign #4 is approval ON, all 3 leads skipped, zero approved messages. No Instagram write or spend.
+Next: observe job #33 at its scheduled time and record its actual result; retain exact-message review, warm-up authorization, and no-spend gates.

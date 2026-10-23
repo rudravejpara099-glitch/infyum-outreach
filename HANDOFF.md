@@ -1086,8 +1086,15 @@ The live service checkout was already on `fix/first-run-operability`, one commit
 
 The durable app DB still has account #2 blocked for the earlier sign-in failure. The account recovery UI requires an Outreach login, and the currently open Chrome window is at `/login`; no credential was read or entered. The existing queued inbox check is scheduled for `2026-10-23 13:50:34 UTC`. I did not change its schedule.
 
-Pending code change: the scheduled inbox job now rechecks Chrome only when the account was blocked for a sign-in-specific reason. It resumes the account and reads the inbox only if the saved account is confirmed; a warning or human-check stop remains blocked. Added runner tests for successful recovery, unconfirmed sign-in, and preserving a warning stop.
+Commit `506f997` changes the scheduled inbox job to recheck Chrome only when the account was blocked for a sign-in-specific reason. It resumes the account and reads the inbox only if the saved account is confirmed; a warning or human-check stop remains blocked. Runner tests cover successful recovery, unconfirmed sign-in, and preserving a warning stop. The commit is pushed and loaded by the live worker.
 
-Verified on this pending change: `npm test` = 341; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `npm run smoke:billing`; and `git diff --check` pass. The UI smoke uses disposable data and sends no messages; billing smoke uses a local fake processor. Direct Chrome verification is read-only. No live Instagram write, paid API request, charge, or spend occurred.
+Verified on this change: `npm test` = 341; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; `npm run smoke:billing`; and `git diff --check` pass. The UI smoke uses disposable data and sends no messages; billing smoke uses a local fake processor. Direct Chrome verification is read-only. No live Instagram write, paid API request, charge, or spend occurred.
 
-Still NOT verified: the updated recovery code has not been committed/pushed/loaded by the live worker; durable account recovery and reply sync; any first-message/first-reply handoff; paid Anthropic/Apify/Stripe TEST. Campaign #4 remains approval ON with all three leads skipped and zero approved messages. Chrome warm-up actions and AI drafting remain disabled under the existing decision; do not run a live send without approval of the exact message.
+Still NOT verified: durable account recovery and reply sync (job #33 is scheduled for 13:50:34 UTC); any first-message/first-reply handoff; paid Anthropic/Apify/Stripe TEST. Campaign #4 remains approval ON with all three leads skipped and zero approved messages. Chrome warm-up actions and AI drafting remain disabled under the existing decision; do not run a live send without approval of the exact message.
+
+
+## Branch build command and PR snapshot (2026-10-23)
+
+Bare `npx next build` fails in this Mac environment with a Turbopack internal error while binding its CSS-loader port, even when retried with local process permissions. `npm run build` now uses `next build --webpack`, which completed successfully after 341 tests, typecheck, and lint passed. No dependency was added. The isolated UI and fake-provider billing smokes also pass.
+
+The live worker is running commit `506f997`; its only queued work is the existing read-only inbox check #33 at 13:50:34 UTC. The account is still blocked in the database pending that run. PR #13 is open/draft with a clean merge state and no configured status checks. Do not describe the live reply handoff or full prospect-to-first-reply path as complete until the scheduled job and a separately approved exact first message are verified.
