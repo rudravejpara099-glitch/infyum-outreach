@@ -998,3 +998,5 @@ Verified: regression tests prove a same-account success hides the older failure 
 NOT verified: a new live outbound DM and first-reply handoff, unattended Chrome reconnection after restart, paid Anthropic/Apify/real Stripe TEST, or hosted operation.
 Needs from Rudra: none for this dashboard correction or no-spend local checks. A live first-contact test still needs an eligible prospect and approval of the exact message; warm-up writes remain off until explicitly authorized. Do not send secrets in chat.
 Next I will: keep approval ON and paid providers off; continue only no-cost verification and report the live-send boundary accurately.
+
+Current browser note: to load the tested production build, the local web server on port 3100 was restarted. The existing Chrome tab now shows the app's login page, so the owner needs to sign in again. No password was requested, read, or changed; the worker and saved database were left untouched.

@@ -1077,3 +1077,4 @@ Verified: same-account resolution and cross-account isolation regression tests p
 NOT verified: new live send/first reply, unattended Chrome reconnect after restart, paid provider/real Stripe TEST connectivity, or hosted operation.
 Needs from Rudra: none for the no-cost checks. A live message still requires an eligible prospect and exact-message approval; warm-up actions remain unauthorized in this check.
 Next: preserve approval ON and keep paid services off.
+Current browser note: the tested web server was restarted on port 3100 and the existing Chrome tab now shows login. The owner needs to sign in again. No password was handled; the worker and database were not restarted or changed.
