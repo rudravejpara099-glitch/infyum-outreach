@@ -1040,3 +1040,10 @@ Verified: inbox read succeeded with 1 thread; all nine primary app routes loaded
 NOT verified: the already-running app worker has not yet recorded a successful inbox check after the profile switch. `npm run smoke:ui` cannot launch its Playwright Chromium under this Mac sandbox (Mach port permission denial); manual browser route smoke passed. Anthropic and Apify paid flows remain unconfigured and off.
 Needs from Rudra: no help for read-only inbox verification. Paid integration checks still require credentials and explicit authorization; no secrets in chat.
 Next I will: preserve approval ON; the scheduled worker should perform a fresh inbox check on the corrected profile, then update the record if it succeeds.
+
+### [2026-10-23] Codex #129: Complete the no-spend product smoke
+Changed: no application code. Follow-up to #128 with the scheduled worker and isolated browser smoke results.
+Verified: the app's own worker completed a reply check on the corrected Rudra099 profile and cleared one previous inbox error. Isolated `smoke:ui` passed end to end using its disposable data; all nine live app routes also loaded. `npm test` = 325 passed; typecheck, lint, and production build pass. Campaign approval remains ON, 0 DMs sent today, and no message was sent during the smoke. No paid API call, real payment, or spend.
+NOT verified: live outbound delivery, which remains intentionally untested until the owner approves an exact message; paid Anthropic/Apify flows, which remain unconfigured and off.
+Needs from Rudra: none for the read-only connection or no-spend product smoke. Paid checks still require private credentials and explicit authorization.
+Next I will: leave campaign approval ON and paid integrations off; use the passing no-spend checks as current evidence of local functionality.
