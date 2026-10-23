@@ -1267,3 +1267,11 @@ NOT verified: a live first-message/reply cycle; the next scheduled inbox run; pa
 Decisions made: do not start a draft campaign or alter assignments to manufacture a send-ready lead; preserve approval ON and existing schedule.
 Needs from Rudra: none for read-only audit.
 Next I will: continue with the approved code/readiness work and inspect job #36 only at its scheduled time.
+
+### [2026-10-23] Codex #162: Verify account status in the app
+Changed: no code or account settings. Used the app's existing “Check Chrome sign-in” control for account #2 after the owner confirmed remote debugging was enabled and allowed.
+Verified: app job #37 completed with `authenticated:true`; the Accounts page shows `@timelessmoments.al` as Connected. The signed-in Chrome tab identifies that same Instagram account. `@akash_infyum` is a separate account and remains “Sign-in needed”; Safari was on its Start Page, so its Instagram session was not verified. No Instagram message, like, follow, or comment occurred; no paid request or spend.
+NOT verified: job #36, which remains scheduled for `2026-10-24 04:12:59 UTC`; a real app-sent first message and first-reply handoff; paid integrations.
+Decisions made: keep approval ON, do not accelerate the inbox schedule, and do not treat the two Instagram accounts as interchangeable.
+Needs from Rudra: none for this read-only connection check.
+Next I will: continue only with locally verifiable no-spend work and inspect job #36 at its original scheduled time.
