@@ -1210,3 +1210,11 @@ Verified: 341 tests, typecheck, lint, Webpack production build, isolated browser
 NOT verified: a fresh prospect reply becoming a new handoff, first-message delivery, warm-up, live paid-provider/Stripe TEST connectivity, or hosting. Keep approval ON and paid work off.
 Needs from Rudra: none for these read-only checks. A real first-contact proof still requires an eligible warmed lead and the existing exact-message approval.
 Next: retain the running worker and observe only its scheduled read-only work; do not accelerate it or perform social writes.
+
+### [2026-10-23] Codex #155: Distinguish imported reply handoff from app-sent first contact
+Changed: clarified `docs/FUNCTIONAL-AUDIT.md` and `HANDOFF.md` after a read-only live database inspection. Lead #49 has a received reply and durable handoff, but its original DM and progression were imported from the legacy CSV; the app's own first-message delivery is therefore still unproven. No application code or user data changed.
+Verified: the active DB has one already-handled inbox thread; the latest Chrome check read 7 threads, matched the same incoming item, and created 0 duplicate handoffs. Campaign #4 remains approval ON with 3 skipped leads and 0 approved outgoing messages. The only queued inbox job remains scheduled for 2026-10-24 04:12:59 UTC. `npm audit` could not reach the registry due DNS failure. No message content or credentials read, no social write, paid call, or spend.
+NOT verified: first DM delivered by this app followed by a new reply; live warm-up; refreshed dependency advisory; real paid provider/Stripe TEST or hosting.
+Decisions: maintain no-spend, approval ON, and existing social-action permission boundaries; do not accelerate the queued inbox check.
+Needs from Rudra: none for the current local audit.
+Next: continue closing locally verifiable project gaps; the live first-contact cycle remains gated by an eligible warmed prospect and exact in-app message approval.
