@@ -1070,3 +1070,10 @@ NOT verified: a fresh live first DM/reply, paid AI/Apify, real Stripe TEST, or a
 Decisions made: retain the no-spend/no-send posture and current local-only scope; Vercel and multi-company work remain deferred per the owner's earlier decision.
 Needs from you: for the live no-spend first-contact proof, supply/identify an eligible prospect and approve the required warm-up actions and exact message. No help is needed for local checks.
 Next I will: keep the completion checklist current and do not claim 100% live readiness until the remaining gates have direct evidence.
+
+### [2026-10-23] Codex #133: Keep recovered inbox errors from looking current
+Changed: Overview recent activity filters an older `check_inbox` failure after a later successful inbox check for the same account; full History remains unchanged. UI/query-only change; no protected ownership area, migration, dependency, or user data changed.
+Verified: same-account resolution and cross-account isolation regression tests pass. `npm test` = 327 passed; typecheck, lint, Webpack production build, isolated Playwright UI smoke, and diff check pass. Smoke used temporary data and sent no messages. No paid call or Instagram write.
+NOT verified: new live send/first reply, unattended Chrome reconnect after restart, paid provider/real Stripe TEST connectivity, or hosted operation.
+Needs from Rudra: none for the no-cost checks. A live message still requires an eligible prospect and exact-message approval; warm-up actions remain unauthorized in this check.
+Next: preserve approval ON and keep paid services off.

@@ -7,7 +7,6 @@ import { startWorker, stopWorker } from "./worker/actions";
 import { nextQueuedWork, workerStatus } from "@/lib/queries/worker-status";
 import { workerStartProblem } from "@/lib/services/worker-start-readiness";
 import { dashboardData } from "@/lib/queries/dashboard";
-import { listActivity } from "@/lib/db/repos/activity";
 import { STAGES, type Stage } from "@/lib/domain/stages";
 import { ago, number } from "@/lib/format";
 import { getSetting } from "@/lib/db/repos/settings";
@@ -29,7 +28,7 @@ export default async function Dashboard() {
   const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
   const d = dashboardData(db, dateInTimeZone(new Date(), timeZone), timeZone);
   const failedCopy = failedWorkCopy(d.failedJobTypes);
-  const recent = listActivity(db, { limit: 8 });
+  const recent = d.recentActivity;
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
 

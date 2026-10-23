@@ -5,6 +5,7 @@ import { createCampaign } from "@/lib/db/repos/campaigns";
 import { addLead } from "@/lib/db/repos/leads";
 import { createOutgoing, markSent } from "@/lib/db/repos/messages";
 import { enqueue } from "@/lib/db/repos/jobs";
+import { logActivity, listActivity } from "@/lib/db/repos/activity";
 import { dashboardData } from "@/lib/queries/dashboard";
 
 let db: Db;
@@ -42,5 +43,25 @@ describe("dashboard counts", () => {
     const result = dashboardData(db, "2026-10-21", "UTC");
     expect(result.failedJobs).toBe(2);
     expect(result.failedJobTypes).toEqual({ open_login: 1, qualify: 1 });
+  });
+
+  it("hides resolved inbox failures from Overview but keeps them in History", () => {
+    const account = createAccount(db, { handle: "@sender", profileDir: "/tmp/sender" }, "test");
+    logActivity(db, "worker", "job.error", { accountId: account.id, detail: "check_inbox: Chrome did not finish connecting." });
+    logActivity(db, "worker", "inbox.checked", { accountId: account.id, detail: "Reply check succeeded." });
+
+    const result = dashboardData(db, "2026-10-21", "UTC");
+    expect(result.recentActivity.map((event) => event.action)).toEqual(["inbox.checked", "account.connected"]);
+    expect(listActivity(db).slice(0, 2).map((event) => event.action)).toEqual(["inbox.checked", "job.error"]);
+  });
+
+  it("keeps an inbox failure visible until that account succeeds", () => {
+    const account = createAccount(db, { handle: "@sender", profileDir: "/tmp/sender" }, "test");
+    const other = createAccount(db, { handle: "@other", profileDir: "/tmp/other" }, "test");
+    logActivity(db, "worker", "job.error", { accountId: account.id, detail: "check_inbox: timed out" });
+    logActivity(db, "worker", "inbox.checked", { accountId: other.id, detail: "Reply check succeeded." });
+
+    const result = dashboardData(db, "2026-10-21", "UTC");
+    expect(result.recentActivity.slice(0, 2).map((event) => event.action)).toEqual(["inbox.checked", "job.error"]);
   });
 });

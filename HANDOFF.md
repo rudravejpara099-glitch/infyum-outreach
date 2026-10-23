@@ -991,3 +991,10 @@ NOT verified: a fresh approved DM and first-reply handoff; automatic AI or Apify
 Needs from Rudra: for a no-spend live message test, provide/identify an eligible prospect and approve the required warm-up actions and exact DM. Paid integration credentials and authorization are only needed if automatic AI/search or real Stripe TEST is wanted.
 
 Next I will: leave providers off and approval ON; use this audit checklist as the completion plan.
+
+### [2026-10-23] Codex #133: Keep recovered inbox errors from looking current
+Changed: the Overview now filters an old `check_inbox` failure when a later `inbox.checked` success exists for that same account. The full Activity/History list is unchanged. Implemented in `lib/queries/dashboard.ts`; no protected repo, worker, service, domain rule, migration, dependency, or user data changed.
+Verified: regression tests prove a same-account success hides the older failure in Overview, while another account's success does not; History still shows both events. `npm test` = 327 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; isolated Playwright UI smoke; and `git diff --check` passed. Smoke used disposable data and sent no messages. No paid call, Instagram write, or spend.
+NOT verified: a new live outbound DM and first-reply handoff, unattended Chrome reconnection after restart, paid Anthropic/Apify/real Stripe TEST, or hosted operation.
+Needs from Rudra: none for this dashboard correction or no-spend local checks. A live first-contact test still needs an eligible prospect and approval of the exact message; warm-up writes remain off until explicitly authorized. Do not send secrets in chat.
+Next I will: keep approval ON and paid providers off; continue only no-cost verification and report the live-send boundary accurately.

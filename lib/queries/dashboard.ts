@@ -4,6 +4,29 @@ import { countByStage } from "@/lib/db/repos/leads";
 import { sentTodayForAccount } from "@/lib/db/repos/messages";
 import { dailyAllowance } from "@/lib/domain/limits";
 import { utcRangeForLocalDate } from "@/lib/domain/time-zone";
+import type { ActivityRow } from "@/lib/db/types";
+
+function recentOverviewActivity(db: Db, limit = 8): ActivityRow[] {
+  const rows = db.prepare(`
+    SELECT a.* FROM activity a
+    WHERE NOT (
+      a.action='job.error'
+      AND a.detail LIKE 'check_inbox:%'
+      AND a.account_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM activity resolved
+        WHERE resolved.action='inbox.checked'
+          AND resolved.account_id=a.account_id
+          AND resolved.id>a.id
+      )
+    )
+    ORDER BY a.id DESC LIMIT ?
+  `).all(limit) as Record<string, unknown>[];
+  return rows.map((r) => ({
+    id: r.id as number, ts: r.ts as string, actor: r.actor as string, action: r.action as string,
+    leadId: r.lead_id as number | null, accountId: r.account_id as number | null, detail: r.detail as string,
+  }));
+}
 
 export function dashboardData(db: Db, today: string, timeZone = "UTC") {
   const stages = countByStage(db);
@@ -25,5 +48,6 @@ export function dashboardData(db: Db, today: string, timeZone = "UTC") {
     failedJobs: c("SELECT COUNT(*) c FROM jobs WHERE status='failed'"),
     failedJobTypes,
     accounts,
+    recentActivity: recentOverviewActivity(db),
   };
 }
