@@ -1023,3 +1023,11 @@ NOT verified: whether upstream will publish a patch or a compatible Next lint-co
 Decisions made: production dependencies remain clean; preserve Next 16 and recheck this development-only issue when upstream publishes a fix.
 Needs from Rudra: none for this finding.
 Next: continue the remaining live workflow/restart checks; keep the advisory clearly disclosed.
+
+### [2026-10-23] Codex #137: Refresh the owner-workspace snapshot
+Changed: no application code. Re-read the owner database in SQLite read-only mode and updated the current audit snapshot; no saved application data changed.
+Verified: database counts show 5 campaigns (4 draft, 1 active with approval ON), 204 leads (27 qualified, 45 found, 103 dm_sent, 2 replied, 27 skipped), 23 outgoing drafts pending approval, and 0 billing usage/cost. No lead in active campaign #4 is warmed. The worker-control record reports running; one `check_inbox` is queued for 2026-10-23 07:46:46 UTC (1:16 PM Asia/Kolkata). The app login endpoint at `127.0.0.1:3100` returns HTTP 200.
+NOT verified: that future inbox job's result, an authenticated browser route check after the app restart, a fresh live first-message handoff, unattended Chrome reconnection, paid-provider/Stripe TEST behavior, or hosting. I did not accelerate the scheduled job.
+Decisions made: leave the read-only check on its normal schedule; keep approvals ON and spend/write actions off.
+Needs from Rudra: none for the scheduled read-only check. A real new first message still needs an eligible prospect and the established warm-up/exact-message approvals.
+Next: inspect job #32 only after its scheduled time if work continues; preserve the first-contact and no-spend gates.

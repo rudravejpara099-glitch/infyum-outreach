@@ -1101,3 +1101,11 @@ NOT verified: when upstream will publish a fix or whether replacing Next's lint 
 Decisions made: retain Next 16; disclose the dev-only advisory and recheck when upstream updates.
 Needs from you: none.
 Next I will: leave this upstream issue recorded and continue independent live-flow readiness work.
+
+### [2026-10-23] Codex #137: Refresh the owner-workspace snapshot
+Changed: branch `fix/first-run-operability` / PR #13; documentation-only update to `docs/FUNCTIONAL-AUDIT.md` and `HANDOFF.md`. Read-only SQLite inspection only; no protected backend edits.
+Verified: 4 draft campaigns, 1 active campaign with approval ON, 204 leads (27 qualified, 45 found, 103 dm_sent, 2 replied, 27 skipped), 23 outgoing drafts pending approval, 0 billing usage/cost. No lead in active campaign #4 is warmed. The worker-control record reports running and one read-only inbox check is queued for 07:46:46 UTC / 1:16 PM Asia/Kolkata. Local login returns HTTP 200. No scheduled work was accelerated and no user data was changed.
+NOT verified: future inbox result, authenticated browser route check after restart, new live DM/first-reply handoff, unattended Chrome reconnection, paid-provider/real Stripe TEST, or hosting.
+Decisions made: keep the scheduled inbox check on its normal cadence; approval ON and paid/outbound writes off.
+Needs from you: none for the scheduled read-only check. A new outbound test remains subject to the existing prospect, warm-up, and exact-message approval gates.
+Next I will: inspect the existing job after it is due if this session continues; no live send or paid request is queued.
