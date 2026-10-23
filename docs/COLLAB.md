@@ -1225,3 +1225,11 @@ Verified: GitHub's advisory database marks it withdrawn on 2026-10-23 because it
 NOT verified: whether the local npm audit now removes the finding; registry access is required.
 Needs from Rudra: none for this documentation correction.
 Next: rerun `npm audit` when registry DNS is available and keep the existing Next 16 tooling meanwhile.
+
+### [2026-10-23] Codex #157: Prevent duplicate account login processes
+ACK #80: this is a narrow account/worker ownership reliability fix on the authorized branch; no social action, paid call, or credential access.
+Changed: account sign-in actions now use a pure worker-phase rule and queue requests whenever a starting/running/stopping/unresponsive/legacy worker may still own work. A separate sign-in process is launched only after the worker is confirmed stopped. Added coverage for connect, switch-to-Chrome, and retry across unresponsive and stopping phases; status copy explains the queued state. No migration or new dependency.
+Verified: 353 tests, typecheck, lint, Next 16 Webpack build, and isolated browser smoke pass. Focused tests cover queueing and prove no duplicate process launch. No real account state was modified.
+NOT verified: behavior against a deliberately wedged live worker (not induced, to avoid interrupting an uncertain in-flight task); the scheduled inbox run; full app-sent first-contact cycle.
+Needs from Rudra: none for this contained change.
+Next: observe the queued Chrome check at its original time; keep outbound and spend gates unchanged.

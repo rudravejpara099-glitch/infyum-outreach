@@ -1154,3 +1154,9 @@ Read-only aggregate inspection of the active app database found lead #49 with `m
 The active database still shows campaign #4 approval ON with all 3 leads skipped and 0 approved outgoing messages. One read-only inbox job is queued for 2026-10-24 04:12:59 UTC; it was not accelerated. `npm audit` could not reach `registry.npmjs.org` because DNS failed, so the current upstream advisory state was not refreshed. No message text, credential, social action, paid call, or spend was accessed/performed.
 
 The dependency advisory status has since been checked against GitHub's advisory database: GHSA-vfj7-8cjw-p6xm (braces) was withdrawn on 2026-10-23 as not practically exploitable. Registry access still failed, so confirm the local `npm audit` result after DNS recovers; do not apply an override or forced downgrade based on the old advisory.
+
+## Prevent duplicate Instagram sign-in processes (2026-10-23 16:56 UTC)
+
+Fixed a reliability issue in Accounts: a live worker with a stale heartbeat is marked `unresponsive`, so `workerStatus().running` is false even though the worker process may still own a task. The three account sign-in actions now queue their requests whenever a worker may still own jobs (starting, running, stopping, unresponsive, legacy-running); a separate sign-in process starts only when the worker is confirmed stopped. The feedback tells the user when the check is saved and whether it must wait for Outreach to recover or start again.
+
+Regression coverage checks all three actions in both unresponsive and stopping states and verifies no second process starts. Validation: 353 tests, typecheck, lint, Next 16 Webpack build, and isolated Playwright browser smoke passed. No live Instagram action, paid call, or spend occurred. No migration or dependency added. This does not complete the live first-message cycle: campaign #4 still has 3 skipped leads and 0 approved outgoing messages.

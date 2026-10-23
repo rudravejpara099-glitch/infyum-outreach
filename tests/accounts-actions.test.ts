@@ -20,6 +20,18 @@ beforeEach(() => {
 });
 afterEach(() => { db.close(); state.db = null; delete process.env.OUTREACH_SMOKE_MODE; });
 
+function setWorkerPhase(phase: "unresponsive" | "stopping"): void {
+  const leasePhase = phase === "unresponsive" ? "running" : "stopping";
+  const updatedAt = new Date(Date.now() - (phase === "unresponsive" ? 120_000 : 0)).toISOString();
+  db.prepare("INSERT OR REPLACE INTO settings (key,value) VALUES ('worker_control',?)")
+    .run(JSON.stringify({ token: "live-worker", pid: process.pid, phase: leasePhase, updatedAt }));
+}
+
+function expectQueuedWithoutSecondProcess(): void {
+  expect(spawn).not.toHaveBeenCalled();
+  expect(db.prepare("SELECT status FROM jobs WHERE type='open_login'").get()).toEqual({ status: "queued" });
+}
+
 describe("Instagram sign-in actions", () => {
   it("opens a login-only process without requiring the full worker", async () => {
     db.prepare("INSERT INTO settings (key,value) VALUES ('team_timezone','Asia/Kolkata')").run();
@@ -65,5 +77,40 @@ describe("Instagram sign-in actions", () => {
     const switched = await useSeparateSignIn(form);
     expect(switched.message).toMatch(/separate sign-in window/i);
     expect(getAccount(db, account.id)?.browserMode).toBe("isolated");
+  });
+
+  it.each(["unresponsive", "stopping"] as const)("does not start a duplicate login process when the worker is %s", async (phase) => {
+    setWorkerPhase(phase);
+    const form = new FormData(); form.set("handle", `@waiting.${phase}`); form.set("dailyCap", "20");
+
+    const result = await connectAccount(form);
+
+    expect(result.message).toMatch(/saved/i);
+    expect(result.message).toMatch(phase === "unresponsive" ? /rather than opening another sign-in window/i : /after Outreach starts again/i);
+    expectQueuedWithoutSecondProcess();
+  });
+
+  it.each(["unresponsive", "stopping"] as const)("queues signed-in Chrome checks while the worker is %s", async (phase) => {
+    setWorkerPhase(phase);
+    const account = createAccount(db, { handle: `chrome.${phase}`, profileDir: `/tmp/chrome.${phase}` }, "test");
+    const form = new FormData(); form.set("id", String(account.id));
+
+    const result = await useSignedInChrome(form);
+
+    expect(result.message).toMatch(/saved/i);
+    expect(result.message).toMatch(phase === "unresponsive" ? /rather than opening another sign-in window/i : /after Outreach starts again/i);
+    expectQueuedWithoutSecondProcess();
+  });
+
+  it.each(["unresponsive", "stopping"] as const)("queues a repeated sign-in check while the worker is %s", async (phase) => {
+    setWorkerPhase(phase);
+    const account = createAccount(db, { handle: `retry.${phase}`, profileDir: `/tmp/retry.${phase}` }, "test");
+    const form = new FormData(); form.set("id", String(account.id));
+
+    const result = await reopenLogin(form);
+
+    expect(result.message).toMatch(/saved/i);
+    expect(result.message).toMatch(phase === "unresponsive" ? /rather than opening another sign-in window/i : /after Outreach starts again/i);
+    expectQueuedWithoutSecondProcess();
   });
 });
