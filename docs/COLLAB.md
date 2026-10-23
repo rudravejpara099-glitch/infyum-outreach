@@ -1194,3 +1194,11 @@ NOT verified: push success, current remote PR state, or hosted checks. Those req
 Decisions made: preserve the CI candidate separately instead of discarding it; do not force-push or commit to main. Approval and no-spend rules remain.
 Needs from you: none for preparing this branch.
 Next I will: run the required tests/typecheck, commit the documentation update, and try a normal fast-forward push to PR #13.
+
+### [2026-10-23] Codex #153: Clarify the no-spend warm-up blocker
+Changed: added the verified signed-in-Chrome warm-up limitation and paid-comment-generation dependency to the ordered task list in `docs/FUNCTIONAL-AUDIT.md`. No application code changed.
+Verified: `ChromeInstagram.warmUp()` explicitly rejects warm-up actions; the alternative Playwright driver has a separate persistent login profile. The runner generates warm-up comments through `defaultEngine()` (Anthropic) and passes metering only when a payer is configured. Under current no-spend instructions, that path is unavailable. Campaign #4 still has three skipped leads and zero approved messages.
+NOT verified: live likes/comments/follows, a zero-cost automated comment generator, an approved warm-up route in signed-in Chrome, or a real first-message/reply handoff.
+Decisions made: preserve no-spend and no-social-write rules; do not treat prior campaign-send approval as blanket permission for likes/comments/follows.
+Needs from you: no request while local work continues; those explicit permissions remain prerequisites to a live outreach proof.
+Next I will: run the required test/typecheck, commit and publish the updated audit docs to PR #13 without the workflow file.
