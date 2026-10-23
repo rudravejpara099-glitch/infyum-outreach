@@ -4,6 +4,22 @@ import { instagramProfileUrl, jsonFromToolResult } from "./chrome-read-only";
 
 type ToolResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
 const safeHandle = (handle: string) => new URL(instagramProfileUrl(handle)).pathname.toLowerCase();
+const LOADING_ROW_PATTERN = "^loading(?:\\b|[.!…])";
+
+export function isInboxLoadingRowText(text: string): boolean {
+  return new RegExp(LOADING_ROW_PATTERN, "i").test(text.replace(/\s+/g, " ").trim());
+}
+
+const threadRowsScript = `
+    const isUsableThreadRow = (row) => {
+      const text = typeof row.innerText === 'string' ? row.innerText.replace(/\\s+/g, ' ').trim() : '';
+      const label = typeof row.getAttribute === 'function' ? row.getAttribute('aria-label') ?? '' : '';
+      const loading = new RegExp(${JSON.stringify(LOADING_ROW_PATTERN)}, 'i');
+      return text.length > 0 && !loading.test(text) && !loading.test(label);
+    };
+    const rows = Array.from(list?.querySelectorAll('div[role="button"]') ?? [])
+      .filter((row) => !row.closest('li') && row.querySelector('img') && isUsableThreadRow(row));
+`;
 
 /** The caller verifies the saved owner first; this script rechecks the exact target page before reading it. */
 export function profileFactsScript(targetHandle: string): string {
@@ -143,7 +159,7 @@ export function inboxListScript(ownerHandle: string): string {
       list = document.querySelector('[aria-label="Thread list"]');
     }
     if (!list) return { allowed: true, ownerMatches: true, isInbox: true, listReady: false, blocked: false, loggedOut: false, indices: [] };
-    const rows = Array.from(list.querySelectorAll('div[role="button"]')).filter((row) => !row.closest('li') && row.querySelector('img') && typeof row.innerText === 'string' && row.innerText.trim().length > 0);
+    ${threadRowsScript}
     return { allowed: true, ownerMatches: true, isInbox: true, listReady: true, blocked: false, loggedOut: false, indices: rows.slice(0, 15).map((_, index) => index) };
   }`;
 }
@@ -179,9 +195,14 @@ export function inboxOpenThreadScript(ownerHandle: string, index: number): strin
     if (${THREAD_WARNING}.test(text)) return { allowed: true, ownerMatches: true, blocked: true, opened: false, path: '' };
     if (/log in to continue|you need to log in to continue/i.test(text)) return { allowed: true, ownerMatches: true, loggedOut: true, opened: false, path: '' };
     const list = document.querySelector('[aria-label="Thread list"]');
-    const rows = Array.from(list?.querySelectorAll('div[role="button"]') ?? []).filter((row) => !row.closest('li') && row.querySelector('img') && typeof row.innerText === 'string' && row.innerText.trim().length > 0);
+    ${threadRowsScript}
     const row = rows[${index}];
-    if (!row || typeof row.click !== 'function') return { allowed: true, ownerMatches: true, opened: false, path: '' };
+    if (!row) return { allowed: true, ownerMatches: true, loading: true, opened: false, path: '' };
+    if (typeof row.click !== 'function') return { allowed: true, ownerMatches: true, opened: false, path: '' };
+    const rowText = typeof row.innerText === 'string' ? row.innerText.replace(/\\s+/g, ' ').trim() : '';
+    const ariaLabel = typeof row.getAttribute === 'function' ? row.getAttribute('aria-label') ?? '' : '';
+    const loading = new RegExp(${JSON.stringify(LOADING_ROW_PATTERN)}, 'i');
+    if (loading.test(rowText) || loading.test(ariaLabel)) return { allowed: true, ownerMatches: true, loading: true, opened: false, path: '' };
     row.click();
     const deadline = Date.now() + 6000;
     while (!/^\\/direct\\/t\\/[A-Za-z0-9_-]+\\/?$/i.test(location.pathname) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
@@ -189,6 +210,15 @@ export function inboxOpenThreadScript(ownerHandle: string, index: number): strin
     const opened = /^\\/direct\\/t\\/[A-Za-z0-9_-]+\\/?$/i.test(path);
     return { allowed: true, ownerMatches: true, opened, path: opened ? path : '' };
   }`;
+}
+
+export function inboxThreadIsLoadingFromToolResult(result: ToolResult): boolean {
+  if (result.isError) throw new Error("Chrome could not open an Instagram reply.");
+  const parsed = jsonFromToolResult(result) as { allowed?: unknown; ownerMatches?: unknown; blocked?: unknown; loggedOut?: unknown; loading?: unknown } | null;
+  if (!parsed || parsed.allowed !== true || parsed.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before opening replies.");
+  if (parsed.blocked === true) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+  if (parsed.loggedOut === true) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
+  return parsed.loading === true;
 }
 
 export function inboxThreadPathFromToolResult(result: ToolResult): string {

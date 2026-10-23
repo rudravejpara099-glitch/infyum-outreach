@@ -6,7 +6,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { IgAccount } from "@/lib/db/types";
 import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { looksBlocked, looksLoggedOut } from "./parse";
-import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
+import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadIsLoadingFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
 
 type Page = { id: number; url: string };
 type ToolTextResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
@@ -243,6 +243,7 @@ export class ChromeInstagram implements InstagramDriver {
       const items: { handle: string; text: string }[] = [];
       for (const [position, index] of indices.entries()) {
         const opened = await this.evaluate(page.id, inboxOpenThreadScript(account.handle, index), "Chrome could not open an Instagram reply.");
+        if (inboxThreadIsLoadingFromToolResult(opened)) continue;
         const path = inboxThreadPathFromToolResult(opened);
         const thread = await this.evaluate(page.id, inboxThreadScript(account.handle, path), "Chrome could not read an Instagram reply.");
         const incoming = inboxItemFromToolResult(thread);

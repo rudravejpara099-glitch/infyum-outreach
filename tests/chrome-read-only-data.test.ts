@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, inboxThreadUrl, profileFactsFromToolResult, profileFactsScript } from "@/worker/chrome-read-only-data";
+import { inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadIsLoadingFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, inboxThreadUrl, isInboxLoadingRowText, profileFactsFromToolResult, profileFactsScript } from "@/worker/chrome-read-only-data";
 
 const mcpJson = (value: unknown) => ({ content: [{ type: "text", text: `Script ran on page and returned:\n\`\`\`json\n${JSON.stringify(value)}\n\`\`\`` }] });
 const runPageScript = async (script: string, location: Record<string, unknown>, document: Record<string, unknown>, style: (element: unknown) => { justifyContent: string } = () => ({ justifyContent: "flex-start" }), date: unknown = Date, timer: unknown = setTimeout) => {
@@ -145,13 +145,22 @@ describe("Chrome read-only data adapter", () => {
   it("lists at most 15 nonempty thread-row indices without returning previews", async () => {
     expect(inboxIdentityUrl()).toBe("https://www.instagram.com/direct/inbox/");
     expect(inboxListScript("owner")).toContain('[aria-label="Thread list"]');
+    expect(isInboxLoadingRowText("Loading... Loading... Loading...")).toBe(true);
+    expect(isInboxLoadingRowText("Loading more conversations…")).toBe(true);
+    expect(isInboxLoadingRowText("Maria: thanks for reaching out")).toBe(false);
     const owner = { href: "https://www.instagram.com/owner/" };
-    const rows = [{ innerText: "Your note", querySelector: () => ({}), closest: () => ({}) }, ...Array.from({ length: 18 }, (_, i) => ({ innerText: i === 3 ? "" : `private preview ${i}`, querySelector: () => ({}), closest: () => null }))];
+    const rows = [{ innerText: "Your note", querySelector: () => ({}), closest: () => ({}) }, ...Array.from({ length: 18 }, (_, i) => ({ innerText: i === 3 ? "" : `private preview ${i}`, querySelector: () => ({}), closest: () => null })), { innerText: "Loading... Loading... Loading...", querySelector: () => ({}), closest: () => null }];
     const document = { querySelectorAll: () => [owner], querySelector: () => ({ querySelectorAll: () => rows }), body: { innerText: "Inbox" } };
     const result = await runPageScript(inboxListScript("owner"), { protocol: "https:", hostname: "www.instagram.com", pathname: "/direct/inbox/" }, document);
     expect(result).toMatchObject({ allowed: true, ownerMatches: true, isInbox: true, listReady: true });
     expect((result as { indices: number[] }).indices).toEqual(Array.from({ length: 15 }, (_, i) => i));
     expect(JSON.stringify(result)).not.toContain("private preview");
+    const onlyReadyRow = { innerText: "ready thread", querySelector: () => ({}), closest: () => null };
+    const loadingRow = { innerText: "Loading... Loading... Loading...", querySelector: () => ({}), closest: () => null };
+    const loadingResult = await runPageScript(inboxListScript("owner"), { protocol: "https:", hostname: "www.instagram.com", pathname: "/direct/inbox/" }, {
+      querySelectorAll: () => [owner], querySelector: () => ({ querySelectorAll: () => [onlyReadyRow, loadingRow] }), body: { innerText: "Inbox" },
+    });
+    expect((loadingResult as { indices: number[] }).indices).toEqual([0]);
     expect(inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, listReady: true, indices: [0, 2, 15, -1, "3", 2, 14, 200] }))).toEqual([0, 2, 14]);
     expect(inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, listReady: true, indices: [] }))).toEqual([]);
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: false, isInbox: true, indices: [0] }))).toThrow("saved Instagram account");
@@ -240,13 +249,22 @@ describe("Chrome read-only data adapter", () => {
 
   it("opens only a validated nonempty inbox row and returns its exact thread path", async () => {
     const location = { protocol: "https:", hostname: "www.instagram.com", pathname: "/direct/inbox/" };
-    let clicked = false;
+    let clicked = false, loadingClicked = false;
     const owner = { href: "https://www.instagram.com/owner/" };
+    const loadingRow = { innerText: "Loading... Loading... Loading...", querySelector: () => ({}), closest: () => null, click: () => { loadingClicked = true; } };
     const row = { innerText: "private preview", querySelector: () => ({}), closest: () => null, click: () => { clicked = true; location.pathname = "/direct/t/thread_42/"; } };
-    const document = { querySelectorAll: () => [owner], querySelector: () => ({ querySelectorAll: () => [row] }), body: { innerText: "Inbox" } };
+    const document = { querySelectorAll: () => [owner], querySelector: () => ({ querySelectorAll: () => [loadingRow, row] }), body: { innerText: "Inbox" } };
     const result = await runPageScript(inboxOpenThreadScript("owner", 0), location, document);
     expect(clicked).toBe(true);
+    expect(loadingClicked).toBe(false);
     expect(inboxThreadPathFromToolResult(mcpJson(result))).toBe("/direct/t/thread_42/");
+    expect(inboxOpenThreadScript("owner", 0)).toContain("isUsableThreadRow");
+    const loadingLocation = { protocol: "https:", hostname: "www.instagram.com", pathname: "/direct/inbox/" };
+    const loadingOnly = await runPageScript(inboxOpenThreadScript("owner", 0), loadingLocation, {
+      querySelectorAll: () => [owner], querySelector: () => ({ querySelectorAll: () => [loadingRow] }), body: { innerText: "Inbox" },
+    });
+    expect(inboxThreadIsLoadingFromToolResult(mcpJson(loadingOnly))).toBe(true);
+    expect(loadingLocation.pathname).toBe("/direct/inbox/");
     expect(() => inboxOpenThreadScript("owner", 15)).toThrow("Invalid Instagram conversation index");
     expect(() => inboxThreadPathFromToolResult(mcpJson({ allowed: true, ownerMatches: true, opened: true, path: "/direct/t/../other/" }))).toThrow("verifiable conversation");
     expect(() => inboxThreadUrl("/direct/t/../other/")).toThrow("Invalid Instagram inbox thread");

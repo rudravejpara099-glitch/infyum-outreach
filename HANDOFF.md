@@ -1132,3 +1132,11 @@ Next: inspect job #33 only after its scheduled retry. Continue diagnosis within 
 ## GitHub push result (2026-10-23)
 
 An escalated push attempt reached GitHub but was rejected: the saved OAuth token lacks the `workflow` scope needed to create or update `.github/workflows/quality.yml`. No remote ref changed. SSH publishing had previously failed with `Permission denied (publickey)`. The original local branch, including the workflow, is preserved as `fix/first-run-operability-ci-local`. The current PR update branch is based on the last known remote head and excludes that optional workflow while publishing the audit docs. A GitHub authorization with workflow scope (or a separately connected GitHub integration) is still needed to publish the candidate workflow.
+
+## [2026-10-23] Codex: Fix live Chrome inbox loading row
+
+Changed: the signed-in Chrome inbox reader now filters Instagram's transient loading placeholder from the conversation list and rechecks a row before opening it. If a row disappears or remains loading, it safely skips that row. Added regression coverage for filtering, index selection, and disappearance; no schema or dependency changes.
+
+Verified: `npm test` = 341 passed; `npm run typecheck`; `npm run lint`; `npm run build` (Next 16 Webpack); focused Chrome inbox tests; and `git diff --check` passed. Live check on the owner's `Rudra099` Chrome profile read 7 real threads, found 1 incoming message matched to a known lead, and recorded 0 new handoffs. No message, like, follow, comment, paid provider call, payment, or spend occurred.
+
+NOT verified: a new first-reply handoff from a fresh prospect, first-contact delivery, warm-up, paid Anthropic/Apify/Stripe TEST, or hosted operation. Keep approval ON and no-spend settings. The app-level live inbox sync is verified for the observed rows; a fresh handoff is still required for end-to-end completion.
