@@ -1047,3 +1047,9 @@ NOT verified: recurring sync after a live worker restart, actual AI/Apify use, S
 Decisions made: paid campaign starts/assignments remain blocked until independent review; keep approval ON and no-spend settings intact.
 Needs from Rudra: none for this periodic sync. A live outbound proof still needs the established eligible-lead, warm-up and exact-message approvals.
 Next: leave the running process undisturbed; the new source will load on a controlled worker restart, then sync behavior can be observed without changing any provider or social-action gate.
+
+### [2026-10-23] Codex #140: Verify scheduled read-only inbox retry
+Changed: refreshed the current-status paragraph and remaining checklist in `docs/FUNCTIONAL-AUDIT.md`; no application code or user data changed.
+Verified: read-only job #32 completed at its scheduled time on attempt 2 with no stored error, and the worker queued job #33 for the next hourly check. The worker process remained live. No new handoff was logged. No message, follow, like, comment, paid call, or payment occurred; billing usage remains zero. No job was accelerated.
+NOT verified: whether job #32 needed a Chrome permission prompt; prompt-free reconnection after a worker restart; any new first-message handoff; paid Anthropic/Apify/real Stripe TEST; or visual access to the local app in the in-app browser.
+Next: retain the current no-spend and approval gates. The remaining checklist is in `docs/FUNCTIONAL-AUDIT.md`; a live first-message proof still requires a warmed eligible prospect and approval of the exact message.
