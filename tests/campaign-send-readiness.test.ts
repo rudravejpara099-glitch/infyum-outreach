@@ -41,7 +41,7 @@ describe("campaign sender readiness", () => {
 
   it("explains when qualified leads are waiting on a Chrome-only warm-up step", () => {
     const sender = account({ id: 2, handle: "chrome.sender", browserMode: "chrome_read_only" });
-    expect(chromeWarmupNotice([sender], [2], 3)).toEqual({ accountHandles: ["chrome.sender"], waitingMatches: 3 });
+    expect(chromeWarmupNotice([sender], [2], 3)).toEqual({ accountHandles: ["chrome.sender"], matchedLeadCount: 3 });
     expect(chromeWarmupNotice([sender], [2], 0)).toBeNull();
     expect(chromeWarmupNotice([sender], [2], -1)).toBeNull();
   });
@@ -51,7 +51,7 @@ describe("campaign sender readiness", () => {
     const isolated = account({ id: 3, handle: "isolated.sender", browserMode: "isolated" });
     expect(chromeWarmupNotice([chrome, isolated], [2, 3], 3)).toBeNull();
     expect(chromeWarmupNotice([chrome, { ...isolated, status: "paused" }], [2, 3], 3)).toEqual({
-      accountHandles: ["chrome.sender"], waitingMatches: 3,
+      accountHandles: ["chrome.sender"], matchedLeadCount: 3,
     });
   });
 

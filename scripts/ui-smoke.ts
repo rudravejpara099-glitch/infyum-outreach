@@ -216,8 +216,9 @@ try {
   const waitingLead = addLead(db, { handle: "chrome-wait.fixture", campaignId: id }, "ui-fixture").lead;
   db.prepare("UPDATE leads SET stage='qualified',account_id=? WHERE id=?").run(manualAccount.id, waitingLead.id);
   await page.goto(campaignUrl);
-  await page.getByRole("status").filter({ hasText: "New first messages are waiting" }).waitFor();
-  await page.getByText(/can’t like, comment on, or follow posts to prepare these 1 matched lead for a first message/).waitFor();
+  await page.getByRole("status").filter({ hasText: "Matched leads need preparation" }).waitFor();
+  await page.getByText(/This matched lead needs Instagram activity before Outreach can prepare a first message/).waitFor();
+  await page.getByText(/can’t like, comment on, or follow posts/).waitFor();
   await page.getByRole("link", { name: "Review Instagram accounts", exact: true }).waitFor();
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });

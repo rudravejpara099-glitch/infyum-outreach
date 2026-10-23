@@ -67,8 +67,8 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
       <p className="mt-1">{senderBlockers.join(" · ")}. Choose an account that is active and set up for campaign actions in <Link href="#settings" className="underline">Campaign settings</Link>.</p>
     </div>}
     {warmupNotice && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
-      <p className="font-medium">New first messages are waiting</p>
-      <p className="mt-1">{warmupNotice.accountHandles.length === 1 ? `@${warmupNotice.accountHandles[0]} uses` : `${warmupNotice.accountHandles.map((handle) => `@${handle}`).join(", ")} use`} signed-in Chrome. This connection can check profiles and replies and send messages you approve, but it can’t like, comment on, or follow posts to prepare these {warmupNotice.waitingMatches} matched lead{warmupNotice.waitingMatches === 1 ? "" : "s"} for a first message.</p>
+      <p className="font-medium">Matched leads need preparation</p>
+      <p className="mt-1">{warmupNotice.matchedLeadCount === 1 ? "This matched lead needs" : `These ${warmupNotice.matchedLeadCount} matched leads need`} Instagram activity before Outreach can prepare a first message. {warmupNotice.accountHandles.length === 1 ? `@${warmupNotice.accountHandles[0]} uses` : `${warmupNotice.accountHandles.map((handle) => `@${handle}`).join(", ")} use`} signed-in Chrome, which can check profiles and replies and send messages you approve, but can’t like, comment on, or follow posts.</p>
       <Link href="/accounts" className="mt-2 inline-flex underline">Review Instagram accounts</Link>
     </div>}
     <section className="audience-summary" aria-labelledby="audience-title">

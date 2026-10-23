@@ -1277,7 +1277,7 @@ Needs from Rudra: none for this read-only connection check.
 Next I will: continue only with locally verifiable no-spend work and inspect job #36 at its original scheduled time.
 
 ### [2026-10-23] Codex #163: Explain Chrome-only campaign warm-up blocker
-Changed: on `fix/first-run-operability`, campaign detail now shows a stage-aware status notice when qualified leads are waiting and all active selected senders use signed-in Chrome. It explains the unavailable like/comment/follow warm-up step and links to Accounts. Added pure-rule tests and an isolated UI smoke assertion. No worker, domain rule, migration, paid integration, or Instagram setting changed.
+Changed: on `fix/first-run-operability`, campaign detail now shows a stage-aware status notice when qualified leads are waiting and all active selected senders use signed-in Chrome. It explains the unavailable like/comment/follow warm-up step and links to Accounts. Added pure-rule tests and an isolated UI smoke assertion. A read-only check of campaign #2 confirmed the copy correctly describes a draft with 3 qualified leads. No worker, domain rule, migration, paid integration, or Instagram setting changed.
 Verified: `npm test` = 362; `npm run typecheck`; `npm run lint`; `npm run build`; `npm run smoke:ui`; `git diff --check`. The smoke verifies the notice at desktop and mobile widths on disposable data. No live Instagram action, paid call, charge, or spend.
 NOT verified: live warm-up, first DM delivery, a fresh reply/handoff, paid integrations, or the scheduled check #36.
 Decisions made: keep all Instagram and message approval behavior unchanged; show the limitation rather than bypassing it.
