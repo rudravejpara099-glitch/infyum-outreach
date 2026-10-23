@@ -45,6 +45,32 @@ describe("dashboard counts", () => {
     expect(result.failedJobTypes).toEqual({ open_login: 1, qualify: 1 });
   });
 
+  it("clears old sign-in failures after the same account is verified again", () => {
+    const account = createAccount(db, { handle: "@sender", profileDir: "/tmp/sender" }, "test");
+    const failedLogin = enqueue(db, { type: "open_login", accountId: account.id });
+    db.prepare("UPDATE jobs SET status='failed' WHERE id=?").run(failedLogin);
+    const verifiedLogin = enqueue(db, { type: "open_login", accountId: account.id, payload: { authenticated: true } });
+    db.prepare("UPDATE jobs SET status='done' WHERE id=?").run(verifiedLogin);
+    const latestFailure = enqueue(db, { type: "open_login", accountId: account.id });
+    db.prepare("UPDATE jobs SET status='failed' WHERE id=?").run(latestFailure);
+
+    const result = dashboardData(db, "2026-10-21", "UTC");
+    expect(result.failedJobs).toBe(1);
+    expect(result.failedJobTypes).toEqual({ open_login: 1 });
+  });
+
+  it("clears old sign-in failures after a successful inbox check", () => {
+    const account = createAccount(db, { handle: "@sender", profileDir: "/tmp/sender" }, "test");
+    const failedLogin = enqueue(db, { type: "open_login", accountId: account.id });
+    db.prepare("UPDATE jobs SET status='failed' WHERE id=?").run(failedLogin);
+    const inboxCheck = enqueue(db, { type: "check_inbox", accountId: account.id });
+    db.prepare("UPDATE jobs SET status='done' WHERE id=?").run(inboxCheck);
+
+    const result = dashboardData(db, "2026-10-21", "UTC");
+    expect(result.failedJobs).toBe(0);
+    expect(result.failedJobTypes).toEqual({});
+  });
+
   it("hides resolved inbox failures from Overview but keeps them in History", () => {
     const account = createAccount(db, { handle: "@sender", profileDir: "/tmp/sender" }, "test");
     logActivity(db, "worker", "job.error", { accountId: account.id, detail: "check_inbox: Chrome did not finish connecting." });

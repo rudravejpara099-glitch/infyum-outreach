@@ -1323,3 +1323,11 @@ NOT verified: app job #36 (still scheduled for 2026-10-24 04:12:59 UTC), a new l
 Decisions made: approval ON, no-spend, no Instagram write; do not accelerate job #36.
 Needs from Rudra: none.
 Next I will: commit this clarification to PR #13 after the required final tests.
+
+### [2026-10-23] Codex #169: Clear recovered sign-in errors and secure exact public paths
+Changed: on `fix/first-run-operability` / PR #13, dashboard summaries now omit an old failed sign-in job only after a later verified sign-in or successful inbox read for the same account. Newer and unrelated failures stay visible. The auth proxy now permits exact `/login` and `/setup` paths only. Added regressions for both changes. No protected worker/domain/service/repository code, migrations, or dependencies changed.
+Verified: `npm test` = 370; `npm run typecheck`; `npm run lint`; `npm run build` (Webpack); `npm run smoke:ui`; `npm run smoke:billing`; focused proxy/dashboard tests; `git diff --check`. A live Overview reload confirmed the stale five-attempt sign-in warning disappeared while later inbox failures remain in activity. UI and billing smokes use disposable data/fakes. No Instagram write, paid call, or spend.
+NOT verified: scheduled inbox job #36, live warm-up, a new app-sent first DM followed by a fresh reply/handoff, paid provider behavior, or real payment. Job #36 remains scheduled for `2026-10-24 04:12:59 UTC`; do not accelerate it. The current Chrome warm-up actions remain disabled under the existing product authorization.
+Decisions made: preserve approval ON, no-spend and social-action boundaries; PR remains open/draft.
+Needs from Rudra: none for this local reliability work.
+Next I will: observe job #36 at its scheduled time and continue the no-spend checklist; see `docs/FUNCTIONAL-AUDIT.md` for the ranked remaining tasks.

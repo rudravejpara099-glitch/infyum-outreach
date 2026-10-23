@@ -37,15 +37,30 @@ export function dashboardData(db: Db, today: string, timeZone = "UTC") {
   const accounts = listAccounts(db).map((a) => ({
     ...a, sentToday: sentTodayForAccount(db, a.id, today, timeZone), allowance: dailyAllowance(a, today),
   }));
-  const failedJobTypes = Object.fromEntries((db.prepare("SELECT type, COUNT(*) AS count FROM jobs WHERE status='failed' GROUP BY type")
+  const failedJobTypes = Object.fromEntries((db.prepare(`SELECT failed.type, COUNT(*) AS count FROM jobs failed
+    WHERE failed.status='failed'
+      AND NOT (
+        failed.type='open_login' AND failed.account_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM jobs recovered
+          WHERE recovered.account_id=failed.account_id AND recovered.id>failed.id
+            AND recovered.status='done'
+            AND (
+              (recovered.type='open_login' AND json_extract(recovered.payload,'$.authenticated')=1)
+              OR recovered.type='check_inbox'
+            )
+        )
+      )
+    GROUP BY failed.type`)
     .all() as { type: string; count: number }[]).map(({ type, count }) => [type, count]));
+  const unresolvedFailedJobs = Object.values(failedJobTypes).reduce((sum, count) => sum + count, 0);
   return {
     stages,
     totalLeads: Object.values(stages).reduce((x, y) => x + y, 0),
     sentToday: c("SELECT COUNT(*) c FROM messages WHERE direction='out' AND status='sent' AND sent_at>=? AND sent_at<?", sqlDate(day.start), sqlDate(day.end)),
     sentWeek: c("SELECT COUNT(*) c FROM messages WHERE direction='out' AND status='sent' AND sent_at>=? AND sent_at<?", sqlDate(week.start), sqlDate(day.end)),
     pending: c("SELECT COUNT(*) c FROM messages WHERE status='pending_approval'"),
-    failedJobs: c("SELECT COUNT(*) c FROM jobs WHERE status='failed'"),
+    failedJobs: unresolvedFailedJobs,
     failedJobTypes,
     accounts,
     recentActivity: recentOverviewActivity(db),

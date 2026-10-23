@@ -39,6 +39,14 @@ Business rules the code must keep:
 
 Latest live check (2026-10-23 17:47 UTC): Rudra confirmed Chrome remote debugging is enabled and allowed for profile `Rudra099`. A manual read-only scan opened six recent conversations and found no new incoming reply; the already-known reply remained handled without a duplicate handoff. The live app Overview reports 204 leads, 23 messages awaiting approval, 0 DMs sent today, 0 warmed leads, and Outreach running. The approval page shows 23 pending drafts, three flagged for sensitive price/guarantee/date topics; none were approved or rejected. This manual Chrome scan is not the app's scheduled inbox job #36; leave it at its scheduled time.
 
+### [2026-10-23] Codex #169: Clear recovered sign-in errors and secure exact public paths
+Changed: on `fix/first-run-operability` / PR #13, dashboard summaries now omit an old failed sign-in job only after a later verified sign-in or successful inbox read for the same account. Newer and unrelated failures stay visible. The auth proxy now permits exact `/login` and `/setup` paths only. Added regressions for both changes. No protected worker/domain/service/repository code, migrations, or dependencies changed.
+Verified: `npm test` = 364; `npm run typecheck`; `npm run lint`; `npm run build` (Webpack); `npm run smoke:ui`; `npm run smoke:billing`; focused proxy/dashboard tests; `git diff --check`. A live Overview reload confirmed the stale five-attempt sign-in warning disappeared while later inbox failures remain in activity. UI and billing smokes use disposable data/fakes. No Instagram write, paid call, or spend.
+NOT verified: scheduled inbox job #36, live warm-up, a new app-sent first DM followed by a fresh reply/handoff, paid provider behavior, or real payment. Job #36 remains scheduled for `2026-10-24 04:12:59 UTC`; do not accelerate it. The current Chrome warm-up actions remain disabled under the existing product authorization.
+Decisions made: preserve approval ON, no-spend and social-action boundaries; PR remains open/draft.
+Needs from Rudra: none for this local reliability work.
+Next I will: continue the no-spend completion checklist and update the remaining-task register with current evidence.
+
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
 - `lib/domain/*` rules (stages, qualify, limits, similarity, approval, sensitive, autoreply)
