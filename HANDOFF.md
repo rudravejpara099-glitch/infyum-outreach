@@ -24,15 +24,16 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
-## Current live-workspace status (2026-10-22, refreshed)
+## Current live-workspace status (2026-10-23, refreshed at 17:36 UTC)
 
-- Active campaign #4 is approval-on and assigned to connected `@timelessmoments.al` in the owner's signed-in Chrome. The Accounts page confirms that session. Chrome mode supports read-only qualification and approved sending, while warm-up likes/comments/follows remain blocked.
-- The local Outreach service is running. Its next read-only inbox check for account #2 is scheduled for tomorrow at 9:42 AM Asia/Kolkata. Do not accelerate it past account hours or pacing.
-- Campaign #4 has 3 leads and all are skipped; there is no eligible lead for a new live campaign send. The dashboard shows 23 drafts awaiting review, 0 approved outgoing messages, and 0 DMs sent today.
-- The app's live read-only inbox job completed, cleared two earlier inbox failures, and showed “Reply check succeeded.” Five older sign-in attempts remain in activity; the connected account is not blocked by them.
-- `@akash_infyum` was added from Accounts using the owner's existing Chrome mode. Chrome verifies `@timelessmoments.al`, not `@akash_infyum`; Accounts now labels the new account “Sign-in needed” and the verified account “Connected.” It is not assigned to a campaign. The account owner must sign in before Outreach can verify it.
-- Settings confirms Anthropic is not connected and Apify is not configured; its monthly cap is unset. Paid work remains off. Real Stripe TEST credentials are not configured.
-- Latest checks: 318 unit tests, typecheck, lint, Webpack production build, isolated UI smoke, local billing smoke, and diff check passed. The UI and billing smokes use temporary data/fake payments. PR #13 is open/draft on `fix/first-run-operability`, with no GitHub status checks. These checks do not prove repeatability, a new live send/reply, paid-provider connectivity, or hosted operation.
+- The owner workspace and worker are running locally. Worker control shows `running` with a heartbeat at 17:35 UTC. Read-only inbox job #36 for account #2 remains queued for `2026-10-24 04:12:59 UTC` (09:42 IST); do not accelerate it.
+- Account #2, `@timelessmoments.al`, is verified in signed-in Chrome profile `Rudra099`; app sign-in check #37 completed with `authenticated:true`. Account #4, `@akash_infyum`, still needs its own sign-in in Outreach. Safari’s Instagram session was not verified.
+- Campaign #2 is a draft with 3 qualified leads; campaign account #2 is selected, but the leads are not yet assigned to an account. Campaign #3 is a draft with 69 leads (34 found, 24 qualified, 11 skipped) and no sender. Campaign #4 is active, uses account #2, and all 3 leads are skipped. Campaigns #1 and #5 are empty drafts. No campaign has a warmed lead.
+- The workspace has 23 outgoing drafts awaiting approval and 0 approved outgoing messages. Approval is ON for campaign #4; no exact first-contact message is approved. Do not activate or reassign a campaign to manufacture a send target.
+- Campaign pages now explain that matched leads need preparation when the selected active senders use signed-in Chrome. The connection can check profiles/replies and send approved messages, but the warm-up likes/comments/follows are not enabled for Chrome. This notice explains the blocker; it does not perform Instagram actions.
+- Anthropic and Apify are not connected, the Apify monthly cap is unset, and Stripe TEST is not configured. Paid calls and payments remain off. Hosting and multi-company accounts remain deferred under the decided scope.
+- Current local verification on `fix/first-run-operability` (`85d5c99`, pushed to PR #13): 362 tests, typecheck, lint, `npm run build` (Webpack), isolated UI and billing smokes, and `npm audit` (0 vulnerabilities) pass. The exact `npx next build` command still fails when Turbopack tries to bind an internal port in this environment; the configured Webpack build passes. PR #13 remains OPEN/DRAFT with no hosted checks.
+- This does not verify a real first message sent by the app followed by a fresh real reply/handoff, live paid-provider behavior, or payment. No Instagram message or engagement action, paid call, or spend occurred in the latest checks.
 
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
