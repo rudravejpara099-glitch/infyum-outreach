@@ -1054,3 +1054,11 @@ Verified: simulator passed consent/limit, checkout redirect/decline/confirm, dup
 NOT verified: real Stripe TEST, paid Anthropic/Apify, or live outbound delivery.
 Needs from Rudra: none for no-charge checks. Continue to require private credentials and explicit paid authorization for real service tests; an outbound test needs approval of an exact message.
 Next I will: keep paid work off and campaign approval ON.
+
+### [2026-10-23] Codex #131: Repeat all local no-spend checks
+Changed: no application code. Pulled the current branch (`git pull --ff-only`, already up to date); recorded a fresh local product verification in `HANDOFF.md`.
+Verified: `npm test` = 325 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; `npm run smoke:ui`; and `npm run smoke:billing` all passed. UI and billing smokes used disposable data and a fake processor; no messages or real payments. Read-only app data: 0 DMs sent today, 23 messages pending approval, 0 billing usage events, one normally scheduled inbox check queued. No paid calls or Instagram writes.
+NOT verified: paid Anthropic/Apify/Stripe connectivity, or a new live outbound DM and first-reply handoff.
+Decisions made: leave paid providers off and keep message approval ON. The manual first-message path is available without Claude for a warmed lead; sending still requires approval of the exact text.
+Needs from you: none for no-cost verification. Paid checks require separate private provider setup and approval; no secrets in chat.
+Next I will: keep the no-spend path available; do not claim the paid/automated workflow is fully verified.

@@ -973,3 +973,9 @@ The former worker was running from the older `Documents/Codex/...` checkout. Bef
 Verified on this checkout: `npm test` = 325 passed; `npm run typecheck`, isolated UI smoke, and local fake billing smoke passed. Anthropic, Apify, and Stripe credentials remain absent, so paid provider calls and live outbound delivery remain unverified and off.
 
 After restarting the current worker, ran its `ChromeInstagram.readInbox` connector directly against the already-authorized signed-in Chrome profile. Chrome requested its remote-debugging confirmation; after the owner-approved Allow prompt, the connector succeeded and returned 1 thread. The diagnostic reported only success/count, not message text. This verifies current-code read-only Instagram access; the worker's next scheduled inbox job remains on its 30-minute cadence. No send or paid call occurred.
+
+### 2026-10-23: Repeat no-spend product checks
+
+Verified on `fix/first-run-operability` after `git pull --ff-only` reported the branch already up to date: `npm test` passed (325 tests/50 files), `npm run typecheck`, `npm run lint`, `npx next build --webpack`, `npm run smoke:ui`, and `npm run smoke:billing` passed. UI and billing smokes use disposable data; billing uses a local fake processor. UI smoke sent no messages. Read-only live database counts remain 0 DMs sent today, 23 pending approvals, and 0 billing usage events; one scheduled `check_inbox` remains queued. Provider credentials for Anthropic, Apify, and Stripe are absent, so paid features remain off. No application code, user records, external provider, or Instagram write was changed or used.
+
+Still unverified: paid Anthropic/Apify/Stripe connections and a live outbound DM followed by first-reply handoff. The no-cost manual first-message path remains available for a warmed lead and campaign approval; live sending still requires review of the exact text and the app's approval.
