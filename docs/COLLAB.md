@@ -1117,3 +1117,11 @@ NOT verified: recurring sync after a live worker restart, real AI/Apify, Stripe 
 Decisions made: keep paid work gated until independent integration review; keep approval ON and no-spend settings unchanged.
 Needs from you: none for this change.
 Next I will: preserve the running service and let a controlled restart load this code; no campaign writes or provider calls are involved in the sync.
+
+### [2026-10-23] Codex #139: Wire owner-selected AI model to metered drafts
+Changed: on `fix/first-run-operability` / PR #13, added an owner-only Billing administration selector for models with confirmed price versions. New metered drafts use the selected model for the provider request, reservation, and recorded rate; unknown or unverified models are rejected. The default remains Sonnet 5.5. No migration, provider call, or dependency was added.
+Verified: full unit suite = 331 passed; lint, typecheck, Webpack production build, `smoke:billing`, and `smoke:ui` passed. Tests verify owner restriction, refusal of unpriced models, selected model/rate consistency, saved UI selection, and no paid requests. Both browser smokes use disposable data; UI smoke sent no messages, and billing used only the local fake processor.
+NOT verified: real Anthropic output/charges, real Stripe TEST, live first-message/reply handoff, or whether the running worker has been restarted onto the latest code. No Anthropic key or spend is authorized.
+Decisions made: keep the model control owner-only in Billing administration and permit only confirmed model prices; keep paid work gated.
+Needs from Rudra: none for this change.
+Next: keep the ordered live workflow and provider verification tasks in `docs/FUNCTIONAL-AUDIT.md`; this model-setting code is no longer an open task.

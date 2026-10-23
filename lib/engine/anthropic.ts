@@ -1,9 +1,8 @@
 import { reserveUsage, settleUsage, tokenEvent } from "@/lib/billing";
-import { verifiedModelRate } from "@/lib/billing/config";
+import { activeAiModel, verifiedModelRate } from "@/lib/billing/config";
 import { tokenCostMicros } from "@/lib/billing/money";
 import type { AiEngine, MeteredAiCall } from "./types";
 
-const MODEL = "claude-sonnet-5-5";
 const MAX_INPUT_BYTES = 30_000;
 const API_URL = "https://api.anthropic.com/v1/messages";
 type Fetcher = typeof fetch;
@@ -25,7 +24,7 @@ export class AnthropicEngine implements AiEngine {
     if (!call) throw new Error("Paid AI needs a metered campaign call");
     const key = this.options.apiKey ?? process.env.ANTHROPIC_API_KEY;
     if (!key) throw new Error("Paid AI is not connected. Add an Anthropic API key in the local environment.");
-    const model = this.options.model ?? MODEL;
+    const model = this.options.model ?? activeAiModel(call.db);
     const bytes = Buffer.byteLength(input.system, "utf8") + Buffer.byteLength(input.prompt, "utf8");
     if (!Number.isSafeInteger(call.maxOutputTokens) || call.maxOutputTokens < 1 || call.maxOutputTokens > 2000 || bytes > MAX_INPUT_BYTES) {
       throw new Error("This AI request exceeds the safe size limit");

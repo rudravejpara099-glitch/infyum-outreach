@@ -6,7 +6,7 @@ import { saveCeiling, assertOwner, integrationReady } from "@/lib/billing/config
 import { parseUsd } from "@/lib/billing/money";
 import { syncBilling } from "@/lib/billing/sync";
 import { claimResource } from "@/lib/billing/attribution";
-import { saveBillingConfig, saveModelRate } from "@/lib/billing/admin";
+import { saveActiveAiModel, saveBillingConfig, saveModelRate } from "@/lib/billing/admin";
 import { addResourceCost } from "@/lib/billing/resources";
 import { createCheckout } from "@/lib/billing/checkout";
 import { reconcilePendingFees } from "@/lib/billing/webhooks";
@@ -57,6 +57,15 @@ export async function confirmModelPrices(form: FormData): Promise<BillingResult>
     const optional = (key: string) => text(form, key) ? parseUsd(text(form, key)) : null;
     saveModelRate(getDb(), user.id, { model: text(form, "model"), inputMicros: parseUsd(text(form, "inputPrice")), outputMicros: parseUsd(text(form, "outputPrice")), cacheReadMicros: optional("cacheRead"), cacheWriteMicros: optional("cacheWrite"), source: text(form, "source"), confirmed: form.get("confirmed") === "on" }); refreshed();
     return { message: "Exact model prices recorded as a new version. Historical usage is unchanged." };
+  } catch (error) { return failure(error); }
+}
+export async function changeActiveAiModel(form: FormData): Promise<BillingResult> {
+  const user = await requireUser();
+  try {
+    assertOwner(user.id);
+    const model = text(form, "model");
+    saveActiveAiModel(getDb(), user.id, model); refreshed();
+    return { message: `New metered drafts will use ${model}. No provider call was made.` };
   } catch (error) { return failure(error); }
 }
 export async function confirmResourceExpense(form: FormData): Promise<BillingResult> {

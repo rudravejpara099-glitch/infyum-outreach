@@ -1,12 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
 import { AnthropicEngine, AiUsageUncertainError } from "@/lib/engine/anthropic";
+import { saveActiveAiModel, saveModelRate } from "@/lib/billing/admin";
 
 let db: Db;
 const source = { campaignId: 1, accountId: 1, leadId: 1, jobId: 9 };
 const metering = { db: null as unknown as Db, userId: 1, operationId: "ai:9:draft_dm:1", source, maxOutputTokens: 100 };
 
 function setup(ready = true) {
+  process.env.BILLING_OWNER_USER_ID = "1";
   db = openDb(":memory:");
   const now = new Date().toISOString();
   db.exec(`
@@ -29,6 +31,7 @@ function response(payload: unknown, status = 200): Response {
 }
 
 beforeEach(() => setup());
+afterEach(() => { db.close(); delete process.env.BILLING_OWNER_USER_ID; });
 
 describe("metered Anthropic engine", () => {
   it("settles exact input, output and cache-read usage from a fake response", async () => {
@@ -41,6 +44,26 @@ describe("metered Anthropic engine", () => {
       { kind: "ai_input_tokens", quantity: 100, token_category: "input" },
       { kind: "ai_output_tokens", quantity: 25, token_category: "output" },
       { kind: "ai_input_tokens", quantity: 10, token_category: "cache_read" },
+    ]);
+  });
+
+  it("uses the owner-selected model and the matching confirmed rate for new drafts", async () => {
+    const now = new Date().toISOString();
+    saveModelRate(db, 1, { model: "claude-fixture-alternate", inputMicros: 9000000, outputMicros: 25000000, cacheReadMicros: null, cacheWriteMicros: null, source: "https://provider.test/prices", confirmed: true }, now);
+    saveActiveAiModel(db, 1, "claude-fixture-alternate");
+    let requestedModel = "";
+    const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      expect(String(url)).toContain("api.anthropic.com");
+      requestedModel = (JSON.parse(String(init?.body)) as { model: string }).model;
+      return response({ id: "msg_test_alt", model: "claude-fixture-alternate", content: [{ type: "text", text: "alternate draft" }], usage: { input_tokens: 100, output_tokens: 25 } });
+    });
+    const engine = new AnthropicEngine({ apiKey: "test-only", fetcher });
+    await expect(engine.complete({ system: "system", prompt: "hello", metering })).resolves.toBe("alternate draft");
+    expect(requestedModel).toBe("claude-fixture-alternate");
+    expect(db.prepare("SELECT model FROM billing_reservations WHERE operation_id=?").get(metering.operationId)).toEqual({ model: "claude-fixture-alternate" });
+    expect(db.prepare("SELECT model,unit_cost_micros FROM billing_usage_events ORDER BY id").all()).toEqual([
+      { model: "claude-fixture-alternate", unit_cost_micros: 9000000 },
+      { model: "claude-fixture-alternate", unit_cost_micros: 25000000 },
     ]);
   });
 

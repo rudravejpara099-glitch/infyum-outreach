@@ -126,6 +126,13 @@ async function main() {
           if (route === "/billing/admin") {
             assert.equal(await page.getByLabel("markup_percent").count(), 0, "Owner settings must not expose a markup control");
             assert.equal(await page.getByText(/service margin/i).count(), 0, "Owner settings must not describe a service margin");
+            if (mode === "light" && width === 1440) {
+              const modelPicker = page.getByLabel("AI model for new drafts");
+              await modelPicker.selectOption("fixture-model");
+              await page.getByRole("button", { name: "Save AI model", exact: true }).click();
+              await page.getByRole("status").filter({ hasText: "New metered drafts will use fixture-model" }).waitFor();
+              assert.equal((db.prepare("SELECT value FROM settings WHERE key='anthropic_model'").get() as { value: string }).value, "fixture-model");
+            }
           }
           if (route.startsWith("/billing/statements/")) assert.equal(await page.getByText(/service margin/i).count(), 0, "Statements must not add a service margin");
           assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Overflow ${route} ${width} ${mode}`);

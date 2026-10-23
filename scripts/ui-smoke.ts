@@ -480,7 +480,9 @@ try {
   await stageForm.getByRole("alert").filter({ hasText: "stage change is not available" }).waitFor();
   assert.equal((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage, "found");
   await page.reload();
-  await page.locator('form').filter({ has: page.locator('input[name="to"][value="qualified"]') }).getByRole("button").click();
+  const validStageForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Matches", exact: true }) });
+  await validStageForm.locator('input[name="to"]').evaluate((el: HTMLInputElement) => { el.value = "qualified"; });
+  await validStageForm.getByRole("button").click();
   await page.locator(".badge").filter({ hasText: /^Matches$/ }).waitFor();
   assert.equal((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage, "qualified");
   await page.getByLabel("Reason (optional)", { exact: true }).fill("Read-only fixture stop");

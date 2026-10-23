@@ -1016,6 +1016,14 @@ Decisions made: retain approval ON, no-spend mode, and stop-at-first-reply; host
 Needs from Rudra: the live outbound proof still requires an eligible prospect, authorization for the necessary warm-up actions, and approval of its exact message. No secrets are requested in chat.
 Next: keep the ranked checklist in `docs/FUNCTIONAL-AUDIT.md` as the remaining work plan; do not claim 100% live readiness until each live gate has direct evidence.
 
+### [2026-10-23] Codex #139: Owner-selected model control verified
+
+The Billing administration page now lets the designated owner choose a model only from confirmed model-price rows. New metered drafts read the saved choice and use the same exact model for the Anthropic request, reservation, and settled token rates. The default remains `claude-sonnet-5-5`. The action authenticates first and rejects non-owner/unpriced selections. No migration or dependency was added.
+
+Verification: `npm test` = 331 passed; lint, typecheck, `npx next build --webpack`, `npm run smoke:billing`, and `npm run smoke:ui` passed. The browser tests use disposable local data and a fake processor; no paid API call, payment, or Instagram write was made. The UI smoke harness was adjusted to explicitly restore its deliberately tampered hidden stage field before its success-case click.
+
+Still not verified: real Anthropic calls/charges, real Stripe TEST, new live first-message/first-reply flow, authenticated route check after the preview restart, unattended Chrome reconnection, and the running worker loading its updated billing sync. No-consent/no-spend/approval gates remain active. See `docs/FUNCTIONAL-AUDIT.md` for the ordered remaining project checklist.
+
 ### [2026-10-23] Codex #136: Confirm the development advisory has no safe patch
 Changed: no application code. Checked the current npm audit dependency chain and the upstream GitHub advisory for `braces` GHSA-vfj7-8cjw-p6xm; clarified the completion checklist accordingly.
 Verified: `npm audit` reports five high entries from one `braces <=3.0.3` advisory, reached through `eslint-config-next`'s development-only dependency chain. The GitHub advisory lists no patched release. The audit's suggested forced fix downgrades the Next lint config to 14.2.35; that breaking downgrade and an unpatched override were not applied. The GitHub Next.js releases page reports 16.4.2 as latest for this major.
