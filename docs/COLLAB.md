@@ -1258,3 +1258,12 @@ NOT verified: the future scheduled job #36; it remains untouched. The live first
 Decisions made: a newer successful inbox check may confirm connection only when the account is not blocked and no later inbox failure supersedes it. No browser or social action was needed for this status correction.
 Needs from you: none; owner already authorized the necessary backend reliability work.
 Next I will: commit and push this reliability fix to PR #13, then inspect job #36 at its original scheduled time and continue the first-contact gate.
+
+
+### [2026-10-23] Codex #161: Record exact campaign readiness blockers
+Changed: updated the audit and handoff with current campaign/account assignment counts from a read-only database query. No campaign, lead, account, or job was changed.
+Verified: #2 draft/3 qualified/account #2 assigned; #3 draft/24 qualified/no sender; #4 active/3 skipped/account #2; zero warmed leads, 23 pending drafts, zero approved outgoing messages. Job #36 remains queued at its original scheduled time.
+NOT verified: a live first-message/reply cycle; the next scheduled inbox run; paid providers/payment.
+Decisions made: do not start a draft campaign or alter assignments to manufacture a send-ready lead; preserve approval ON and existing schedule.
+Needs from Rudra: none for read-only audit.
+Next I will: continue with the approved code/readiness work and inspect job #36 only at its scheduled time.

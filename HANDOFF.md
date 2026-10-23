@@ -1179,3 +1179,8 @@ Still unverified: app-level Chrome inbox reconnection after the owner's setting 
 Fixed a misleading Accounts status. The saved owner DB showed an older explicit sign-in result of `authenticated:false` followed by a newer successful inbox job for the same account. The Accounts page now recognizes that successful inbox read as proof of Chrome access, but only while the account is not blocked and no newer sign-in or inbox failure supersedes it. This keeps the status tied to actual completed work.
 
 Added a pure connection-evidence rule and regression coverage for newer success, stale evidence, later failure, and Instagram-blocked accounts. Validation: `npm test` 359 tests, `npm run typecheck`, `npm run lint`, `npm run build`, and isolated `npm run smoke:ui` pass. No live account or social action changed. Job #36 remains queued for its original `2026-10-24 04:12:59 UTC` run.
+
+
+## Current campaign readiness snapshot (2026-10-23 17:17 UTC)
+
+Read-only inspection of the configured database: campaign #2 is a draft with 3 qualified leads and account #2 assigned; campaign #3 is a draft with 24 qualified leads but no sender; campaign #4 is active with all 3 leads skipped and account #2. There are no warmed leads across campaigns, 23 pending drafts, and 0 approved outgoing messages. Account #2 is active in signed-in Chrome and its inbox job #35 completed; the next read-only check #36 remains scheduled for `2026-10-24 04:12:59 UTC`. This confirms the remaining live-send path is blocked by the lack of a warmed prospect and exact in-app approval. No campaign state was changed and no social action was taken.
