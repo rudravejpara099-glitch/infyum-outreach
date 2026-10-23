@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { posix, win32 } from "node:path";
 import { browserModeAllowsJob, browserModeAllowsLeadSearch, loginCheckFailure } from "@/lib/domain/browser-mode";
-import { bindInstagramPage, chromeEndpointFromActivePort, chromeMcpArgs, chromeUserDataDir, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, isInstagramInboxUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
+import { bindInstagramPage, chromeMcpArgs, chromeUserDataDir, ensureChromeToolSucceeded, instagramLoginCheckScript, instagramProfileUrl, isAllowedInstagramUrl, isInstagramInboxUrl, jsonFromToolResult, loginStateFromToolResult } from "@/worker/chrome-read-only";
 import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountBrowserMode } from "@/lib/db/repos/accounts";
 
@@ -78,19 +78,15 @@ describe("signed-in Chrome mode", () => {
     expect(() => instagramLoginCheckScript("https://attacker.example")).toThrow("Invalid Instagram handle");
   });
 
-  it("uses Chrome's temporary WebSocket address when available and otherwise auto-connects to the selected profile", () => {
+  it("auto-connects to the selected Chrome profile instead of trusting a stale debugging address", () => {
     const profilePath = "/test/chrome-profile";
-    const activePort = "43821\n/devtools/browser/abc-123\n";
-    expect(chromeEndpointFromActivePort(activePort)).toBe("ws://127.0.0.1:43821/devtools/browser/abc-123");
-    expect(chromeEndpointFromActivePort("0\n/devtools/browser/abc\n")).toBeNull();
-    expect(chromeEndpointFromActivePort("9222\n/../../private\n")).toBeNull();
-    const args = chromeMcpArgs("chrome-devtools-mcp.js", profilePath, activePort);
-    expect(args).toContain("--ws-endpoint=ws://127.0.0.1:43821/devtools/browser/abc-123");
-    expect(args).not.toContain("--auto-connect");
-    expect(args).not.toContain("--user-data-dir");
+    const args = chromeMcpArgs("chrome-devtools-mcp.js", profilePath);
+    expect(args).toContain("--auto-connect");
+    expect(args).toContain("--channel=stable");
+    expect(args[args.indexOf("--user-data-dir") + 1]).toBe(profilePath);
+    expect(args.some((arg) => arg.startsWith("--ws-endpoint"))).toBe(false);
     expect(args).toContain("--allowed-url-pattern=https://www.instagram.com/*");
     expect(args).toContain("--allowed-url-pattern=https://instagram.com/*");
-    expect(() => chromeMcpArgs("chrome-devtools-mcp.js", profilePath, "9222\n/invalid\n")).toThrow("local debugging address is invalid");
     const defaultArgs = chromeMcpArgs("chrome-devtools-mcp.js");
     expect(defaultArgs).toContain("--auto-connect");
     expect(defaultArgs).toContain("--channel=stable");

@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { dirname, join, win32 } from "node:path";
 import { homedir } from "node:os";
 import { createRequire } from "node:module";
@@ -38,20 +37,8 @@ export function chromeUserDataDir(platform: NodeJS.Platform = process.platform, 
   if (platform === "win32") return pathJoin(localAppData, "Google", "Chrome", "User Data");
   return pathJoin(home, ".config", "google-chrome");
 }
-export function chromeEndpointFromActivePort(contents: string): string | null {
-  const [rawPort, path] = contents.trim().split(/\r?\n/);
-  const port = Number(rawPort);
-  if (!/^\d+$/.test(rawPort ?? "") || !Number.isInteger(port) || port < 1 || port > 65535) return null;
-  if (!/^\/devtools\/browser\/[A-Za-z0-9_-]+$/.test(path ?? "")) return null;
-  return `ws://127.0.0.1:${port}${path}`;
-}
-export function chromeMcpArgs(bin: string, userDataDir = chromeUserDataDir(), activePortContents?: string): string[] {
-  const endpoint = activePortContents === undefined ? null : chromeEndpointFromActivePort(activePortContents);
-  if (activePortContents !== undefined && !endpoint) throw new Error("Chrome's local debugging address is invalid.");
-  const connectionArgs = endpoint
-    ? [`--ws-endpoint=${endpoint}`]
-    : ["--auto-connect", "--channel=stable", "--user-data-dir", userDataDir];
-  return [bin, ...connectionArgs, "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+export function chromeMcpArgs(bin: string, userDataDir = chromeUserDataDir()): string[] {
+  return [bin, "--auto-connect", "--channel=stable", "--user-data-dir", userDataDir, "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
 }
 export function isAllowedInstagramUrl(value: string): boolean {
   try {
@@ -95,15 +82,9 @@ export class ChromeInstagram implements InstagramDriver {
     const entry = createRequire(import.meta.url).resolve("chrome-devtools-mcp");
     const bin = join(dirname(entry), "bin", "chrome-devtools-mcp.js");
     const userDataDir = chromeUserDataDir();
-    let activePortContents: string | undefined;
-    try {
-      activePortContents = readFileSync(join(userDataDir, "DevToolsActivePort"), "utf8");
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw new Error("macOS blocked access to Chrome's local debugging file.");
-    }
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: chromeMcpArgs(bin, userDataDir, activePortContents),
+      args: chromeMcpArgs(bin, userDataDir),
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", CI: "1", CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1" },
       stderr: "ignore",
     });
@@ -119,7 +100,16 @@ export class ChromeInstagram implements InstagramDriver {
     return client;
   }
   private async pages(): Promise<Page[]> {
-    const result = ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "list_pages", arguments: {} }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult & { structuredContent?: { pages?: Page[]; message?: string } }, "Chrome could not list its open pages.");
+    let response: ToolTextResult & { structuredContent?: { pages?: Page[]; message?: string } };
+    try {
+      response = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as typeof response;
+    } catch (error) {
+      if (error instanceof Error && /MCP error -32001|request timed out/i.test(error.message)) {
+        throw new Error("Chrome did not finish connecting. Check the signed-in Chrome window for an “Allow remote debugging?” prompt, approve it, then retry.");
+      }
+      throw error;
+    }
+    const result = ensureChromeToolSucceeded(response, "Chrome could not list its open pages.");
     if (result.structuredContent?.pages?.length) return result.structuredContent.pages.map((page) => ({ id: Number(page.id), url: page.url })).filter((page) => Number.isSafeInteger(page.id));
     const text = result.content?.filter((part) => part.type === "text").map((part) => part.text).join("\n") ?? "";
     return [...text.matchAll(/(?:^|\n)\s*(\d+):\s*(.*?)\s+\((https?:\/\/[^)]+)\)/g)].map((m) => ({ id: Number(m[1]), url: m[3].trim() }));

@@ -933,3 +933,13 @@ Live app check in the signed-in Chrome profile: all requested screens load; `@ti
 NOT verified: a fresh prospect from qualification through a new approved first DM and reply handoff; real Anthropic generation, Apify search, or Stripe TEST; reliability across a later restart. The isolated flows prove the product UI and local fake billing path, not every live integration.
 
 Help needed to complete the live paid-provider checks: configure Anthropic and Apify credentials privately on this machine, then explicitly authorize any paid request. Do not send secrets in chat. A new outbound test also needs a suitable eligible lead and the owner’s approval of its exact message.
+
+### 2026-10-23: Use Chrome's current remote-debugging connection
+
+Changed on `fix/first-run-operability` / draft PR #13: the Instagram driver no longer trusts Chrome's potentially stale `DevToolsActivePort` file. This machine runs Chrome 155, whose supported signed-in-profile connection is `chrome-devtools-mcp --auto-connect`; the old saved WebSocket route returned 404 on its HTTP probe and timed out on WebSocket handshake. A timed-out first page-list now gives the user an actionable Chrome approval prompt message instead of the raw MCP timeout. Added regression coverage. No migration or dependency.
+
+Verified: `npm test` = 325 passed; `npm run typecheck`, `npm run lint`, `npx next build --webpack`, and read-only navigation across Overview, Campaigns, Pipeline, Approvals, Replies, Accounts, History, Billing, and Settings pass. The live app shows the approved sender connected and approval remains ON. No message, like, follow, comment, paid API call, real payment, or spend.
+
+NOT verified: the updated branch has not been loaded into the separate running app process, and the live reply check still cannot complete until Chrome's “Allow remote debugging?” prompt is accepted. The current prompt did not respond to the computer-control clicks; direct connection attempts therefore remain unverified. `npm run smoke:ui` could not start because this shell cannot create the `tsx` Unix socket under its temporary directory; the previous isolated UI and fake-billing smokes passed in the prior verification.
+
+Needs from Rudra: click **Allow** in the visible Chrome prompt yourself; then the app can retry the read-only reply check. No paid setup or social-write approval is needed for that check.

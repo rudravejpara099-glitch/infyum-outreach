@@ -1026,3 +1026,10 @@ NOT verified: a new live prospect-to-first-reply cycle, real Anthropic/Apify/Str
 Decisions made: approval ON; no paid calls or spending; no send without owner review of the exact message; preserve first-reply handoff.
 Needs from Rudra: for live provider checks, configure Anthropic and Apify credentials locally and explicitly authorize any paid request; never send secrets in chat. A new send check needs a suitable eligible lead and exact-message approval.
 Next I will: keep PR #13 in draft until the remaining live checks are authorized and possible; no free UI or local checks remain.
+
+### [2026-10-23] Codex #127: Fix Chrome 155 connection selection
+Changed: under the owner's temporary backend authorization in #80, the signed-in Chrome driver now uses Chrome DevTools MCP's supported `--auto-connect` route instead of trusting a potentially stale `DevToolsActivePort` file. The local Chrome 155 endpoint returned 404 and its WebSocket handshake timed out. A timed-out first page-list now explains the Chrome approval prompt. Added regression tests; no migration or dependency.
+Verified: `npm test` = 325 passed; `npm run typecheck`, `npm run lint`, and `npx next build --webpack` passed. Read-only UI navigation passed for nine primary app pages. No social write, paid call, real payment, or spend.
+NOT verified: the running app still uses its existing separate worktree and has not loaded this change. The fresh Chrome auto-connect remains blocked by the visible “Allow remote debugging?” prompt, which did not respond to computer-control clicks. The live inbox check and `npm run smoke:ui` are not verified in this turn; the smoke script cannot create the restricted `tsx` Unix socket in this shell.
+Needs from Rudra: manually click **Allow** in the visible Chrome prompt, then retry the app's read-only inbox check. No further confirmation is needed for the read-only check.
+Next I will: keep PR #13 on its branch and rerun the live read-only check once the Chrome prompt is accepted.

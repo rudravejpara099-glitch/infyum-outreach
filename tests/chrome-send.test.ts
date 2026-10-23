@@ -22,6 +22,16 @@ describe("signed-in Chrome DM driver", () => {
     expect(callTool.mock.calls.map(([, , options]) => options?.timeout)).toEqual([60_000, 60_000]);
   });
 
+  it("turns a pending Chrome approval timeout into a clear next step", async () => {
+    const fakeClient = {
+      callTool: vi.fn(async () => { throw new Error("MCP error -32001: Request timed out"); }),
+      close: vi.fn(async () => {}),
+    } as unknown as Client;
+    const driver = new ChromeInstagram(fakeClient);
+
+    await expect(driver.openLogin(owner)).rejects.toThrow("Allow remote debugging?");
+  });
+
   it("reloads the exact inbox once when its signed-in page is still loading", async () => {
     const calls: { name: string; args: Record<string, unknown> }[] = [];
     let inboxReads = 0;
