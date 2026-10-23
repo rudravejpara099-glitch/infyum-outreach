@@ -1283,3 +1283,19 @@ NOT verified: live warm-up, first DM delivery, a fresh reply/handoff, paid integ
 Decisions made: keep all Instagram and message approval behavior unchanged; show the limitation rather than bypassing it.
 Needs from Rudra: none for this UI-only clarity fix.
 Next I will: continue the remaining locally verifiable checklist; leave #36 at its original scheduled time and keep the live first-contact gate intact.
+
+### [2026-10-23] Codex #164: Refresh the live completion snapshot
+Changed: refreshed the current-state summary in `HANDOFF.md` and the top-level audit with the live campaign/account/job counts, worker heartbeat, PR state, and exact plain-build limitation. No application or owner database data changed.
+Verified: read-only owner DB queries; worker heartbeat was fresh and job #36 remains scheduled for `2026-10-24 04:12:59 UTC`. The exact `npx next build` failed with Turbopack’s restricted internal port bind; `npm run build` (Webpack), `npm test` (362), and `npm run typecheck` pass. `git diff --check` passes.
+NOT verified: fresh app-sent first DM and reply/handoff, live paid integrations/payment, hosted behavior, or the future job #36.
+Decisions made: leave job #36 on schedule; keep paid calls off, approval ON, and PR #13 open/draft.
+Needs from Rudra: none for this evidence refresh.
+Next I will: continue with the scheduled read-only check when due and preserve the live-send prerequisites.
+
+### [2026-10-23] Codex #165: Confirm the signed-in Chrome inbox is readable
+Changed: no application code or owner data. Rudra confirmed remote debugging was enabled and allowed for `Rudra099`; a manual read-only check opened six recent Instagram conversations.
+Verified: Chrome inbox access worked. No new incoming reply was present in those six conversations; the already-known reply remained handled, with no duplicate handoff. No message was sent and no engagement action was taken.
+NOT verified: app job #36 has not run; it remains queued for `2026-10-24 04:12:59 UTC` (09:42 IST). This Chrome UI scan does not replace the app's own scheduled sync or prove a new live app-sent first-contact cycle.
+Decisions made: keep the app inbox job at its scheduled time; no acceleration, social write, or spend.
+Needs from Rudra: none.
+Next I will: inspect job #36 after its scheduled run and update the handoff with its result.
