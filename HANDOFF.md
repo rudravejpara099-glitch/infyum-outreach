@@ -1140,3 +1140,9 @@ Changed: the signed-in Chrome inbox reader now filters Instagram's transient loa
 Verified: `npm test` = 341 passed; `npm run typecheck`; `npm run lint`; `npm run build` (Next 16 Webpack); focused Chrome inbox tests; and `git diff --check` passed. Live check on the owner's `Rudra099` Chrome profile read 7 real threads, found 1 incoming message matched to a known lead, and recorded 0 new handoffs. No message, like, follow, comment, paid provider call, payment, or spend occurred.
 
 NOT verified: a new first-reply handoff from a fresh prospect, first-contact delivery, warm-up, paid Anthropic/Apify/Stripe TEST, or hosted operation. Keep approval ON and no-spend settings. The app-level live inbox sync is verified for the observed rows; a fresh handoff is still required for end-to-end completion.
+
+## No-spend verification refresh (2026-10-23 16:43 UTC)
+
+The owner confirmed remote debugging is enabled in the signed-in Chrome profile for the previously authorized read-only Instagram check. Re-ran the disposable browser walkthrough and local billing simulator: both passed. `npm test` passes 341 tests and `npm run typecheck` passes. The live inbox observation remains 7 threads, 1 matched incoming item, and 0 new handoffs. The worker remains running for scheduled read-only work. No real message was sent, no social write occurred, and no paid provider or payment was used.
+
+Still unverified: a fresh prospect reply creating a new handoff; first-message delivery; warm-up; live paid-provider/Stripe TEST connections; hosted operation. Campaign approvals remain ON. No eligible warmed lead and exact approved message currently exist for a live first-message check.

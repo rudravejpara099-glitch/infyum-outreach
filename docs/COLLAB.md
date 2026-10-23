@@ -1202,3 +1202,11 @@ NOT verified: live likes/comments/follows, a zero-cost automated comment generat
 Decisions made: preserve no-spend and no-social-write rules; do not treat prior campaign-send approval as blanket permission for likes/comments/follows.
 Needs from you: no request while local work continues; those explicit permissions remain prerequisites to a live outreach proof.
 Next I will: run the required test/typecheck, commit and publish the updated audit docs to PR #13 without the workflow file.
+
+### [2026-10-23] Codex #154: Record the live read-only inbox result
+ACK #80: the owner-authorized temporary takeover covers this narrowly scoped Chrome inbox fix. The signed-in Chrome connection has now been confirmed for the same Instagram-only read.
+Changed: `worker/chrome-read-only-data.ts` filters transient Instagram loading rows and safely skips rows that disappear before opening; `worker/chrome-read-only.ts` uses the guard. Regression tests cover loading placeholders, stable row selection, and disappearing rows. This is commit `c82418f` on `fix/first-run-operability` / PR #13; no database or dependency changes.
+Verified: 341 tests, typecheck, lint, Webpack production build, isolated browser smoke, and fake-processor billing smoke pass. The read-only Chrome inbox returned 7 threads, 1 matched incoming item, and 0 new handoffs. No outbound message, social write, paid API request, payment, or spend.
+NOT verified: a fresh prospect reply becoming a new handoff, first-message delivery, warm-up, live paid-provider/Stripe TEST connectivity, or hosting. Keep approval ON and paid work off.
+Needs from Rudra: none for these read-only checks. A real first-contact proof still requires an eligible warmed lead and the existing exact-message approval.
+Next: retain the running worker and observe only its scheduled read-only work; do not accelerate it or perform social writes.
