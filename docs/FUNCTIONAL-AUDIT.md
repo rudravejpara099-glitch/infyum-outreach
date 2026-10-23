@@ -1,5 +1,22 @@
 # Full functionality audit — 2026-10-22
 
+## Current project status and completion checklist — 2026-10-23
+
+**Status:** local app and no-spend test flows pass; the full live prospect-to-first-reply path is not yet proven. Do not present this as a 100% verified live product.
+
+Verified now: signed-in app is open at `127.0.0.1:3100`; background worker PID 23157 is running from this checkout. Scheduled inbox job #30 first timed out while Chrome displayed “Allow remote debugging?”; after accepting the previously authorized read-only connection prompt, its scheduled retry completed (`done`, attempt 2, no error). A direct read-only DevTools `list_pages` also succeeded and exposed four Instagram page URLs, without reading their message content. The first-prompt recovery worked; unattended reconnection across another restart is not yet proven. Fresh checks passed: 325 tests, typecheck, lint, Webpack production build, isolated UI smoke and local fake-billing smoke. The isolated UI flow sent no messages; the billing simulation made no real payment. Live data shows campaign #4 active with approval ON, 3 leads all skipped, 0 DMs sent today, 23 awaiting approval, 0 billing usage events. No lead is warmed. Anthropic and Apify are unconfigured; lead search is off. Production dependencies have 0 reported vulnerabilities; full `npm audit` reports 5 high findings in the development ESLint dependency chain, with no compatible automatic fix (the forced fix would downgrade Next's lint config to v14). PR #13 is open, draft, clean, with no GitHub checks reported.
+
+### Tasks to finish, in order
+
+1. **Prove one real first-message handoff without spending.** Supply/identify one eligible prospect, use a sender session that supports the required warm-up, complete the required Instagram warm-up only after the owner authorizes those actions, write the three-part first DM manually, review and approve the exact text in the app, then verify the DM and the prospect's first reply are recorded. Current campaign #4 cannot do this yet: all three leads are skipped and its connected Chrome mode does not perform warm-up actions.
+2. **Keep automatic AI and lead search optional and off for now.** For AI-written messages and Apify search, the owner must privately configure the provider credentials, confirm the price/cap settings, and authorize a paid test call. Do not use the personal Claude subscription as an app provider. The no-cost fallback is manual lead entry and manual message writing for a warmed lead.
+3. **If billing is part of the demo, verify real Stripe TEST separately.** Provide Stripe test credentials/webhook configuration privately and authorize test-mode calls. The local simulator is not proof of a real Stripe connection; it does not charge a real card.
+4. **Prove unattended Chrome reconnection after restart.** A scheduled inbox retry succeeded after the user-approved Chrome prompt, but the next background connection without a prompt and recovery across restart are not proven.
+5. **Resolve the development-only dependency findings.** Production dependencies have 0 advisories; the five high findings are in ESLint's transitive development dependency chain and npm only offers a breaking Next lint-config downgrade. Wait for a compatible upstream patch or replace the affected tooling without changing the Next major version.
+6. **Leave hosting and multi-company accounts deferred.** The current decided product runs locally for the internal team; Vercel hosting is outside this completion pass.
+
+**Owner help required for the no-spend live test:** one eligible prospect, authorization for the Instagram warm-up actions, and approval of the exact first DM before it is sent. No help is required for the local tests. Paid-provider credentials and approval are only required if automatic AI/search or a live Stripe TEST check is wanted.
+
 The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. This is a current evidence index; older dated observations below are historical and are superseded by newer entries in `HANDOFF.md`. No live send or paid call is authorized by this audit.
 
 ## Current evidence

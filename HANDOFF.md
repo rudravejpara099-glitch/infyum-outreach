@@ -979,3 +979,15 @@ After restarting the current worker, ran its `ChromeInstagram.readInbox` connect
 Verified on `fix/first-run-operability` after `git pull --ff-only` reported the branch already up to date: `npm test` passed (325 tests/50 files), `npm run typecheck`, `npm run lint`, `npx next build --webpack`, `npm run smoke:ui`, and `npm run smoke:billing` passed. UI and billing smokes use disposable data; billing uses a local fake processor. UI smoke sent no messages. Read-only live database counts remain 0 DMs sent today, 23 pending approvals, and 0 billing usage events; one scheduled `check_inbox` remains queued. Provider credentials for Anthropic, Apify, and Stripe are absent, so paid features remain off. No application code, user records, external provider, or Instagram write was changed or used.
 
 Still unverified: paid Anthropic/Apify/Stripe connections and a live outbound DM followed by first-reply handoff. The no-cost manual first-message path remains available for a warmed lead and campaign approval; live sending still requires review of the exact text and the app's approval.
+
+### 2026-10-23: Record the project completion checklist
+
+Changed: `docs/FUNCTIONAL-AUDIT.md` now has a current status and ranked list to complete the decided product, including the no-spend live-message gate, optional paid providers, Stripe TEST, background Chrome reliability, development-only dependency advisories, and explicitly deferred hosting/multi-company work. No application logic or user data changed.
+
+Verified: `git pull --ff-only` reported already up to date. Current PR #13 is open and draft with a clean merge state and no GitHub checks. Repeated `npm test` (325 tests), `npm run typecheck`, `npm run lint`, `npx next build --webpack`, `npm run smoke:ui`, and `npm run smoke:billing` all passed. `npm audit --omit=dev` reports 0 vulnerabilities; full audit finds 5 high findings in the dev ESLint dependency chain, and a dry run offers only the breaking downgrade to `eslint-config-next@14.2.35`. The current app and worker are running. Scheduled Chrome inbox job #30 completed after the previously authorized remote-debugging prompt was accepted; no message was sent, billing usage remains 0, and the 23 existing approval items remain untouched. Campaign #4 has 3 skipped leads; the workspace has no warmed lead.
+
+NOT verified: a fresh approved DM and first-reply handoff; automatic AI or Apify; real Stripe TEST; Chrome reconnection without a prompt after restart; sustained operation over multiple cycles. No spend or Instagram write occurred.
+
+Needs from Rudra: for a no-spend live message test, provide/identify an eligible prospect and approve the required warm-up actions and exact DM. Paid integration credentials and authorization are only needed if automatic AI/search or real Stripe TEST is wanted.
+
+Next I will: leave providers off and approval ON; use this audit checklist as the completion plan.

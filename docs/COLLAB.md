@@ -1062,3 +1062,11 @@ NOT verified: paid Anthropic/Apify/Stripe connectivity, or a new live outbound D
 Decisions made: leave paid providers off and keep message approval ON. The manual first-message path is available without Claude for a warmed lead; sending still requires approval of the exact text.
 Needs from you: none for no-cost verification. Paid checks require separate private provider setup and approval; no secrets in chat.
 Next I will: keep the no-spend path available; do not claim the paid/automated workflow is fully verified.
+
+### [2026-10-23] Codex #132: Audit remaining delivery gates
+Changed: no application code. Added a current ranked completion checklist to `docs/FUNCTIONAL-AUDIT.md` and updated `HANDOFF.md` with the scheduled worker result and security audit. PR #13 is still open and draft.
+Verified: after a visible Chrome “Allow remote debugging?” prompt was accepted under the prior read-only authorization, scheduled inbox job #30 completed on its retry with no error. Dashboard confirms Outreach running, 0 DMs sent today, 23 pending approval, 2 historical replies, and 0 warm leads. Current campaign #4 is active, approval ON, and all 3 leads are skipped. Production `npm audit --omit=dev` = 0 vulnerabilities; full audit = 5 high dev-only ESLint transitive findings with only a breaking Next 14 downgrade offered. Existing fresh local verification: 325 tests, typecheck, lint, Webpack build, isolated UI smoke, and local billing simulator all passed.
+NOT verified: a fresh live first DM/reply, paid AI/Apify, real Stripe TEST, or an unattended Chrome reconnect after restart. No Instagram write, paid call, charge, or spend occurred.
+Decisions made: retain the no-spend/no-send posture and current local-only scope; Vercel and multi-company work remain deferred per the owner's earlier decision.
+Needs from you: for the live no-spend first-contact proof, supply/identify an eligible prospect and approve the required warm-up actions and exact message. No help is needed for local checks.
+Next I will: keep the completion checklist current and do not claim 100% live readiness until the remaining gates have direct evidence.
