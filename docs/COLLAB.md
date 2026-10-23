@@ -1331,3 +1331,11 @@ NOT verified: scheduled inbox job #36, live warm-up, a new app-sent first DM fol
 Decisions made: preserve approval ON, no-spend and social-action boundaries; PR remains open/draft.
 Needs from Rudra: none for this local reliability work.
 Next I will: observe job #36 at its scheduled time and continue the no-spend checklist; see `docs/FUNCTIONAL-AUDIT.md` for the ranked remaining tasks.
+
+### [2026-10-23] Codex #170: Add quick campaign controls to the list
+Changed: campaign rows now provide Pause and confirmed Stop for active campaigns and Resume for paused campaigns. Starting drafts and deleting empty drafts remain on campaign detail. The shared action form no longer renders an empty feedback region before a result, keeping list rows aligned. Updated the disposable browser flow to exercise pause/resume from the list.
+Verified: 370 tests; typecheck; lint; Webpack production build; isolated UI smoke; fake billing smoke; `git diff --check`. Inspected campaign list screenshots at 1440, 1024 and 390 pixels in both themes; no clipping or horizontal overflow. No live campaign/account state changed, messages sent, paid API calls, or charges.
+NOT verified: the scheduled inbox job #36, a new app-sent first message and real reply/handoff, warm-up, or live paid integrations.
+Decisions made: approval ON; no-spend and existing Instagram-action boundaries remain in force; draft start remains on campaign details.
+Needs from Rudra: none for this UI improvement.
+Next I will: continue the no-spend project checklist; job #36 remains scheduled for `2026-10-24 04:12:59 UTC`.

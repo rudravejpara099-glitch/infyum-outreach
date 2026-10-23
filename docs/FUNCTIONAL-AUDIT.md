@@ -21,7 +21,7 @@
 - [ ] **Keep paid connections off until separately approved.** Anthropic, Apify (including a saved monthly cap), and Stripe TEST have fake/local coverage only. Real API/payment calls need private credentials and explicit spending/test authorization. This is postponed under the current no-spend request.
 - [ ] **Before any hosted/public SaaS launch, add revocable sessions and tenant isolation.** Current decided scope is a local shared workspace for the internal team; this is future launch work, not a local-v1 gate.
 
-Campaign stop/start/delete controls already exist on campaign detail pages and are covered by unit and browser tests. The campaign list itself remains navigation-only; list-level quick controls would improve speed but do not block use because the controls are on each campaign page.
+Campaign stop/start/delete controls already exist on campaign detail pages. The campaign list now also offers Pause/Stop for active campaigns and Resume for paused campaigns; starting a draft and deleting an empty draft remain on the detail page. UI smoke verifies the list actions and all six theme/width layouts.
 
 **Completed in this refresh:** the dependency audit reports 0 vulnerabilities. The local suite (362 tests), typecheck, lint, production build, disposable UI flow, and disposable at-cost billing flow all pass. PR #13 remains intentionally open/draft; the remote reports no CI checks.
 
@@ -56,6 +56,10 @@ The Overview setup card now checks the prepared-lead count. With no prepared lea
 ### 2026-10-23: Clear resolved sign-in warnings and tighten public route matching
 
 The Overview no longer counts an older failed sign-in attempt after that same account later passes the app's authenticated sign-in check or completes a successful inbox read. Unrelated failures and failures newer than the recovery still remain visible. A live Overview reload confirmed the obsolete five-attempt warning disappeared while the two later inbox errors remained in recent activity. Also changed the optimistic auth proxy to allow only the exact `/login` and `/setup` paths; `/login-evil` and `/setupanything` now require a session. Tests cover account-specific recovery, later failure, successful inbox recovery, and the public/protected paths. `npm test` (370), typecheck, lint, Webpack build, isolated UI smoke, and fake billing smoke pass. No Instagram write, paid call, or spend.
+
+### 2026-10-23: Add campaign controls to the campaign list
+
+Active campaigns now show Pause and Stop controls beside their summary; Stop requires confirmation. Paused campaigns show Resume. Starting a draft remains a detail-page action so its configuration can be checked first. The row stacks its controls at phone width and uses compact inline controls on wider screens. The shared action form only renders feedback while work is pending or after a result, which avoids empty status elements distorting the row layout. UI smoke exercises pause/resume against SQLite and checks the campaign list at 1440, 1024 and 390 px in light and dark themes. `npm test` (370), typecheck, lint, Webpack build, UI smoke, and fake billing smoke pass. No messages sent, provider calls, or charges.
 
 Validation on the final code: 328 unit tests, typecheck, lint, Webpack production build, isolated Playwright UI smoke, and `git diff --check` passed. No provider credentials, provider calls, Instagram writes, or spend. The current browser tab is at login after the web-server restart; the worker and saved app database were left running/untouched.
 

@@ -769,6 +769,13 @@ try {
   await page.getByRole("button", { name: "Resume campaign", exact: true }).click();
   await page.getByRole("button", { name: "Pause campaign", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "active");
+  await page.goto(`${base}/campaigns`);
+  await page.getByRole("button", { name: "Pause US business coaches revised", exact: true }).click();
+  await page.getByRole("button", { name: "Resume US business coaches revised", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "paused");
+  await page.getByRole("button", { name: "Resume US business coaches revised", exact: true }).click();
+  await page.getByRole("button", { name: "Pause US business coaches revised", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "active");
   await page.goto(campaignUrl);
   await page.locator("#add-leads summary").click();
   await page.getByRole("button", { name: "Queue lead search", exact: true }).click();

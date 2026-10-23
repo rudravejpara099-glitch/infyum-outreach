@@ -27,6 +27,6 @@ export function ActionForm({ action, children, className = "grid gap-3", id, onR
   }
   return <form ref={form} id={id} method="post" onSubmit={submit} className={className} aria-busy={pending}>
     <fieldset disabled={pending} className="contents">{children}</fieldset>
-    <p ref={feedback} tabIndex={-1} role={result.error ? "alert" : "status"} className={`col-span-full basis-full text-sm ${result.error ? "text-bad" : "text-muted"}`}>{pending ? "Saving…" : result.error ?? result.message}</p>
+    {(pending || result.error || result.message) && <p ref={feedback} tabIndex={-1} role={result.error ? "alert" : "status"} className={`col-span-full basis-full text-sm ${result.error ? "text-bad" : "text-muted"}`}>{pending ? "Saving…" : result.error ?? result.message}</p>}
   </form>;
 }
