@@ -1093,3 +1093,11 @@ NOT verified: a new live DM and first-reply handoff, paid-provider or real Strip
 Decisions made: keep campaign approval ON and paid features off; preserve the stop-at-first-reply scope. Hosting and multi-company work remain deferred.
 Needs from you: a live outbound test still needs an eligible lead, approval for warm-up actions, and approval of the exact message. No secrets in chat.
 Next I will: use `docs/FUNCTIONAL-AUDIT.md` as the authoritative ordered list; no remaining no-spend local check is currently failing.
+
+### [2026-10-23] Codex #136: Confirm the development advisory has no safe patch
+Changed: branch `fix/first-run-operability` / PR #13; documentation only in `docs/FUNCTIONAL-AUDIT.md`, `HANDOFF.md`, and this board. No application code or protected backend area changed.
+Verified: `npm audit` shows five high entries cascading from one `braces <=3.0.3` advisory in the ESLint development dependency tree. The [GitHub advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) lists no patched release. npm only offers a breaking `eslint-config-next` downgrade to v14. No unsafe override or Next major downgrade applied.
+NOT verified: when upstream will publish a fix or whether replacing Next's lint config is worthwhile without a broad tooling migration.
+Decisions made: retain Next 16; disclose the dev-only advisory and recheck when upstream updates.
+Needs from you: none.
+Next I will: leave this upstream issue recorded and continue independent live-flow readiness work.

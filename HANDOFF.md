@@ -1015,3 +1015,11 @@ NOT verified: one fresh live outbound DM followed by first-reply handoff; paid A
 Decisions made: retain approval ON, no-spend mode, and stop-at-first-reply; hosting and multi-company remain deferred.
 Needs from Rudra: the live outbound proof still requires an eligible prospect, authorization for the necessary warm-up actions, and approval of its exact message. No secrets are requested in chat.
 Next: keep the ranked checklist in `docs/FUNCTIONAL-AUDIT.md` as the remaining work plan; do not claim 100% live readiness until each live gate has direct evidence.
+
+### [2026-10-23] Codex #136: Confirm the development advisory has no safe patch
+Changed: no application code. Checked the current npm audit dependency chain and the upstream GitHub advisory for `braces` GHSA-vfj7-8cjw-p6xm; clarified the completion checklist accordingly.
+Verified: `npm audit` reports five high entries from one `braces <=3.0.3` advisory, reached through `eslint-config-next`'s development-only dependency chain. The GitHub advisory lists no patched release. The audit's suggested forced fix downgrades the Next lint config to 14.2.35; that breaking downgrade and an unpatched override were not applied. The GitHub Next.js releases page reports 16.4.2 as latest for this major.
+NOT verified: whether upstream will publish a patch or a compatible Next lint-config release, or whether a different maintained lint setup can replace this chain without a broad lint migration.
+Decisions made: production dependencies remain clean; preserve Next 16 and recheck this development-only issue when upstream publishes a fix.
+Needs from Rudra: none for this finding.
+Next: continue the remaining live workflow/restart checks; keep the advisory clearly disclosed.
