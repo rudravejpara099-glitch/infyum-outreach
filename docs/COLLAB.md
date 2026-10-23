@@ -1146,3 +1146,51 @@ Changed: commit `506f997` is pushed to PR #13 and loaded by the live worker afte
 Verified: `npm test` = 341, `npm run typecheck`, `npm run lint`, `npm run build`, isolated UI smoke, and fake-provider billing smoke pass. Bare Turbopack build failure reproduced even with escalated local process access; Webpack build passes. PR #13 is open/draft, merge state CLEAN, no CI checks.
 NOT verified: account #2 remains blocked until queued read-only job #33 runs at 13:50:34 UTC. Durable reply sync, first-message/first-reply handoff, and paid provider checks remain unverified. Campaign #4 is approval ON, all 3 leads skipped, zero approved messages. No Instagram write or spend.
 Next: observe job #33 at its scheduled time and record its actual result; retain exact-message review, warm-up authorization, and no-spend gates.
+
+### [2026-10-23] Codex #147: Refresh full no-spend verification and project task list
+Changed: branch `fix/first-run-operability` / PR #13; updated the current status in `docs/FUNCTIONAL-AUDIT.md` and appended this entry plus the detailed verification note to `HANDOFF.md`. No app code or user data changed. `git pull --ff-only` could not resolve `github.com`; the last-known local origin ref still shows this branch four commits ahead.
+Verified: `npm test` = 341 passed; `npm run typecheck`; `npm run lint`; `npm run build` (Webpack); `npm run smoke:ui`; `npm run smoke:billing`; and `git diff --check` passed. Browser and billing smokes used disposable data and the billing simulator. No social write, paid API call, real payment or spend. Current read-only DB snapshot: job #33 remains queued for 15:40:21 UTC with Chrome MCP timeout; account #2 remains blocked; campaign #4 has approval ON, no warmed leads and no approved outgoing messages.
+NOT verified: job #33's next result; durable inbox sync; any fresh first-message/first-reply handoff; real Anthropic/Apify/Stripe TEST; hosted operation. Bare `npx next build` continues to fail only in this restricted environment's Turbopack internal port bind; project Webpack build passes.
+Decisions made: keep approvals ON, paid work disabled, and Instagram writes off unless the exact message is approved in-app. Hosting remains deferred under the current product decision. Do not bypass browser security restrictions or accelerate the scheduled job.
+Needs from you: none for no-spend local checks. GitHub could not be reached to refresh/publish the existing branch in this environment.
+Next I will: verify job #33 after the scheduled time and keep the ranked remaining project gates in `docs/FUNCTIONAL-AUDIT.md`.
+
+### [2026-10-23] Codex #148: Identify stale Chrome connection evidence
+Changed: branch `fix/first-run-operability` / PR #13; documentation-only update to `docs/FUNCTIONAL-AUDIT.md` and `HANDOFF.md`. No app code or saved account data changed.
+Verified: inspected the installed `chrome-devtools-mcp` implementation. With `--auto-connect --user-data-dir`, it reads `DevToolsActivePort` from that default Chrome data directory and connects to the endpoint there. The file exists and is readable, but its timestamp is 15:52 IST, hours before the current check; contents were not read. This suggests, but does not prove, the endpoint is stale. The next scheduled job remains #33 at 15:40:21 UTC. No raw CDP or alternate browser-control route was used.
+NOT verified: that the owner’s signed-in Chrome process owns this default user-data directory, that remote debugging is currently active there, or that the worker can read the signed-in account/inbox. No outbound or paid action occurred.
+Decisions made: do not restart or modify the owner’s browser; retain approval ON and no-spend. Treat the timestamp as a clue, not a confirmed root cause.
+Needs from you: none for local diagnosis.
+Next I will: inspect job #33 after its scheduled retry and decide the next safe fix from its actual result.
+
+### [2026-10-23] Codex #149: Verify successful scheduled Chrome recovery
+Changed: branch `fix/first-run-operability` / PR #13; updated the current state in `docs/FUNCTIONAL-AUDIT.md` and appended the scheduled-run result to `HANDOFF.md`. No app code or user data changed.
+Verified: job #33 completed on attempt 3 at 15:41 UTC. `ig_accounts` shows account #2 (`timelessmoments.al`) active with no status note; activity #664 is `account.active`. The read-only worker job returned without error. No new `inbox.checked` or handoff event was recorded, so a real first-reply handoff is still unverified. The old `DevToolsActivePort` timestamp did not prevent this successful run and is not a confirmed root cause. No outgoing social or paid action occurred.
+NOT verified: durable persistence of an actual first reply; any live first-message delivery; paid providers or Stripe TEST; hosted operation. The account is now available, but campaign #4 still has no warmed lead and no approved message.
+Decisions made: approval ON, no-spend, no outbound action without the exact in-app message approval, and no browser restriction bypass.
+Needs from you: none for the read-only recovery result.
+Next I will: keep the current account recovery recorded and only pursue a first-contact proof if an eligible warmed lead and exact in-app message approval exist.
+
+### [2026-10-23] Codex #150: Record GitHub workflow-scope push rejection
+Changed: no code. Attempted to publish the existing branch containing the quality workflow and audit docs to PR #13 after the owner authorized branch/PR work.
+Verified: GitHub was reachable under escalated local execution but rejected the push because the saved OAuth authorization lacks `workflow` scope to create/update `.github/workflows/quality.yml`. Remote ref is unchanged; local branch is seven commits ahead of its last-known tracking ref. Earlier SSH publishing returned `Permission denied (publickey)`. No main-branch change occurred.
+NOT verified: remote CI result or whether PR #13 remains at the previously observed remote head; fresh `git pull` is still unavailable in the restricted sandbox.
+Decisions made: keep the CI workflow commit; do not rewrite history just to get around the missing permission.
+Needs from you: GitHub account authorization with the `workflow` scope or a connected GitHub write integration is required to publish the existing branch.
+Next I will: continue work that can be verified locally; keep all product write/spend gates intact.
+
+### [2026-10-23] Codex #151: Revalidate the active task and publish blocker
+Changed: on the existing feature branch, refreshed the current audit paragraph in `docs/FUNCTIONAL-AUDIT.md` and clarified the unpublished state in `HANDOFF.md`. No application code or user data changed.
+Verified: the branch is clean and currently ahead of its last-known remote tracking ref. A new local push attempt reached GitHub but was refused because the token lacks the `workflow` scope; the remote branch was not changed. The owner workspace still has account #2 active after job #33, campaign #4 approval ON with all three leads skipped, zero approved outbound messages, and zero billing usage. No message, social action, paid request, or spend.
+NOT verified: refreshed remote PR status, because `git pull` remains blocked by sandbox DNS and push is refused by GitHub's scope check. No first-contact / first-reply live handoff, paid providers, or hosting.
+Decisions made: keep the full checklist in `docs/FUNCTIONAL-AUDIT.md`; no auth or exact-message approval is inferred.
+Needs from you: GitHub `workflow` scope is required to publish the existing CI workflow; an exact in-app message approval and eligible lead are required for the live first-contact proof.
+Next I will: keep the remaining gates explicit and work only on locally verifiable no-spend tasks until the external permissions/prospect state permit further verification.
+
+### [2026-10-23] Codex #152: Prepare a publishable PR update without CI workflow
+Changed: preserved the original local branch with the candidate quality workflow as `fix/first-run-operability-ci-local`; created a fresh `fix/first-run-operability` from the last known PR remote head and applied only the current audit/handoff/collaboration documentation updates. No app code changed and no remote branch was force-updated.
+Verified: the current PR update contains no `.github/workflows` file, so it does not require the missing GitHub `workflow` OAuth scope. Candidate CI remains recoverable on the separate local branch. No user data or credentials were accessed.
+NOT verified: push success, current remote PR state, or hosted checks. Those require the next authorized push; `git pull` had failed earlier under sandbox DNS.
+Decisions made: preserve the CI candidate separately instead of discarding it; do not force-push or commit to main. Approval and no-spend rules remain.
+Needs from you: none for preparing this branch.
+Next I will: run the required tests/typecheck, commit the documentation update, and try a normal fast-forward push to PR #13.

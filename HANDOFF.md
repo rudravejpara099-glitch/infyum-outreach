@@ -1098,3 +1098,37 @@ Still NOT verified: durable account recovery and reply sync (job #33 is schedule
 Bare `npx next build` fails in this Mac environment with a Turbopack internal error while binding its CSS-loader port, even when retried with local process permissions. `npm run build` now uses `next build --webpack`, which completed successfully after 341 tests, typecheck, and lint passed. No dependency was added. The isolated UI and fake-provider billing smokes also pass.
 
 The live worker is running commit `506f997`; its only queued work is the existing read-only inbox check #33 at 13:50:34 UTC. The account is still blocked in the database pending that run. PR #13 is open/draft with a clean merge state and no configured status checks. Do not describe the live reply handoff or full prospect-to-first-reply path as complete until the scheduled job and a separately approved exact first message are verified.
+
+## Pull request quality gate (2026-10-23)
+
+Prepared `.github/workflows/quality.yml` to run `npm ci`, all Vitest tests, typecheck, lint, and the production build on pull requests and pushes to `main` or `feat/platform-integration`. The workflow uses Node 22, read-only repository permissions, and the repository's Webpack build script. It adds no package or service. Because GitHub's saved OAuth token cannot publish workflow files, this candidate is preserved on local branch `fix/first-run-operability-ci-local` and is not included in PR #13.
+
+Local verification on this exact change: `npm test` passed (341 tests), `npm run typecheck`, `npm run lint`, and `npm run build` passed; `git diff --check` passed. No paid provider, payment, or Instagram write was used. The push was rejected because the saved GitHub OAuth authorization does not include the `workflow` scope, so hosted GitHub results cannot start yet. The source branch was preserved locally as `fix/first-run-operability-ci-local`; current PR update branch excludes the workflow so it can be published with the available scope.
+
+## Current Chrome worker check (2026-10-23 15:18 UTC)
+
+Changed: refreshed the functional audit's live state; no application code or saved account data changed. The local app is reachable and redirects to `/login`. Job #33 (`check_inbox`, account #2) did not connect to Chrome after the owner confirmed remote debugging was enabled and allowed. It requeued for `2026-10-23 15:40:21 UTC`; `last_error` still says Chrome did not finish connecting and asks for the “Allow remote debugging?” prompt. Account #2 remains blocked for the old sign-in failure. No message is approved, no lead is warmed, and no live message/social action, paid request, payment, or spend occurred.
+
+Direct connector testing earlier confirmed the exact `Rudra099` Instagram account and read one thread; that connector check did not prove the worker's Chrome DevTools MCP connection. Current browser inventory shows Instagram in the `Rudra099` Chrome extension profile, while the foreground Chrome window belongs to a different profile (`Rudra2008`). An attempted read-only navigation to `chrome://inspect/#remote-debugging` was denied by the browser security policy, which also forbids reaching the same setting through another route. The owner confirmed remote debugging is enabled and the prompt was allowed in `Rudra099`, but the worker retry still timed out. Do not bypass that policy or reschedule job #33; inspect the existing Chrome MCP connection path before further attempts.
+
+The local app page is left open at `/login`. Tests/typecheck/lint/build remain green from the latest code state. The quality-workflow and documentation commits are local and ahead of PR #13 because GitHub OAuth lacks `workflow` scope; SSH publishing also failed with `Permission denied (publickey)`. No GitHub write connector is connected.
+
+## Full no-spend verification refresh (2026-10-23 15:20 UTC)
+
+Changed: no app code or user data. Refreshed `docs/FUNCTIONAL-AUDIT.md` with the latest verification and outstanding job state. Attempted the repo-required `git pull --ff-only`; DNS could not resolve `github.com`, so no remote state was refreshed. The local branch was four commits ahead of its last-known origin tracking ref at that time.
+
+Verified on current branch HEAD: `npm test` = 341 passed; `npm run typecheck`, `npm run lint`, `npm run build` (Next 16 Webpack), `npm run smoke:ui`, `npm run smoke:billing`, and `git diff --check` passed. The isolated Playwright and billing smokes used disposable app data; the billing provider was a fake local simulator. Sandbox restrictions initially denied local listeners, so those test commands were rerun with permission to bind temporary local IPC/HTTP endpoints. No paid request, charge, Instagram send, follow, like, or comment occurred.
+
+At this 15:20 UTC snapshot, job #33 was still queued for 15:40:21 UTC after Chrome MCP timed out. This was superseded by the 15:42 UTC result below. At that time, no approved outbound draft or warmed lead existed for campaign #4, so a real first-DM/first-reply proof was not available; approval remained ON. Live Anthropic/Apify calls and Stripe TEST need separately authorized credentials/calls; hosted operation is deferred by the decided scope. Bare `npx next build` remains blocked by Turbopack's sandbox port bind; the repo's `npm run build` succeeds using Webpack.
+
+Additional Chrome diagnostic: the connector launches `chrome-devtools-mcp` with `--auto-connect` against the default macOS Chrome data directory, where the tool reads `DevToolsActivePort`. The file existed and was readable but its filesystem timestamp was 15:52 IST. This timestamp did not prevent the later successful connection, so it is not evidence of a stale endpoint or a confirmed root cause. I did not read the file contents or attempt a raw CDP connection.
+
+## Scheduled Chrome recovery result (2026-10-23 15:42 UTC)
+
+Job #33 (`check_inbox`, account #2) completed at 15:41 UTC on attempt 3. Activity records `account.active`; account #2 (`timelessmoments.al`) is now active with an empty status note. The `check_inbox` runner returned without error after reopening the previously blocked account and calling the inbox reader. No `inbox.checked` or new reply-handoff activity was recorded, so this proves recovery and a completed read-only call, but not a real first-reply handoff. No message text was reported. No sending, liking, following, commenting, paid API call, payment, or spend occurred.
+
+Next: inspect job #33 only after its scheduled retry. Continue diagnosis within the existing Instagram-only Chrome connector; do not use another browser-control route or accelerate the job. For a full product completion claim, close the live first-contact handoff and app-level Chrome recovery. Keep campaign approval ON and all paid work off.
+
+## GitHub push result (2026-10-23)
+
+An escalated push attempt reached GitHub but was rejected: the saved OAuth token lacks the `workflow` scope needed to create or update `.github/workflows/quality.yml`. No remote ref changed. SSH publishing had previously failed with `Permission denied (publickey)`. The original local branch, including the workflow, is preserved as `fix/first-run-operability-ci-local`. The current PR update branch is based on the last known remote head and excludes that optional workflow while publishing the audit docs. A GitHub authorization with workflow scope (or a separately connected GitHub integration) is still needed to publish the candidate workflow.
