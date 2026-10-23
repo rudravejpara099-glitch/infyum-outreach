@@ -10,6 +10,7 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { accountStatusBadge, loginJobSummary } from "@/lib/ui/copy";
 import { accountNeedsSignIn } from "@/lib/domain/account-recovery";
+import { inboxReadConfirmsConnection } from "@/lib/domain/account-connection";
 import type { Job } from "@/lib/db/types";
 import { Empty, PageHeader } from "@/components/ui";
 import { changeCap, changeStatus, connectAccount, reopenLogin, useSeparateSignIn, useSignedInChrome } from "./actions";
@@ -23,8 +24,13 @@ export default async function AccountsPage() {
   const today = dateInTimeZone(new Date(), timeZone);
   const accounts = listAccounts(db);
   const worker = workerStatus(db, new Date());
-  const loginJobs = db.prepare("SELECT account_id,status,last_error,payload FROM jobs j WHERE type='open_login' AND account_id IS NOT NULL AND id=(SELECT MAX(j2.id) FROM jobs j2 WHERE j2.type='open_login' AND j2.account_id=j.account_id)").all() as { account_id: number; status: Job["status"]; last_error: string; payload: string }[];
-  const loginJobByAccount = new Map(loginJobs.map((job) => [job.account_id, { status: job.status, lastError: job.last_error, payload: JSON.parse(job.payload) as Record<string, unknown> }]));
+  const loginJobs = db.prepare("SELECT id,account_id,status,last_error,payload FROM jobs j WHERE type='open_login' AND account_id IS NOT NULL AND id=(SELECT MAX(j2.id) FROM jobs j2 WHERE j2.type='open_login' AND j2.account_id=j.account_id)").all() as { id: number; account_id: number; status: Job["status"]; last_error: string; payload: string }[];
+  const loginJobByAccount = new Map(loginJobs.map((job) => [job.account_id, { id: job.id, status: job.status, lastError: job.last_error, payload: JSON.parse(job.payload) as Record<string, unknown> }]));
+  const inboxEvidence = db.prepare(`SELECT account_id,
+    MAX(CASE WHEN status='done' AND last_error='' THEN id ELSE 0 END) latest_success,
+    MAX(CASE WHEN status='failed' THEN id ELSE 0 END) latest_failure
+    FROM jobs WHERE type='check_inbox' AND account_id IS NOT NULL GROUP BY account_id`).all() as { account_id: number; latest_success: number; latest_failure: number }[];
+  const inboxEvidenceByAccount = new Map(inboxEvidence.map((row) => [row.account_id, row]));
   return (
     <>
       <PageHeader title="Instagram accounts" sub="Sign in yourself in your existing Chrome or a separate sign-in window. Outreach never sees your password." />
@@ -41,7 +47,10 @@ export default async function AccountsPage() {
         <div className="card divide-y divide-line">
           {accounts.map((a) => {
             const signInRequired = accountNeedsSignIn(a.statusNote);
-            const signIn = loginJobSummary(loginJobByAccount.get(a.id) ?? null, worker.running, a.browserMode, a.statusNote);
+            const loginJob = loginJobByAccount.get(a.id) ?? null;
+            const inbox = inboxEvidenceByAccount.get(a.id);
+            const inboxVerified = inboxReadConfirmsConnection(a.status, loginJob?.id ?? null, inbox?.latest_success || null, inbox?.latest_failure || null);
+            const signIn = loginJobSummary(loginJob, worker.running, a.browserMode, a.statusNote, inboxVerified);
             const statusBadge = accountStatusBadge(a.status, signIn.tone, a.statusNote);
             const signInTone = signIn.tone === "error" ? "border-bad bg-bad/5 text-bad" : signIn.tone === "success" ? "border-ok bg-ok/5 text-ok" : signIn.tone === "attention" ? "border-warn bg-warn/5 text-warn" : "border-line bg-panel text-muted";
             return <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4">

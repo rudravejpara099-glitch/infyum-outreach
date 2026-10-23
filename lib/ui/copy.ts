@@ -114,8 +114,13 @@ export function accountStatusBadge(status: "active" | "paused" | "blocked", sign
 }
 
 /** Describes the sign-in window job only; it never treats a saved account as authenticated. */
-export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean, browserMode: "isolated" | "chrome_read_only" = "isolated", statusNote = ""): LoginJobSummary {
+export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean, browserMode: "isolated" | "chrome_read_only" = "isolated", statusNote = "", inboxVerified = false): LoginJobSummary {
   const usesChrome = browserMode === "chrome_read_only";
+  if (inboxVerified) return {
+    title: "Instagram is connected",
+    detail: "Outreach successfully checked for new replies using this account.",
+    tone: "success",
+  };
   if (accountNeedsSignIn(statusNote) && job?.status !== "queued" && job?.status !== "running") return {
     title: usesChrome ? "Chrome isn’t signed in as this account" : "Sign-in needed",
     detail: usesChrome

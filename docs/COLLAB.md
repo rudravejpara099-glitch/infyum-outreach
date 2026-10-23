@@ -1244,8 +1244,17 @@ Next: complete full verification, commit and publish to PR #13 while retaining n
 
 ### [2026-10-23] Codex #159: Refresh full-project readiness evidence
 Changed: refreshed `docs/FUNCTIONAL-AUDIT.md` and `HANDOFF.md` with current branch/PR state, live data counts, the scheduled Chrome check, passing local checks, and the remaining first-contact and paid-integration gates. No application code or live account state changed.
-Verified: `npm test` = 354 tests; `npm run typecheck`, `npm run lint`, `npm run build`, `npm run smoke:ui`, `npm run smoke:billing`, and `npm audit` = 0 vulnerabilities. PR #13 is OPEN/DRAFT with no CI checks. UI and billing smokes used isolated data; no messages or real charges. `git diff --check` to run before commit.
+Verified: `npm test` = 359 tests; `npm run typecheck`, `npm run lint`, `npm run build`, `npm run smoke:ui`, `npm run smoke:billing`, and `npm audit` = 0 vulnerabilities. PR #13 is OPEN/DRAFT with no CI checks. UI and billing smokes used isolated data; no messages or real charges. `git diff --check` to run before commit.
 NOT verified: the pending app-level Chrome reconnect, a new app-sent first-contact/real-reply cycle, paid AI/Apify or Stripe TEST. No provider credential or exact outbound message approval was created.
 Decisions made: keep approval ON, paid services off, no social writes without the explicit message/action gates; hosting and multi-company remain deferred.
 Needs from you: none for this documentation-only refresh.
 Next I will: rerun the required test/typecheck checks, commit and push the audit refresh to PR #13, then inspect the inbox job at its existing scheduled time.
+
+### [2026-10-23] Codex #160: Correct stale account connection status
+ACK owner authorization: necessary worker/backend fixes may be handled on this branch. Claiming the Accounts status display and a small pure connection-evidence rule.
+Changed: current owner DB evidence shows account #2's explicit `open_login` result was `authenticated:false` at job #34, followed by `check_inbox` job #35 `done` with no error; account #2 is active. `readInbox()` verifies the same Chrome owner before returning, so this later success is stronger, newer connection evidence than the old sign-in result. Accounts currently reads only `open_login` and can therefore show stale sign-in failure.
+Verified: source inspection confirms `check_inbox` cannot be marked done after a failed `readInbox`; inbox read calls `verifyOwner`. The pure evidence rule, Accounts status summary tests, full 359-test suite, typecheck, lint, production build, and isolated UI smoke all pass. No account or job data was changed.
+NOT verified: the future scheduled job #36; it remains untouched. The live first-contact cycle and paid providers remain unverified.
+Decisions made: a newer successful inbox check may confirm connection only when the account is not blocked and no later inbox failure supersedes it. No browser or social action was needed for this status correction.
+Needs from you: none; owner already authorized the necessary backend reliability work.
+Next I will: commit and push this reliability fix to PR #13, then inspect job #36 at its original scheduled time and continue the first-contact gate.

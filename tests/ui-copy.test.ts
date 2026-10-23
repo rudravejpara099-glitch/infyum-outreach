@@ -51,6 +51,14 @@ describe("plain-language UI copy", () => {
     expect(loginJobSummary({ status: "failed", lastError: "Chrome could not connect" }, false, "chrome_read_only").title).toBe("Could not check Chrome sign-in");
   });
 
+  it("uses a successful newer inbox check to correct an older Chrome sign-in failure", () => {
+    expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: false } }, false, "chrome_read_only", "", true)).toEqual({
+      title: "Instagram is connected",
+      detail: "Outreach successfully checked for new replies using this account.",
+      tone: "success",
+    });
+  });
+
   it("does not label an unverified or paused account as connected", () => {
     expect(accountStatusBadge("active", "attention")).toEqual({ label: "Sign-in needed", tone: "warn" });
     expect(accountStatusBadge("active", "neutral")).toEqual({ label: "Sign-in needed", tone: "warn" });

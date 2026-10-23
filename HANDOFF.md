@@ -1167,8 +1167,15 @@ Added a worker regression that exercises one complete approved Chrome-mode cycle
 
 ## Readiness audit refresh (2026-10-23 17:00 UTC)
 
-Current branch `fix/first-run-operability` is pushed through `4052d13`. PR #13 is OPEN/DRAFT against `feat/platform-integration`; GitHub currently reports no CI checks. Latest verification: `npm test` (354 tests), `npm run typecheck`, `npm run lint`, `npm run build` (Next 16 Webpack), `npm run smoke:ui`, `npm run smoke:billing`, and `npm audit` (0 vulnerabilities) all pass. Browser smokes use isolated temporary data; they sent no Instagram messages and made no real payment/provider call.
+Current branch `fix/first-run-operability` is pushed through `4052d13`. PR #13 is OPEN/DRAFT against `feat/platform-integration`; GitHub currently reports no CI checks. Latest verification before the connection-status fix: `npm test` (354 tests), `npm run typecheck`, `npm run lint`, `npm run build` (Next 16 Webpack), `npm run smoke:ui`, `npm run smoke:billing`, and `npm audit` (0 vulnerabilities) all passed. See the next entry for current verification. Browser smokes use isolated temporary data; they sent no Instagram messages and made no real payment/provider call.
 
 Read-only inspection of the configured app database found campaign #4 active with approval required, all 3 leads skipped, 23 pending drafts and 0 approved outgoing messages; the imported/history data has 105 sent messages and 2 leads marked replied. The recent signed-in Chrome read matched an already-handled reply, so it created no duplicate handoff. Rudra confirmed Chrome remote debugging is enabled and allowed in profile `Rudra099`. The app's next read-only inbox job remains queued at `2026-10-24 04:12:59 UTC` (09:42 IST); do not accelerate it.
 
 Still unverified: app-level Chrome inbox reconnection after the owner's setting change; a fresh real app-sent first message and first-reply handoff (needs eligible lead, supported warm-up, exact in-app approval, one approved send, and a real reply); live paid Anthropic/Apify/Stripe TEST. No real social write, paid call, payment, or spend occurred. Hosting and multi-company accounts remain deferred by the existing scope.
+
+
+## Use successful inbox reads as connection proof (2026-10-23 17:13 UTC)
+
+Fixed a misleading Accounts status. The saved owner DB showed an older explicit sign-in result of `authenticated:false` followed by a newer successful inbox job for the same account. The Accounts page now recognizes that successful inbox read as proof of Chrome access, but only while the account is not blocked and no newer sign-in or inbox failure supersedes it. This keeps the status tied to actual completed work.
+
+Added a pure connection-evidence rule and regression coverage for newer success, stale evidence, later failure, and Instagram-blocked accounts. Validation: `npm test` 359 tests, `npm run typecheck`, `npm run lint`, `npm run build`, and isolated `npm run smoke:ui` pass. No live account or social action changed. Job #36 remains queued for its original `2026-10-24 04:12:59 UTC` run.
