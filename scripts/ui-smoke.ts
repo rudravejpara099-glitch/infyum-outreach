@@ -212,6 +212,23 @@ try {
   setCampaignAccounts(db, id, [manualAccount.id]);
   await page.getByRole("button", { name: "Start campaign", exact: true }).click();
   await page.getByRole("heading", { name: "US business coaches" }).waitFor();
+  db.prepare("UPDATE ig_accounts SET browser_mode='chrome_read_only' WHERE id=?").run(manualAccount.id);
+  const waitingLead = addLead(db, { handle: "chrome-wait.fixture", campaignId: id }, "ui-fixture").lead;
+  db.prepare("UPDATE leads SET stage='qualified',account_id=? WHERE id=?").run(manualAccount.id, waitingLead.id);
+  await page.goto(campaignUrl);
+  await page.getByRole("status").filter({ hasText: "New first messages are waiting" }).waitFor();
+  await page.getByText(/can’t like, comment on, or follow posts to prepare these 1 matched lead for a first message/).waitFor();
+  await page.getByRole("link", { name: "Review Instagram accounts", exact: true }).waitFor();
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Chrome warm-up notice must fit on screen");
+  }
+  db.transaction(() => {
+    db.prepare("DELETE FROM activity WHERE lead_id=?").run(waitingLead.id);
+    db.prepare("DELETE FROM leads WHERE id=?").run(waitingLead.id);
+    db.prepare("UPDATE ig_accounts SET browser_mode='isolated' WHERE id=?").run(manualAccount.id);
+  })();
+  await page.goto(campaignUrl);
   const retryLead = addLead(db, { handle: "retry-check.fixture", campaignId: id }, "ui-fixture").lead;
   db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(manualAccount.id, retryLead.id);
   db.prepare("INSERT INTO jobs (type,lead_id,account_id,status,last_error) VALUES ('qualify',?,?,'failed','temporary read failure')").run(retryLead.id, manualAccount.id);

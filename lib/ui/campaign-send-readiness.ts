@@ -15,3 +15,12 @@ export function campaignSendBlockers(accounts: IgAccount[], selectedIds: number[
   else blockers.push("No active Instagram account is ready for campaign actions");
   return blockers;
 }
+
+export function chromeWarmupNotice(
+  accounts: IgAccount[], selectedIds: number[], qualifiedCount: number,
+): { accountHandles: string[]; waitingMatches: number } | null {
+  if (!Number.isSafeInteger(qualifiedCount) || qualifiedCount < 1) return null;
+  const activeSenders = accounts.filter((account) => selectedIds.includes(account.id) && account.status === "active");
+  if (activeSenders.length === 0 || activeSenders.some((account) => account.browserMode !== "chrome_read_only")) return null;
+  return { accountHandles: activeSenders.map((account) => account.handle), waitingMatches: qualifiedCount };
+}

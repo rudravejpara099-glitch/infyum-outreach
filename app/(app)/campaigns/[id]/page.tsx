@@ -16,7 +16,7 @@ import { campaignHistory } from "@/lib/queries/campaign-history";
 import { validTimeZone } from "../../settings/validation";
 import { messageKindLabel } from "@/lib/ui/copy";
 import { CAMPAIGN_STATUS_LABEL } from "@/components/campaign-status";
-import { campaignSendBlockers } from "@/lib/ui/campaign-send-readiness";
+import { campaignSendBlockers, chromeWarmupNotice } from "@/lib/ui/campaign-send-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +32,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   const accounts = listAccounts(db);
   const selected = campaignAccountIds(db, campaign.id);
   const senderBlockers = campaignSendBlockers(accounts, selected);
+  const warmupNotice = chromeWarmupNotice(accounts, selected, overview.stages.qualified ?? 0);
   const next = campaign.status === "active" ? { to: "paused", label: "Pause campaign" } : { to: "active", label: campaign.status === "draft" ? "Start campaign" : "Resume campaign" };
   const cap = getSetting(db, "apify_monthly_cap_usd");
   const savedZone = getSetting(db, "team_timezone") ?? "America/New_York";
@@ -64,6 +65,11 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     {campaign.status === "active" && senderBlockers.length > 0 && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
       <p className="font-medium">This campaign can’t run yet</p>
       <p className="mt-1">{senderBlockers.join(" · ")}. Choose an account that is active and set up for campaign actions in <Link href="#settings" className="underline">Campaign settings</Link>.</p>
+    </div>}
+    {warmupNotice && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
+      <p className="font-medium">New first messages are waiting</p>
+      <p className="mt-1">{warmupNotice.accountHandles.length === 1 ? `@${warmupNotice.accountHandles[0]} uses` : `${warmupNotice.accountHandles.map((handle) => `@${handle}`).join(", ")} use`} signed-in Chrome. This connection can check profiles and replies and send messages you approve, but it can’t like, comment on, or follow posts to prepare these {warmupNotice.waitingMatches} matched lead{warmupNotice.waitingMatches === 1 ? "" : "s"} for a first message.</p>
+      <Link href="/accounts" className="mt-2 inline-flex underline">Review Instagram accounts</Link>
     </div>}
     <section className="audience-summary" aria-labelledby="audience-title">
       <div><h2 id="audience-title">Who you’re reaching</h2><p>{campaign.audienceText || campaign.niches.join(", ") || "Describe your audience in campaign settings."}</p></div>

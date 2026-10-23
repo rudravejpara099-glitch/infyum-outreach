@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IgAccount } from "@/lib/db/types";
-import { campaignSendBlockers } from "@/lib/ui/campaign-send-readiness";
+import { campaignSendBlockers, chromeWarmupNotice } from "@/lib/ui/campaign-send-readiness";
 
 const account = (overrides: Partial<IgAccount>): IgAccount => ({
   id: 1, handle: "sender", label: "", profileDir: "profile", browserMode: "isolated",
@@ -37,5 +37,27 @@ describe("campaign sender readiness", () => {
 
   it("leaves the no-selected-sender explanation to the existing campaign UI", () => {
     expect(campaignSendBlockers([account({})], [])).toEqual([]);
+  });
+
+  it("explains when qualified leads are waiting on a Chrome-only warm-up step", () => {
+    const sender = account({ id: 2, handle: "chrome.sender", browserMode: "chrome_read_only" });
+    expect(chromeWarmupNotice([sender], [2], 3)).toEqual({ accountHandles: ["chrome.sender"], waitingMatches: 3 });
+    expect(chromeWarmupNotice([sender], [2], 0)).toBeNull();
+    expect(chromeWarmupNotice([sender], [2], -1)).toBeNull();
+  });
+
+  it("does not show the warm-up notice when any active selected sender supports the full flow", () => {
+    const chrome = account({ id: 2, handle: "chrome.sender", browserMode: "chrome_read_only" });
+    const isolated = account({ id: 3, handle: "isolated.sender", browserMode: "isolated" });
+    expect(chromeWarmupNotice([chrome, isolated], [2, 3], 3)).toBeNull();
+    expect(chromeWarmupNotice([chrome, { ...isolated, status: "paused" }], [2, 3], 3)).toEqual({
+      accountHandles: ["chrome.sender"], waitingMatches: 3,
+    });
+  });
+
+  it("does not show a warm-up notice without a selected active Chrome sender", () => {
+    const chrome = account({ id: 2, browserMode: "chrome_read_only" });
+    expect(chromeWarmupNotice([chrome], [], 3)).toBeNull();
+    expect(chromeWarmupNotice([{ ...chrome, status: "paused" }], [2], 3)).toBeNull();
   });
 });
