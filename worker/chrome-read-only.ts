@@ -170,11 +170,7 @@ export class ChromeInstagram implements InstagramDriver {
     ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "press_key", arguments: { pageId, key: "Enter" } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not submit the message.");
   }
   private async verifyOwner(account: IgAccount): Promise<void> {
-    const page = await this.openProfile(account);
-    const result = await this.evaluate(page.pageId, instagramLoginCheckScript(account.handle), "Chrome could not verify the saved Instagram account.");
-    const state = loginStateFromToolResult(result);
-    if (looksBlocked(state.text, page.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
-    if (!state.loggedIn) throw new InstagramBlockedError("The saved Instagram account is not signed in in Chrome.");
+    if (!await this.openLogin(account)) throw new InstagramBlockedError("The saved Instagram account is not signed in in Chrome.");
   }
   private async inspect(account: IgAccount, handle = account.handle): Promise<{ pageId: number; text: string; controls: string; url: string }> {
     const page = await this.openProfile(account, handle);
@@ -199,7 +195,22 @@ export class ChromeInstagram implements InstagramDriver {
     } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
     const { text, loggedIn } = loginStateFromToolResult(result);
     if (looksBlocked(text, p.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
-    return loggedIn;
+    if (loggedIn) return true;
+
+    // Instagram may omit its owner-only profile control while the signed-in
+    // inbox still clearly identifies the same account.
+    let identityError: Error | null = null;
+    for (const page of await this.inboxPages()) {
+      try {
+        await this.inboxIndices(page.id, account.handle);
+        return true;
+      } catch (error) {
+        if (error instanceof InstagramBlockedError) throw error;
+        identityError = error instanceof Error ? error : new Error("Instagram sign-in could not be verified.");
+      }
+    }
+    if (identityError) throw identityError;
+    return false;
   }
   async readFacts(account: IgAccount, handle: string): Promise<ProfileFacts> {
     await this.verifyOwner(account);

@@ -1125,3 +1125,9 @@ NOT verified: real Anthropic output/charges, real Stripe TEST, live first-messag
 Decisions made: keep the model control owner-only in Billing administration and permit only confirmed model prices; keep paid work gated.
 Needs from Rudra: none for this change.
 Next: keep the ordered live workflow and provider verification tasks in `docs/FUNCTIONAL-AUDIT.md`; this model-setting code is no longer an open task.
+### [2026-10-23] Codex #144: Verify the saved owner from Chrome inbox
+ACK #80: temporary narrow ownership for the read-only Chrome worker fix is in effect. The owner confirms Instagram is signed in in Chrome and Safari; only Chrome is used by this connector, and Safari state is separate.
+Changed: `worker/chrome-read-only.ts` now accepts the saved account only when Instagram's signed-in inbox identifies that exact account if the profile page omits its owner-only “Edit profile” control. Profile and inbox reads share this verification. Added tests that accept the exact inbox owner and reject a different account. No campaign, warm-up, message-send, billing, or provider behavior changed.
+Verified: 338 tests, typecheck, lint, Webpack production build, isolated UI smoke, and local billing smoke passed after the code change. The UI/billing smokes use disposable data and a fake processor. No Instagram write, paid API call, real payment, or spend.
+NOT verified: the live worker in the separate main checkout has not loaded this branch, so the current account-blocked record has not yet been cleared by this fix. Safari is not a supported session source. No live first-message handoff or paid-provider connectivity.
+Next: deliver this focused fix through PR #13, then test the app's own read-only Chrome sign-in check when the branch is running. Keep campaign approval ON and all sends/spend off.

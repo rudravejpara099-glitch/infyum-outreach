@@ -7,6 +7,47 @@ const owner: IgAccount = { id: 1, handle: "owner", label: "", profileDir: "/tmp/
 const result = (message: string) => ({ structuredContent: { message } });
 
 describe("signed-in Chrome DM driver", () => {
+  it("confirms the saved account from the inbox owner marker when the profile control is absent", async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const fakeClient = {
+      callTool: vi.fn(async ({ name, arguments: args }: { name: string; arguments: Record<string, unknown> }) => {
+        calls.push({ name, args });
+        if (name === "list_pages") return { structuredContent: { pages: [
+          { id: 7, url: "https://www.instagram.com/owner/" },
+          { id: 8, url: "https://www.instagram.com/direct/inbox/" },
+        ] } };
+        if (name === "evaluate_script" && String(args.function).includes("edit profile")) {
+          return result("```json\n{\"allowed\":true,\"loggedIn\":false}\n```");
+        }
+        return result("```json\n{\"allowed\":true,\"ownerMatches\":true,\"isInbox\":true,\"listReady\":true,\"indices\":[]}\n```");
+      }),
+      close: vi.fn(async () => {}),
+    } as unknown as Client;
+
+    await expect(new ChromeInstagram(fakeClient).openLogin(owner)).resolves.toBe(true);
+
+    expect(calls.filter((call) => call.name === "evaluate_script")).toHaveLength(2);
+    expect(String(calls[1].args.function)).toContain('"/owner/"');
+  });
+
+  it("does not accept a different inbox account as the saved account", async () => {
+    const fakeClient = {
+      callTool: vi.fn(async ({ name, arguments: args }: { name: string; arguments: Record<string, unknown> }) => {
+        if (name === "list_pages") return { structuredContent: { pages: [
+          { id: 7, url: "https://www.instagram.com/owner/" },
+          { id: 8, url: "https://www.instagram.com/direct/inbox/" },
+        ] } };
+        if (name === "evaluate_script" && String(args.function).includes("edit profile")) {
+          return result("```json\n{\"allowed\":true,\"loggedIn\":false}\n```");
+        }
+        return result("```json\n{\"allowed\":true,\"ownerMatches\":false,\"isInbox\":true,\"listReady\":true,\"indices\":[]}\n```");
+      }),
+      close: vi.fn(async () => {}),
+    } as unknown as Client;
+
+    await expect(new ChromeInstagram(fakeClient).openLogin(owner)).rejects.toThrow("saved Instagram account could not be confirmed");
+  });
+
   it("allows the read-only Chrome sign-in check enough time for a slow browser response", async () => {
     const callTool = vi.fn(async ({ name }: { name: string; arguments: Record<string, unknown> }, _extra?: unknown, options?: { timeout?: number }) => {
       void _extra;

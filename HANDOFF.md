@@ -1072,3 +1072,10 @@ Changed: added a pure rule that recognizes only sign-in-specific stop reasons. A
 Verified: `npm test` = 336 tests; `npm run typecheck`; `npm run lint`; `npx next build`; and `UI_SMOKE_SCREENSHOTS=0 npm run smoke:ui` passed. UI smoke uses disposable data and sent no messages. No real Instagram write, paid call, or payment occurred.
 NOT verified: the owner's current Instagram sign-in or a successful Chrome connection after restart. The live account remains stopped until its app sign-in check succeeds. Paid providers, real Stripe TEST, and a fresh first-message/first-reply handoff remain unverified.
 Next: keep the worker active, account guard intact, and approvals ON. The owner can recover a sign-in-only stop by signing into the account in Chrome and choosing `Check Chrome sign-in`; the app will resume it only after confirmation.
+## Chrome sign-in verification follow-up (2026-10-23)
+
+The owner confirms the Instagram session is signed in in Chrome and Safari. The Outreach connector uses Chrome only; Safari does not share its session. A read-only `open_login` check in the running app still failed, so the account remains blocked in its current database record. This is an app-to-Chrome verification issue, not evidence that the owner needs to sign in again.
+
+On `fix/first-run-operability`, the connector now falls back to checking the exact saved account marker in the signed-in Instagram inbox when the profile page omits its “Edit profile” control. A different inbox account is rejected. `npm test` (338), typecheck, lint, `npx next build --webpack`, UI smoke, and billing smoke passed. No live send, social action, paid API request, real charge, or spend occurred.
+
+The updated code has not been loaded by the live worker, which runs from a separate main checkout. The live Chrome verification therefore remains unverified. Campaign approval remains ON; paid providers remain off. See PR #13 for the branch.
