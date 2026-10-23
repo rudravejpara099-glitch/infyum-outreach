@@ -13,7 +13,7 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { stageCopy } from "@/lib/ui/copy";
 import { activityLabel } from "@/lib/ui/copy";
-import { failedWorkCopy, runningWorkerCopy } from "@/lib/ui/worker-status-copy";
+import { automaticWritingCopy, failedWorkCopy, runningWorkerCopy } from "@/lib/ui/worker-status-copy";
 import { PageHeader, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +28,7 @@ export default async function Dashboard() {
   const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
   const d = dashboardData(db, dateInTimeZone(new Date(), timeZone), timeZone);
   const failedCopy = failedWorkCopy(d.failedJobTypes);
+  const writingCopy = automaticWritingCopy(Boolean(process.env.ANTHROPIC_API_KEY));
   const recent = d.recentActivity;
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
@@ -59,6 +60,11 @@ export default async function Dashboard() {
           </li>
         </ol>
       </section>
+      {writingCopy && <section className="card mb-4 p-4" aria-labelledby="automatic-writing-title">
+        <h2 id="automatic-writing-title" className="font-semibold">Automatic message writing needs setup</h2>
+        <p className="mt-1 text-sm text-muted">{writingCopy}</p>
+        <Link href="/settings" className="mt-2 inline-block text-sm text-accent underline">See AI setup in Settings</Link>
+      </section>}
       <section className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Background service status">
         <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{workerLabel}</span>
           <p className="mt-2 text-sm text-muted">{worker.phase === "running" ? runningWorkerCopy(nextWork, new Date(), timeZone) : worker.phase === "stopping" ? "The current task can finish; no new tasks should start." : worker.phase === "starting" ? "The service is opening. Status will update shortly." : worker.phase === "unresponsive" ? "The process still exists but has not reported recently. Stop it and wait for its current task to finish." : worker.phase === "legacy_running" ? "This service was started in a terminal. Stop it there before using these controls." : "Campaign tasks are waiting. Account sign-in can still run separately."}</p>

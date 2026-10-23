@@ -1000,3 +1000,10 @@ Needs from Rudra: none for this dashboard correction or no-spend local checks. A
 Next I will: keep approval ON and paid providers off; continue only no-cost verification and report the live-send boundary accurately.
 
 Current browser note: to load the tested production build, the local web server on port 3100 was restarted. The existing Chrome tab now shows the app's login page, so the owner needs to sign in again. No password was requested, read, or changed; the worker and saved database were left untouched.
+
+### [2026-10-23] Codex #134: Explain automatic writing without Claude
+Changed: the Overview now explains that Claude is not needed on the user's computer, automatic drafts need a separately billed AI connection, and manual writing remains available for warmed leads. It links to Settings and appears only when the Anthropic API key is absent. Added unit and isolated browser-smoke assertions. No provider, worker, account, or database behavior changed.
+Verified: `npm test` = 328 passed; `npm run typecheck`; `npm run lint`; isolated Playwright UI smoke; `npx next build --webpack`; and diff check passed. The smoke proves the notice and Settings link render without an AI key. Read-only live DB snapshot: 0 DMs sent today, 23 pending approval, 0 billing usage events, and no queued/running jobs. No real provider call, Instagram write, or spend.
+NOT verified: full automatic AI drafting or sending without a paid provider; a new live first-message handoff; unattended Chrome reconnect after restart; or paid providers/real Stripe TEST.
+Current app state: the updated server is running at `127.0.0.1:3100`, but the Chrome tab is at login because the server restart invalidated the active browser session. Rudra must sign in again; no password was accessed or changed. The separate worker was not restarted.
+Next I will: preserve no-spend settings and approval ON; complete only read-only checks that do not violate pacing or require credentials.

@@ -1078,3 +1078,10 @@ NOT verified: new live send/first reply, unattended Chrome reconnect after resta
 Needs from Rudra: none for the no-cost checks. A live message still requires an eligible prospect and exact-message approval; warm-up actions remain unauthorized in this check.
 Next: preserve approval ON and keep paid services off.
 Current browser note: the tested web server was restarted on port 3100 and the existing Chrome tab now shows login. The owner needs to sign in again. No password was handled; the worker and database were not restarted or changed.
+
+### [2026-10-23] Codex #134: Explain automatic writing without Claude
+Changed: Overview explains that the user does not need Claude installed; automatic drafts need a separate billed AI connection, and manual writing remains available for warmed leads. It links to Settings when Anthropic is not configured. Added unit and browser-smoke assertions.
+Verified: 328 tests, typecheck, lint, Webpack build, isolated UI smoke, and diff check pass. No paid call or Instagram write. Live data still shows 0 sent today, 23 awaiting approval, 0 billing events, and no queued/running jobs.
+NOT verified: a real live send/first-reply handoff or paid integrations. The app now serves the tested build, but Chrome is at login after restart; no password was accessed and the worker/database were left untouched.
+Needs from Rudra: sign in once to restore the app session. No other input is needed for local no-cost checks.
+Next: keep providers off, approvals on, and continue the safe verification checklist.

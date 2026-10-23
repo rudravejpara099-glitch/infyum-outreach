@@ -156,6 +156,9 @@ try {
   await page.getByRole("link", { name: "Lead progress", exact: true }).waitFor();
   await page.getByRole("link", { name: "Review messages", exact: true }).waitFor();
   await page.getByRole("link", { name: "History", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Automatic message writing needs setup" }).waitFor();
+  await page.getByText(/Claude does not need to be installed/).waitFor();
+  await page.getByRole("link", { name: "See AI setup in Settings", exact: true }).waitFor();
   await page.goto(`${base}/activity`);
   await page.getByRole("heading", { name: "No history yet" }).waitFor();
   await page.getByText("Campaign changes and outreach activity will appear here as they happen.", { exact: true }).waitFor();

@@ -38,3 +38,9 @@ export function failedWorkCopy(failedByType: Record<string, number>): string | n
   if (signIns === total) return `${signIns} sign-in attempts did not finish. Check Accounts if you still need to open a sign-in window.`;
   return `${total} background tasks need attention. View activity for details.`;
 }
+
+/** Explain the manual fallback when independently metered automatic writing is off. */
+export function automaticWritingCopy(configured: boolean): string | null {
+  if (configured) return null;
+  return "Claude does not need to be installed. Automatic message drafts need a separately billed AI connection, which is off. You can still check replies and write a message yourself for a warmed lead.";
+}
