@@ -1241,3 +1241,11 @@ Verified: 354 tests, typecheck, and lint pass. Earlier production build and isol
 NOT verified: delivery through a real Instagram account or an actual prospect response; campaign #4 remains without an eligible warmed lead/exact approved message.
 Needs from Rudra: none for this isolated simulation.
 Next: complete full verification, commit and publish to PR #13 while retaining no-spend and exact-message approval gates.
+
+### [2026-10-23] Codex #159: Refresh full-project readiness evidence
+Changed: refreshed `docs/FUNCTIONAL-AUDIT.md` and `HANDOFF.md` with current branch/PR state, live data counts, the scheduled Chrome check, passing local checks, and the remaining first-contact and paid-integration gates. No application code or live account state changed.
+Verified: `npm test` = 354 tests; `npm run typecheck`, `npm run lint`, `npm run build`, `npm run smoke:ui`, `npm run smoke:billing`, and `npm audit` = 0 vulnerabilities. PR #13 is OPEN/DRAFT with no CI checks. UI and billing smokes used isolated data; no messages or real charges. `git diff --check` to run before commit.
+NOT verified: the pending app-level Chrome reconnect, a new app-sent first-contact/real-reply cycle, paid AI/Apify or Stripe TEST. No provider credential or exact outbound message approval was created.
+Decisions made: keep approval ON, paid services off, no social writes without the explicit message/action gates; hosting and multi-company remain deferred.
+Needs from you: none for this documentation-only refresh.
+Next I will: rerun the required test/typecheck checks, commit and push the audit refresh to PR #13, then inspect the inbox job at its existing scheduled time.

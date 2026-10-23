@@ -1164,3 +1164,11 @@ Regression coverage checks all three actions in both unresponsive and stopping s
 ## Integrated simulated first-contact and handoff check (2026-10-23 16:58 UTC)
 
 Added a worker regression that exercises one complete approved Chrome-mode cycle with a fake Instagram driver: create a pending first DM, approve it, dispatch it once, read a simulated incoming reply, persist one `lead.handoff`, move the lead to `replied`, and cancel follow-up scheduling. The full suite now passes 354 tests; typecheck and lint also pass. The test uses no live account, provider, payment, or spend. Live app-sent first-contact remains unverified because campaign #4 has no warmed lead or exact approved message.
+
+## Readiness audit refresh (2026-10-23 17:00 UTC)
+
+Current branch `fix/first-run-operability` is pushed through `4052d13`. PR #13 is OPEN/DRAFT against `feat/platform-integration`; GitHub currently reports no CI checks. Latest verification: `npm test` (354 tests), `npm run typecheck`, `npm run lint`, `npm run build` (Next 16 Webpack), `npm run smoke:ui`, `npm run smoke:billing`, and `npm audit` (0 vulnerabilities) all pass. Browser smokes use isolated temporary data; they sent no Instagram messages and made no real payment/provider call.
+
+Read-only inspection of the configured app database found campaign #4 active with approval required, all 3 leads skipped, 23 pending drafts and 0 approved outgoing messages; the imported/history data has 105 sent messages and 2 leads marked replied. The recent signed-in Chrome read matched an already-handled reply, so it created no duplicate handoff. Rudra confirmed Chrome remote debugging is enabled and allowed in profile `Rudra099`. The app's next read-only inbox job remains queued at `2026-10-24 04:12:59 UTC` (09:42 IST); do not accelerate it.
+
+Still unverified: app-level Chrome inbox reconnection after the owner's setting change; a fresh real app-sent first message and first-reply handoff (needs eligible lead, supported warm-up, exact in-app approval, one approved send, and a real reply); live paid Anthropic/Apify/Stripe TEST. No real social write, paid call, payment, or spend occurred. Hosting and multi-company accounts remain deferred by the existing scope.
