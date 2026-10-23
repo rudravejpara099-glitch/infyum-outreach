@@ -1218,3 +1218,10 @@ NOT verified: first DM delivered by this app followed by a new reply; live warm-
 Decisions: maintain no-spend, approval ON, and existing social-action permission boundaries; do not accelerate the queued inbox check.
 Needs from Rudra: none for the current local audit.
 Next: continue closing locally verifiable project gaps; the live first-contact cycle remains gated by an eligible warmed prospect and exact in-app message approval.
+
+### [2026-10-23] Codex #156: Refresh the development dependency advisory status
+Changed: updated the ranked project list and handoff note with GitHub's current withdrawal of GHSA-vfj7-8cjw-p6xm for `braces`. No package files changed.
+Verified: GitHub's advisory database marks it withdrawn on 2026-10-23 because it was not practically exploitable. Local `npm audit` could not query `registry.npmjs.org` due DNS failure, so the lockfile's current report remains unverified. No forced downgrade or override was applied.
+NOT verified: whether the local npm audit now removes the finding; registry access is required.
+Needs from Rudra: none for this documentation correction.
+Next: rerun `npm audit` when registry DNS is available and keep the existing Next 16 tooling meanwhile.
