@@ -1299,3 +1299,11 @@ NOT verified: app job #36 has not run; it remains queued for `2026-10-24 04:12:5
 Decisions made: keep the app inbox job at its scheduled time; no acceleration, social write, or spend.
 Needs from Rudra: none.
 Next I will: inspect job #36 after its scheduled run and update the handoff with its result.
+
+### [2026-10-23] Codex #166: Verify the live app and refresh the completion checklist
+Changed: updated `HANDOFF.md` and the top of `docs/FUNCTIONAL-AUDIT.md` to match the current owner-browser Overview and Accounts pages. No app code, account setting, lead, message, or job was changed.
+Verified: the authenticated campaign page, Accounts page, and Overview all loaded in the owner's browser. Overview reports 204 leads, 23 drafts awaiting approval, 0 DMs sent today, 2 replies, and Outreach running. Four accounts are saved: one connected, two sign-in-needed, one paused. Six recent signed-in Chrome inbox conversations had no new incoming reply; the already-known reply remained handled. The scheduled app inbox job #36 remains tomorrow at 09:42 IST. Local verification remains 362 tests, typecheck, lint, Webpack build, UI smoke, billing smoke, and npm audit with 0 vulnerabilities.
+NOT verified: the result of app inbox job #36; a new app-sent first DM and fresh reply/handoff; warm-up in signed-in Chrome; or real paid-provider/payment behavior. The shell cannot reach the local preview over loopback, but the owner's browser reload proved the app page itself is serving.
+Decisions made: preserve no-spend, approval, and Instagram-action gates; leave the scheduled job unchanged and PR #13 open/draft.
+Needs from Rudra: none for this refresh.
+Next I will: continue locally verifiable completion work and inspect #36 after its normal scheduled run.

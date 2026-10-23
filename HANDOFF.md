@@ -24,10 +24,10 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
-## Current live-workspace status (2026-10-23, refreshed at 17:36 UTC)
+## Current live-workspace status (2026-10-23, refreshed at 17:45 UTC)
 
-- The owner workspace and worker are running locally. Worker control shows `running` with a heartbeat at 17:35 UTC. Read-only inbox job #36 for account #2 remains queued for `2026-10-24 04:12:59 UTC` (09:42 IST); do not accelerate it.
-- Account #2, `@timelessmoments.al`, is verified in signed-in Chrome profile `Rudra099`; app sign-in check #37 completed with `authenticated:true`. Account #4, `@akash_infyum`, still needs its own sign-in in Outreach. Safari’s Instagram session was not verified.
+- The owner workspace and worker are running locally. The live Overview says Outreach is running and the next reply check is tomorrow at 09:42 IST. Read-only inbox job #36 for account #2 remains queued for `2026-10-24 04:12:59 UTC`; do not accelerate it. The Overview and Campaign #2 both reloaded successfully in the owner’s browser.
+- Four Instagram accounts are saved; `@timelessmoments.al` is Connected in signed-in Chrome profile `Rudra099`, two other accounts need sign-in, and one is paused. App sign-in check #37 completed with `authenticated:true`. Safari’s Instagram session was not verified.
 - Campaign #2 is a draft with 3 qualified leads; campaign account #2 is selected, but the leads are not yet assigned to an account. Campaign #3 is a draft with 69 leads (34 found, 24 qualified, 11 skipped) and no sender. Campaign #4 is active, uses account #2, and all 3 leads are skipped. Campaigns #1 and #5 are empty drafts. No campaign has a warmed lead.
 - The workspace has 23 outgoing drafts awaiting approval and 0 approved outgoing messages. Approval is ON for campaign #4; no exact first-contact message is approved. Do not activate or reassign a campaign to manufacture a send target.
 - Campaign pages now explain that matched leads need preparation when the selected active senders use signed-in Chrome. The connection can check profiles/replies and send approved messages, but the warm-up likes/comments/follows are not enabled for Chrome. This notice explains the blocker; it does not perform Instagram actions.
@@ -35,7 +35,7 @@ Business rules the code must keep:
 - Current local verification on `fix/first-run-operability` (pushed to PR #13): 362 tests, typecheck, lint, `npm run build` (Webpack), isolated UI and billing smokes, and `npm audit` (0 vulnerabilities) pass. The exact `npx next build` command still fails when Turbopack tries to bind an internal port in this environment; the configured Webpack build passes. PR #13 remains OPEN/DRAFT with no hosted checks.
 - This does not verify a real first message sent by the app followed by a fresh real reply/handoff, live paid-provider behavior, or payment. No Instagram message or engagement action, paid call, or spend occurred in the latest checks.
 
-Latest inbox confirmation (2026-10-23 17:38 UTC): Rudra confirmed Chrome remote debugging is enabled and allowed for profile `Rudra099`. A manual read-only scan opened six recent conversations and found no new incoming reply; the already-known reply remained handled without a duplicate handoff. This is not the app's scheduled inbox job #36, still queued for `2026-10-24 04:12:59 UTC` (09:42 IST); leave it at its scheduled time.
+Latest live check (2026-10-23 17:45 UTC): Rudra confirmed Chrome remote debugging is enabled and allowed for profile `Rudra099`. A manual read-only scan opened six recent conversations and found no new incoming reply; the already-known reply remained handled without a duplicate handoff. The live app Overview reports 204 leads, 23 messages awaiting approval, 0 DMs sent today, 0 warmed leads, and Outreach running. This manual Chrome scan is not the app's scheduled inbox job #36; leave it at its scheduled time.
 
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:
