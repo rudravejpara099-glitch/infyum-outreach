@@ -1053,3 +1053,9 @@ Changed: refreshed the current-status paragraph and remaining checklist in `docs
 Verified: read-only job #32 completed at its scheduled time on attempt 2 with no stored error, and the worker queued job #33 for the next hourly check. The worker process remained live. No new handoff was logged. No message, follow, like, comment, paid call, or payment occurred; billing usage remains zero. No job was accelerated.
 NOT verified: whether job #32 needed a Chrome permission prompt; prompt-free reconnection after a worker restart; any new first-message handoff; paid Anthropic/Apify/real Stripe TEST; or visual access to the local app in the in-app browser.
 Next: retain the current no-spend and approval gates. The remaining checklist is in `docs/FUNCTIONAL-AUDIT.md`; a live first-message proof still requires a warmed eligible prospect and approval of the exact message.
+
+### [2026-10-23] Codex #141: Restart the idle worker for reconnection check
+Changed: no application code. Restarted the worker only after confirming there were no running jobs, no approved outbound messages, approval ON, and the only queued job was the scheduled read-only inbox check #33.
+Verified: SIGINT stopped the worker cleanly; `npm run worker` started it again with a fresh running control record. The worker remains running; #33 is queued for 11:50:26 UTC. There are zero billing usage events and no new handoff. No job was accelerated and no social write or payment occurred.
+NOT verified: the result of #33 or whether Chrome reconnects without a permission prompt after the restart.
+Next: allow #33 to run on schedule and inspect its saved result. Keep all paid and outbound actions disabled.
