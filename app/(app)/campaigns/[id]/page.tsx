@@ -24,7 +24,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   await requireUser();
   const { id } = await params;
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
-  const db = getDb();
+  const db = (await getDb());
   const campaign = getCampaign(db, Number(id));
   if (!campaign) notFound();
   const worker = workerStatus(db, new Date());

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
+import { getWorkspacePaths } from "@/lib/workspaces/storage";
 import { createAccount, getAccount, setAccountBrowserMode, setAccountCap, setAccountStatus } from "@/lib/db/repos/accounts";
 import { enqueue } from "@/lib/db/repos/jobs";
 import { normHandle } from "@/lib/db/repos/dnc";
@@ -16,7 +17,8 @@ import { loginWindowCommand } from "@/lib/services/login-window-command";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { accountIdSchema, capSchema, connectSchema } from "./validation";
 
-function startLoginWindow(accountId: number, jobId: number): boolean {
+function startLoginWindow(db: Awaited<ReturnType<typeof getDb>>, workspaceId: string, accountId: number, jobId: number): boolean {
+  const paths = getWorkspacePaths(workspaceId);
   if (process.env.OUTREACH_SMOKE_MODE === "1") return true;
   try {
     const command = loginWindowCommand(accountId, jobId);
@@ -24,12 +26,11 @@ function startLoginWindow(accountId: number, jobId: number): boolean {
       cwd: process.cwd(), detached: true, stdio: "ignore",
       env: {
         PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", NODE_ENV: process.env.NODE_ENV ?? "development",
-        DB_PATH: config.dbPath, PROFILES_DIR: config.profilesDir,
+        DB_PATH: paths.dbPath, PROFILES_DIR: paths.profilesDir, OUTREACH_HOST_CHROME_ALLOWED: paths.hostChromeAllowed ? "1" : "0",
       },
     });
     child.once("error", () => {
       try {
-        const db = getDb();
         db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'")
           .run("The sign-in window could not start. Try again from Accounts.", jobId);
       } catch { /* The next page load still shows the queued request. */ }
@@ -50,7 +51,7 @@ function queuedLoginMessage(browserMode: "isolated" | "chrome_read_only", phase:
     ? "Account saved. Outreach is checking the current Chrome sign-in."
     : "Instagram is opening in a separate sign-in window. Sign in there, then refresh this page to see the connection status.";
 }
-function requestLogin(db: ReturnType<typeof getDb>, accountId: number, backgroundOwnsJobs: boolean): LoginRequest {
+function requestLogin(db: Awaited<ReturnType<typeof getDb>>, accountId: number, backgroundOwnsJobs: boolean): LoginRequest {
   const active = db.prepare("SELECT id,status,created_at FROM jobs WHERE type='open_login' AND account_id=? AND status IN ('queued','running') ORDER BY id DESC LIMIT 1")
     .get(accountId) as { id: number; status: string; created_at: string } | undefined;
   if (active?.status === "running") {
@@ -68,7 +69,9 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = connectSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message, field: String(parsed.error.issues[0].path[0]) };
-  const handle = normHandle(parsed.data.handle), db = getDb();
+  if (parsed.data.browserMode === "chrome_read_only" && !user.hostChromeAllowed) return { error: "Use your company's separate Instagram sign-in window.", field: "browserMode" };
+  const paths = getWorkspacePaths(user.workspaceId);
+  const handle = normHandle(parsed.data.handle), db = (await getDb(form));
   if (db.prepare("SELECT id FROM ig_accounts WHERE handle=?").get(handle)) return { error: "This account is already saved. Use its sign-in button below.", field: "handle" };
   const smoke = process.env.OUTREACH_SMOKE_MODE === "1";
   const worker = workerStatus(db, new Date());
@@ -77,11 +80,11 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
   db.transaction(() => {
     const now = new Date();
     const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
-    const account = createAccount(db, { handle, profileDir: path.join(config.profilesDir, handle), dailyCap: parsed.data.dailyCap, browserMode: parsed.data.browserMode, rampStart: dateInTimeZone(now, timeZone) }, user.email);
+    const account = createAccount(db, { handle, profileDir: path.join(paths.profilesDir, handle), dailyCap: parsed.data.dailyCap, browserMode: parsed.data.browserMode, rampStart: dateInTimeZone(now, timeZone) }, user.email);
     accountId = account.id;
     request = requestLogin(db, account.id, backgroundRunning);
   }).immediate();
-  const started = !request.launch || startLoginWindow(accountId, request.jobId);
+  const started = !request.launch || startLoginWindow(db, user.workspaceId, accountId, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: parsed.data.browserMode === "chrome_read_only"
@@ -96,17 +99,18 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
 }
 export async function useSignedInChrome(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
+  if (!user.hostChromeAllowed) return { error: "Use your company's separate Instagram sign-in window." };
   const parsed = accountIdSchema.safeParse(form.get("id"));
-  const account = parsed.success ? getAccount(getDb(), parsed.data) : null;
+  const account = parsed.success ? getAccount((await getDb(form)), parsed.data) : null;
   if (!account) return { error: "Account not found. Refresh this page." };
-  const db = getDb();
+  const db = (await getDb(form));
   setAccountBrowserMode(db, account.id, "chrome_read_only", user.email);
   const smoke = process.env.OUTREACH_SMOKE_MODE === "1";
   const worker = workerStatus(db, new Date());
   const backgroundRunning = smoke || workerMayOwnJobs(worker.phase);
   let request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
   db.transaction(() => { request = requestLogin(db, account.id, backgroundRunning); }).immediate();
-  const started = !request.launch || startLoginWindow(account.id, request.jobId);
+  const started = !request.launch || startLoginWindow(db, user.workspaceId, account.id, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: "Chrome connection was selected, but the check could not start. Try again." };
@@ -117,18 +121,18 @@ export async function useSignedInChrome(form: FormData): Promise<ActionResult> {
 export async function useSeparateSignIn(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = accountIdSchema.safeParse(form.get("id"));
-  const account = parsed.success ? getAccount(getDb(), parsed.data) : null;
+  const account = parsed.success ? getAccount((await getDb(form)), parsed.data) : null;
   if (!account) return { error: "Account not found. Refresh this page." };
-  setAccountBrowserMode(getDb(), account.id, "isolated", user.email);
+  setAccountBrowserMode((await getDb(form)), account.id, "isolated", user.email);
   revalidatePath("/accounts");
   return { message: "This account will use its separate sign-in window again." };
 }
 export async function reopenLogin(form: FormData): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = accountIdSchema.safeParse(form.get("id"));
-  const account = parsed.success ? getAccount(getDb(), parsed.data) : null;
+  const account = parsed.success ? getAccount((await getDb(form)), parsed.data) : null;
   if (!account) return { error: "Account not found. Refresh this page." };
-  const db = getDb();
+  const db = (await getDb(form));
   const smoke = process.env.OUTREACH_SMOKE_MODE === "1";
   const worker = workerStatus(db, new Date());
   const backgroundRunning = smoke || workerMayOwnJobs(worker.phase);
@@ -136,7 +140,7 @@ export async function reopenLogin(form: FormData): Promise<ActionResult> {
   db.transaction(() => {
     request = requestLogin(db, account.id, backgroundRunning);
   }).immediate();
-  const started = !request.launch || startLoginWindow(account.id, request.jobId);
+  const started = !request.launch || startLoginWindow(db, user.workspaceId, account.id, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: account.browserMode === "chrome_read_only" ? "The Chrome sign-in check could not start. Try again shortly." : "The sign-in window could not open. Try again shortly." };
@@ -153,17 +157,17 @@ export async function changeStatus(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = accountIdSchema.safeParse(form.get("id")), status = form.get("status");
   if (!parsed.success || (status !== "active" && status !== "paused")) return { error: "Choose a valid account action." };
-  const account = getAccount(getDb(), parsed.data);
+  const account = getAccount((await getDb(form)), parsed.data);
   if (!account) return { error: "Account not found. Refresh this page." };
   if (account.status === "blocked") return { error: "Instagram showed a warning. This account stays stopped; resolve it in Instagram and have the warning reviewed before resuming." };
-  setAccountStatus(getDb(), parsed.data, status, status === "paused" ? "Paused by team" : "", user.email);
+  setAccountStatus((await getDb(form)), parsed.data, status, status === "paused" ? "Paused by team" : "", user.email);
   revalidatePath("/accounts"); return { message: status === "paused" ? "Account paused." : "Account resumed. Working hours and daily limits still apply." };
 }
 export async function changeCap(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const id = accountIdSchema.safeParse(form.get("id")), cap = capSchema.safeParse(form.get("cap"));
-  if (!id.success || !getAccount(getDb(), id.data)) return { error: "Account not found. Refresh this page." };
+  if (!id.success || !getAccount((await getDb(form)), id.data)) return { error: "Account not found. Refresh this page." };
   if (!cap.success) return { error: `Choose a whole-number limit from 1 to ${config.absoluteDailyCeiling}.`, field: "cap" };
-  setAccountCap(getDb(), id.data, cap.data, user.email);
+  setAccountCap((await getDb(form)), id.data, cap.data, user.email);
   revalidatePath("/accounts"); return { message: "Daily limit saved. The gradual ramp-up still applies." };
 }

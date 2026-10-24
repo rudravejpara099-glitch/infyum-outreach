@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /** Our job ends at the first reply. This page is the hand-off list: open the chat in Instagram or GoHighLevel and take it from here. */
 export default async function Replies() {
   await requireUser();
-  const db = getDb();
+  const db = (await getDb());
   const leads = listLeads(db, { stage: "replied" });
   return (
     <>

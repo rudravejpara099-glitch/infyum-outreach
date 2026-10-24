@@ -1,3 +1,9 @@
+# Self-service update — 2026-10-24
+
+Private company workspaces are now the default signup path. Invitation-only teams, workspace switching, membership removal, revocable sessions, database/browser separation and company-scoped test billing are implemented. Existing owner data is preserved. Verification: 444 tests, typecheck, lint, Webpack production build, disposable UI flow, fake billing flow and two-company browser flow pass. See the latest `HANDOFF.md` section for exact evidence and remaining live proof.
+
+Public remote Instagram onboarding, per-company provider setup, public deployment and live outbound first-reply verification remain unfinished. The historical local-only/tenancy-deferred checklist below is superseded for the implemented workspace foundation, not for those outstanding integrations.
+
 # Full functionality audit — 2026-10-22
 
 ## Current project status and completion checklist — 2026-10-24

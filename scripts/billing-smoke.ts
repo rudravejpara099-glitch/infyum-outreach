@@ -18,6 +18,8 @@ import { periodFor } from "@/lib/billing/periods";
 import { addResourceCost } from "@/lib/billing/resources";
 import { syncBilling } from "@/lib/billing/sync";
 import { setSetting } from "@/lib/db/repos/settings";
+import { createUser } from "@/lib/db/repos/users";
+import { createWorkspaceSession } from "@/lib/workspaces/catalog";
 import { billingTestProvider } from "./billing-test-provider";
 import { buildIsolatedNextApp, cleanupIsolatedNextApp, type IsolatedNextBuild } from "./isolated-next-build";
 async function stopServer(child: ChildProcess) {
@@ -155,9 +157,15 @@ async function main() {
     assert.equal((db.prepare("SELECT count(*) n FROM billing_payments").get() as { n: number }).n, 1);
     assert.equal((db.prepare("SELECT count(*) n FROM billing_fee_reconciliations").get() as { n: number }).n, 1);
     const response = await context.request.get(`${base}/billing/export`); assert.equal(response.status(), 200); assert((await response.text()).includes("provider_reference"));
-    const teammate = db.prepare("INSERT INTO users(email,name,password_hash) VALUES('other@example.test','Other','unused')").run();
+    const identity = openDb(`${dbPath}.identity.db`);
+    let otherId: number, otherSession: string;
+    try {
+      otherId = createUser(identity, "other@example.test", "Other", "unused").id;
+      identity.prepare("INSERT INTO workspace_memberships(workspace_id,user_id,role) VALUES ('legacy',?,'member')").run(otherId);
+      otherSession = createWorkspaceSession(identity, otherId, "legacy", Date.now() + 3_600_000);
+    } finally { identity.close(); }
     const { SignJWT } = await import("jose");
-    const token = await new SignJWT({ uid: Number(teammate.lastInsertRowid) }).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1h").sign(new TextEncoder().encode(sessionSecret));
+    const token = await new SignJWT({ uid: otherId, wid: "legacy", sid: otherSession }).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1h").sign(new TextEncoder().encode(sessionSecret));
     const otherContext = await browser.newContext();
     await otherContext.addCookies([{ name: "session", value: token, domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]);
     const otherPage = await otherContext.newPage();

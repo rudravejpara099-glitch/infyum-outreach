@@ -18,8 +18,8 @@ import { changeCap, changeStatus, connectAccount, reopenLogin, useSeparateSignIn
 export const dynamic = "force-dynamic";
 
 export default async function AccountsPage() {
-  await requireUser();
-  const db = getDb();
+  const user = await requireUser();
+  const db = (await getDb());
   const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
   const today = dateInTimeZone(new Date(), timeZone);
   const accounts = listAccounts(db);
@@ -37,7 +37,7 @@ export default async function AccountsPage() {
       <ActionForm action={connectAccount} className="card mb-6 flex flex-wrap items-end gap-3 p-4">
         <div className="w-56"><label className="label" htmlFor="handle">Instagram handle</label><input id="handle" name="handle" required placeholder="@yourbrand" className="input" /></div>
         <div className="w-40"><label className="label" htmlFor="dailyCap">DMs per day (max {config.absoluteDailyCeiling})</label><input id="dailyCap" name="dailyCap" type="number" defaultValue={35} min={1} max={config.absoluteDailyCeiling} className="input" /></div>
-        <div className="w-56"><label className="label" htmlFor="browserMode">How should it connect?</label><select id="browserMode" name="browserMode" defaultValue="isolated" className="input"><option value="isolated">New sign-in window</option><option value="chrome_read_only">My signed-in Chrome</option></select></div>
+        <div className="w-56"><label className="label" htmlFor="browserMode">How should it connect?</label><select id="browserMode" name="browserMode" defaultValue="isolated" className="input"><option value="isolated">New sign-in window</option>{user.hostChromeAllowed && <option value="chrome_read_only">My signed-in Chrome</option>}</select></div>
         <button className="btn btn-primary">Connect account</button>
         <p className="basis-full text-xs text-muted">Choose a separate sign-in window or your existing signed-in Chrome. Campaign messages still wait for approval when approval is turned on in campaign settings.</p>
       </ActionForm>
@@ -73,7 +73,7 @@ export default async function AccountsPage() {
                   <button className="btn">Set cap</button>
                 </ActionForm>
                 <ActionForm action={reopenLogin}><input type="hidden" name="id" value={a.id} /><button className="btn">{a.browserMode === "chrome_read_only" ? "Check Chrome sign-in" : "Open login window"}</button></ActionForm>
-                {a.browserMode !== "chrome_read_only" && <ActionForm action={useSignedInChrome}><input type="hidden" name="id" value={a.id} /><button className="btn">Use signed-in Chrome</button></ActionForm>}
+                {user.hostChromeAllowed && a.browserMode !== "chrome_read_only" && <ActionForm action={useSignedInChrome}><input type="hidden" name="id" value={a.id} /><button className="btn">Use signed-in Chrome</button></ActionForm>}
                 {a.browserMode === "chrome_read_only" && <ActionForm action={useSeparateSignIn}><input type="hidden" name="id" value={a.id} /><button className="btn">Use separate sign-in</button></ActionForm>}
                 <ActionForm action={changeStatus}>
                   <input type="hidden" name="id" value={a.id} />

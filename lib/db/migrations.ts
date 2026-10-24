@@ -138,4 +138,41 @@ VALUES(100,'claude-sonnet-5-5',2000000,10000000,100000,NULL,1,'https://platform.
     name: "instagram_browser_mode",
     sql: "ALTER TABLE ig_accounts ADD COLUMN browser_mode TEXT NOT NULL DEFAULT 'isolated' CHECK (browser_mode IN ('isolated','chrome_read_only'))",
   },
+  {
+    id: 6,
+    name: "company_workspaces",
+    sql: `
+CREATE TABLE workspace_catalog (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  legacy INTEGER NOT NULL DEFAULT 0 CHECK (legacy IN (0,1))
+);
+CREATE UNIQUE INDEX workspace_one_legacy ON workspace_catalog(legacy) WHERE legacy=1;
+CREATE TABLE workspace_memberships (
+  workspace_id TEXT NOT NULL REFERENCES workspace_catalog(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('owner','member')),
+  PRIMARY KEY (workspace_id,user_id)
+);
+CREATE UNIQUE INDEX workspace_one_owner ON workspace_memberships(workspace_id) WHERE role='owner';
+CREATE TABLE workspace_invites (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL REFERENCES workspace_catalog(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at INTEGER NOT NULL,
+  consumed_at INTEGER,
+  revoked_at INTEGER
+);
+CREATE TABLE workspace_sessions (
+  token_hash TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL REFERENCES workspace_catalog(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  revoked_at INTEGER
+);
+CREATE INDEX workspace_sessions_user ON workspace_sessions(user_id,workspace_id);
+CREATE TABLE workspace_bootstrap (id INTEGER PRIMARY KEY CHECK (id=1));
+`,
+  },
 ];

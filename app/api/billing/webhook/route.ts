@@ -1,6 +1,7 @@
-import { getDb } from "@/lib/db";
+import { getWorkspaceDb } from "@/lib/workspaces/storage";
 import { verifyWebhook, testStripe, paymentConfigured } from "@/lib/billing/provider";
 import { processWebhook, reconcilePendingFees } from "@/lib/billing/webhooks";
+import { eventWorkspaceId } from "@/lib/billing/workspace-routing";
 export const runtime = "nodejs";
 /** Provider authentication replaces interactive requireUser on this exact endpoint only. */
 export async function POST(request: Request) {
@@ -17,8 +18,12 @@ export async function POST(request: Request) {
   try { event = verifyWebhook(Buffer.concat(chunks).toString("utf8"), signature); }
   catch { return new Response("Invalid test webhook signature or mode", { status: 400 }); }
   try {
-    processWebhook(getDb(), event);
-    if (paymentConfigured() && ["checkout.session.completed", "checkout.session.async_payment_succeeded", "charge.succeeded", "charge.updated"].includes(event.type)) await reconcilePendingFees(getDb(), testStripe());
+    const workspaceId = eventWorkspaceId(event);
+    if (workspaceId === null) return Response.json({ received: true });
+    // Catalog validation happens before opening a company database; no user cookie is trusted here.
+    const db = getWorkspaceDb(workspaceId);
+    processWebhook(db, event);
+    if (paymentConfigured() && ["checkout.session.completed", "checkout.session.async_payment_succeeded", "charge.succeeded", "charge.updated"].includes(event.type)) await reconcilePendingFees(db, testStripe());
     return Response.json({ received: true });
   } catch { return new Response("Payment reconciliation pending; retry delivery", { status: 503 }); }
 }

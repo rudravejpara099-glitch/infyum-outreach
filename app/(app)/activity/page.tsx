@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Activity() {
   await requireUser();
-  const db = getDb();
+  const db = (await getDb());
   const rows = listActivity(db, { limit: 300 });
   const failed = listJobs(db, 200).filter((j) => j.status === "failed");
   return (

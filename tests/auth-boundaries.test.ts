@@ -4,8 +4,8 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const appRoot = join(process.cwd(), "app");
-const publicPages = new Set(["login/page.tsx", "setup/page.tsx"]);
-const publicActions = new Set(["login/actions.ts:login", "login/actions.ts:setup"]);
+const publicPages = new Set(["login/page.tsx", "setup/page.tsx", "register/page.tsx", "join/page.tsx"]);
+const publicActions = new Set(["login/actions.ts:login", "login/actions.ts:setup", "register/actions.ts:register", "join/actions.ts:join"]);
 const providerAuthenticatedRoutes = new Set(["api/billing/webhook/route.ts"]);
 
 type FunctionBody = { name: string; body: ts.Block };

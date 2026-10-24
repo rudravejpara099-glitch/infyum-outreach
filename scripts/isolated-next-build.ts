@@ -1,11 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { rmSync, writeFileSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export type IsolatedNextBuild = { distDir: string; tsconfigPath: string };
 
 export function buildIsolatedNextApp(name: "ui" | "billing", secrets: string[] = []): IsolatedNextBuild {
+  const reused = process.env.OUTREACH_REUSE_SMOKE_BUILD;
+  if (reused) {
+    if (!/^\.next-smoke-[a-z0-9-]{1,64}$/.test(reused) || !existsSync(path.join(reused, "BUILD_ID"))) throw new Error("Choose a completed isolated smoke build.");
+    return { distDir: reused, tsconfigPath: `${reused.replace(".next-smoke-", ".tsconfig-smoke-")}.json` };
+  }
   const suffix = randomBytes(4).toString("hex");
   const build = { distDir: `.next-smoke-${name}-${suffix}`, tsconfigPath: `.tsconfig-smoke-${name}-${suffix}.json` };
   writeFileSync(build.tsconfigPath, JSON.stringify({ extends: "./tsconfig.json" }));
@@ -23,6 +28,7 @@ export function buildIsolatedNextApp(name: "ui" | "billing", secrets: string[] =
 }
 
 export function cleanupIsolatedNextApp(build: IsolatedNextBuild): void {
+  if (process.env.OUTREACH_REUSE_SMOKE_BUILD === build.distDir) return;
   rmSync(path.resolve(build.distDir), { recursive: true, force: true });
   rmSync(path.resolve(build.tsconfigPath), { force: true });
 }

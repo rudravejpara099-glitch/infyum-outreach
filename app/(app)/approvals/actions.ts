@@ -9,7 +9,7 @@ import type { ActionResult } from "@/lib/ui/action-result";
 
 export async function approve(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), db = getDb();
+  const id = Number(form.get("id")), db = (await getDb(form));
   if (!Number.isSafeInteger(id) || id <= 0) return { error: "Draft not found. Refresh this page." };
   const result: ActionResult = db.transaction(() => {
     const checked = reviewDraft(db, id, form.getAll("part"));
@@ -23,7 +23,7 @@ export async function approve(form: FormData): Promise<ActionResult> {
 }
 export async function reject(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), db = getDb();
+  const id = Number(form.get("id")), db = (await getDb(form));
   if (!Number.isSafeInteger(id) || id <= 0) return { error: "Draft not found. Refresh this page." };
   const result: ActionResult = db.transaction(() => {
     const message = getMessage(db, id);
@@ -40,7 +40,7 @@ export async function approveSelected(form: FormData): Promise<ActionResult> {
   if (form.get("reviewed") !== "on") return { error: "Confirm that you reviewed every selected draft." };
   const raw = form.getAll("selected").map(String);
   if (!raw.length || raw.length > 100 || raw.some(id => !/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) || new Set(raw).size !== raw.length) return { error: "Select 1 to 100 different drafts to approve." };
-  const db = getDb();
+  const db = (await getDb(form));
   const result: ActionResult = db.transaction(() => {
     const recent = recentSentTexts(db), checked: { id: number; parts: string[] }[] = [];
     for (const id of raw) {

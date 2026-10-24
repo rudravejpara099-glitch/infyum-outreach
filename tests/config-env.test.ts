@@ -27,6 +27,10 @@ describe("shared configuration outside the Next runtime", () => {
     fixture(); const db = path.join(directory, "explicit.db");
     expect(readConfig({ DB_PATH: db }).db).toBe(db);
   });
+  it("does not restore owner credentials over private-worker empty overrides", () => {
+    fixture();
+    expect(readConfig({ SESSION_SECRET: "", APIFY_TOKEN: "" })).toMatchObject({ sessionLoaded: false, providerLoaded: false });
+  });
   it("ignores private local files in test mode and uses the test configuration", () => {
     fixture(); const db = path.join(directory, "only-test.db");
     writeFileSync(path.join(directory, ".env.test"), `DB_PATH=${db}\n`);

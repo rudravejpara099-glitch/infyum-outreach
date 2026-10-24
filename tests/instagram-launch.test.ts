@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IgAccount } from "@/lib/db/types";
 
 const browserMocks = vi.hoisted(() => ({
@@ -16,6 +16,7 @@ import { PlaywrightInstagram } from "@/worker/instagram";
 import { AccountInstagramDriver } from "@/worker/instagram-driver";
 
 describe("Instagram login browser launch", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.clearAllMocks();
     browserMocks.context.close.mockResolvedValue(undefined);
@@ -41,6 +42,14 @@ describe("Instagram login browser launch", () => {
     expect(browserMocks.page.goto).toHaveBeenCalledWith("https://www.instagram.com/", { waitUntil: "domcontentloaded" });
     expect(browserMocks.page.bringToFront).toHaveBeenCalledOnce();
     expect(browserMocks.context.close).toHaveBeenCalledOnce();
+  });
+  it("refuses host Chrome for a private company's worker before connecting", async () => {
+    vi.stubEnv("OUTREACH_HOST_CHROME_ALLOWED", "0");
+    const driver = new AccountInstagramDriver();
+    const account = { id: 4, browserMode: "chrome_read_only" } as IgAccount;
+    expect(() => driver.openLogin(account)).toThrow("host's Chrome profile is unavailable");
+    expect(browserMocks.launchPersistentContext).not.toHaveBeenCalled();
+    await driver.close();
   });
 
   it("stops profile reads when Instagram overlays a login prompt on a public profile", async () => {

@@ -9,6 +9,7 @@ export class AccountInstagramDriver implements InstagramDriver {
   private readonly chrome = new Map<number, ChromeInstagram>();
   private for(account: IgAccount): InstagramDriver {
     if (account.browserMode !== "chrome_read_only") return this.isolated;
+    if (process.env.OUTREACH_HOST_CHROME_ALLOWED === "0") throw new Error("The host's Chrome profile is unavailable to this workspace. Connect a separate Instagram sign-in.");
     let driver = this.chrome.get(account.id);
     if (!driver) { driver = new ChromeInstagram(); this.chrome.set(account.id, driver); }
     return driver;

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Approvals({ searchParams }: PageProps<"/approvals">) {
   await requireUser();
-  const db = getDb();
+  const db = (await getDb());
   const sp = await searchParams;
   const parsed = z.coerce.number().int().positive().safeParse(sp.campaign);
   if (sp.campaign !== undefined && !parsed.success) notFound();

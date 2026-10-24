@@ -14,7 +14,7 @@ const STATUS_BADGE = { draft: "badge-muted", active: "badge-ok", paused: "badge-
 
 export default async function CampaignsPage() {
   await requireUser();
-  const db = getDb();
+  const db = (await getDb());
   const campaigns = listCampaigns(db);
   return (
     <>
