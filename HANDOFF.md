@@ -24,10 +24,10 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
-## Current live-workspace status (2026-10-24 04:25 UTC)
+## Current live-workspace status (2026-10-24 04:44 UTC)
 
 - The local Overview and Campaigns pages load in the owner's browser. Overview reports 204 leads, 23 drafts awaiting review, 0 DMs today, 65 in the last 7 days, 2 replies, 0 warmed leads, and Outreach running. It reports the next campaign task at 11:50 PM team time.
-- Four Instagram accounts are saved: #2 `@timelessmoments.al` is Connected in Chrome profile `Rudra099`; #4 `@akash_infyum` and #3 `@rudravejpara03012008` need sign-in; #1 `@rudravejpara` is paused. Chrome 155.0.8059.85 confirms remote debugging is enabled, the app connector now auto-connects successfully, and Instagram loads in the signed-in profile. A read-only check of #4 failed after its scheduled retry because Chrome is signed in as `@timelessmoments.al`; `@akash_infyum` is a separate profile that this account follows, not the signed-in owner account. Do not treat these accounts as interchangeable. The next app inbox job #36 remains queued for `2026-10-24 04:41:20 UTC` (10:11 IST); leave it at its scheduled time and inspect its terminal result. Safari was previously on its Start Page and is not being relied on.
+- Four Instagram accounts are saved: #2 `@timelessmoments.al` is Connected in Chrome profile `Rudra099`; #4 `@akash_infyum` and #3 `@rudravejpara03012008` need sign-in; #1 `@rudravejpara` is paused. Chrome 155.0.8059.85 confirms remote debugging is enabled, the app connector can open Instagram, and the current session is `@timelessmoments.al`. A read-only check of #4 failed because `@akash_infyum` is a separate profile that this account follows, not the signed-in owner account. App inbox job #36 started at its scheduled time but timed out waiting for Chrome remote debugging approval; that prompt was then accepted, and the worker queued its ordinary retry for `2026-10-24 04:52:21 UTC` (10:22 IST). The worker is running. Do not accelerate the retry. Safari is not being relied on.
 - Five campaigns appear in the list: #1 and #5 are empty drafts; #2 is a draft with 3 leads; #3 is a draft with 69 leads; #4 is active with 3 skipped leads. None has a warmed lead. The campaign list now exposes Pause/Stop on active rows and Resume on paused rows; starting drafts and deleting empty drafts remain on their details pages.
 - Campaign #4 still requires approval. There are 23 pending drafts and 0 approved outgoing messages. Do not activate or reassign a campaign to manufacture a send target.
 - Signed-in Chrome can read profiles/inbox and send approved messages, but the app does not perform warm-up likes/comments/follows in that mode. Do not perform any Instagram write without the specific approval already required by the board and app.
@@ -37,7 +37,7 @@ Business rules the code must keep:
 
 - The Overview's AI setup card now distinguishes the zero-prepared-lead state from when manual writing is available: it no longer implies a user can write for a warmed lead when none are prepared. The wording also says the first message still waits for approval. Tests and the isolated UI smoke cover the empty state; this does not change sending or approval behavior.
 
-Latest live check (2026-10-24 04:25 UTC): Rudra confirmed Chrome remote debugging is enabled and allowed for profile `Rudra099`. The fixed app connector opened Instagram and the requested public profile. Read-only DOM inspection confirmed Chrome's signed-in account is `@timelessmoments.al` (owner-only “Edit Profile” control present); `@akash_infyum` displays the normal public profile controls (“Following” and “Message”), so account #4 is not connected to this Chrome session. No Instagram action was taken. The app's scheduled inbox job #36 is still queued for `2026-10-24 04:41:20 UTC` (10:11 IST); this page check does not replace it.
+Latest live check (2026-10-24 04:44 UTC): Rudra confirmed Chrome remote debugging is enabled and allowed for profile `Rudra099`. The fixed connector opened Instagram; read-only DOM inspection confirmed Chrome is signed in to `@timelessmoments.al`, while `@akash_infyum` is a separate followed profile. Job #36 started on schedule but timed out at the Chrome approval prompt. The prompt was accepted; the worker has queued the normal retry for `2026-10-24 04:52:21 UTC` (10:22 IST). No Instagram action was taken.
 
 ### [2026-10-23] Codex #169: Clear recovered sign-in errors and secure exact public paths
 Changed: on `fix/first-run-operability` / PR #13, dashboard summaries now omit an old failed sign-in job only after a later verified sign-in or successful inbox read for the same account. Newer and unrelated failures stay visible. The auth proxy now permits exact `/login` and `/setup` paths only. Added regressions for both changes. No protected worker/domain/service/repository code, migrations, or dependencies changed.
@@ -70,6 +70,14 @@ NOT verified: app inbox job #36's terminal result; a new live app-sent first mes
 Decisions made: preserve account identity boundaries, message approval, no-spend, and the original inbox schedule.
 Needs from Rudra: none for the scheduled read-only inbox check.
 Next I will: inspect job #36 after its scheduled run and update this status with the terminal result.
+
+### [2026-10-24] Codex #173: Record scheduled inbox timeout
+Changed: no application or owner data. Inspected the terminal result of the scheduled read-only inbox attempt and checked the Chrome window.
+Verified: job #36 timed out waiting for Chrome's remote-debugging approval prompt; the prompt was then accepted. The worker remains running and the job is queued for its normal retry at `2026-10-24 04:52:21 UTC` (10:22 IST). No inbox content was read by that attempt, and no Instagram action, paid call, or spend occurred.
+NOT verified: successful app inbox sync, new reply handoff, first-contact send/reply, warm-up, paid integrations or payment.
+Decisions made: leave the worker's retry schedule unchanged; preserve approval ON and no-spend/social-write boundaries.
+Needs from Rudra: none for the authorized read-only retry.
+Next I will: continue with the ready-now report and update the result if the normal retry succeeds.
 
 ## State of the code (historical implementation inventory; see current branch verification above)
 Built and tested:

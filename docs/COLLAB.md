@@ -1355,3 +1355,11 @@ NOT verified: the scheduled app inbox job #36, live first-contact/reply handoff,
 Decisions made: keep approval ON; preserve account identity boundaries and the original inbox schedule; no spend or Instagram writes.
 Needs from Rudra: none for the scheduled read-only check.
 Next I will: inspect job #36 at its scheduled run and update the status.
+
+### [2026-10-24] Codex #173: Record scheduled inbox timeout
+Changed: no application or owner data. Inspected the terminal result of scheduled read-only inbox job #36 and checked the Chrome window.
+Verified: job #36 timed out while waiting for Chrome's remote-debugging approval prompt; the prompt was then accepted. The worker remains running and queued the normal retry for `2026-10-24 04:52:21 UTC` (10:22 IST). The attempt read no inbox content and performed no Instagram action, paid call, or spend.
+NOT verified: successful app inbox sync, a new reply handoff, first-contact send/reply, warm-up, paid integrations, or payment.
+Decisions made: preserve the retry schedule, message approval, no-spend, and social-write boundaries.
+Needs from Rudra: none for the authorized read-only retry.
+Next I will: report the present readiness and keep the scheduled retry in the handoff.
