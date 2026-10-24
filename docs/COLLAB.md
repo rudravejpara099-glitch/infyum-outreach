@@ -1347,3 +1347,11 @@ NOT verified: whether job #38 succeeds using auto-connect; inbox job #36 at `202
 Decisions made: keep approval ON, no-spend and explicit Instagram-action gates; do not accelerate #36.
 Needs from Rudra: none for this no-cost read-only connector fix.
 Next I will: observe job #38 after its existing retry, then job #36 at its scheduled time.
+
+### [2026-10-24] Codex #172: Verify the connected account after Chrome auto-connect
+Changed: no application or owner data. After Rudra confirmed remote debugging was enabled and allowed, read job #38 and inspected the existing Instagram tabs in signed-in Chrome profile `Rudra099`.
+Verified: the app's Chrome auto-connect succeeds and Instagram pages load. Read-only DOM inspection confirms the signed-in account is `@timelessmoments.al`; `@akash_infyum` is a separate public account that it follows, and app account #4 remains unconnected. Job #38 failed on its scheduled retry; job #36 remains queued at `2026-10-24 04:41:20 UTC` (10:11 IST). No Instagram message, like, follow, or comment; no paid call or spend.
+NOT verified: the scheduled app inbox job #36, live first-contact/reply handoff, warm-up, paid provider or payment behavior.
+Decisions made: keep approval ON; preserve account identity boundaries and the original inbox schedule; no spend or Instagram writes.
+Needs from Rudra: none for the scheduled read-only check.
+Next I will: inspect job #36 at its scheduled run and update the status.
