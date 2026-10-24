@@ -1379,3 +1379,11 @@ NOT verified: successful inbox sync, Chrome warm-up, live first-contact/reply ha
 Decisions made: preserve no-spend, message approval, account guards, and first-reply handoff.
 Needs from Rudra: none for this local verification.
 Next I will: continue the ordered completion checklist; don't count the pending retry as success or run an Instagram write outside the existing approval gate.
+
+### [2026-10-24] Codex #176: Confirm the scheduled inbox result
+Changed: no application code, owner data, or worker settings. Read the job and activity status from the existing database in read-only mode; inspected the signed-in Chrome window and refreshed the app dashboard.
+Verified: job #36 is terminal after three attempts (`MCP error -32001: Request timed out`). Job #39's first attempt returned a Chrome connection timeout and the ordinary retry is queued for 05:19:19 UTC. The worker heartbeat is fresh. The app shows 27 matched, 0 engaged, 23 drafts awaiting approval, 0 sends today, and two background tasks needing attention. Both Instagram tabs still show the full-page loading screen; no permission prompt is visible. No inbox content was read and no social or paid action occurred.
+NOT verified: successful inbox sync, live first-message/reply handoff, warm-up, or paid integration.
+Decisions made: leave the scheduled retry and all no-spend/no-write boundaries intact.
+Needs from Rudra: none for this read-only status check.
+Next I will: observe the normal retry once and continue only with work that does not require paid calls or an Instagram write.
