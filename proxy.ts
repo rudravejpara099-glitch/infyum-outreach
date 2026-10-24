@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Quick, optimistic redirect only. The real check is requireUser() in lib/auth/dal.ts.
-const PUBLIC = new Set(["/login", "/setup"]);
+const PUBLIC = new Set(["/login", "/setup", "/register", "/join"]);
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
