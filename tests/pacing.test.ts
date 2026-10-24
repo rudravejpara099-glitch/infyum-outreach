@@ -28,7 +28,7 @@ describe("working hours", () => {
 describe("sessions, rests and lunch", () => {
   it("rests after a work session and resumes after the rest", () => {
     const rng = seeded(7);
-    let g = gate(at("2026-10-20T14:00:00Z"), 1, EMPTY_STATE, cfg, rng);
+    const g = gate(at("2026-10-20T14:00:00Z"), 1, EMPTY_STATE, cfg, rng);
     expect(g.ok).toBe(true);
     const later = at("2026-10-20T15:10:00Z");           // 70 minutes later: session (25 to 50) is over
     const g2 = gate(later, 1, g.state, cfg, rng);

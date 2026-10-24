@@ -2,15 +2,19 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
 import { openDb } from "@/lib/db/core";
+import { createAccount, setAccountStatus } from "@/lib/db/repos/accounts";
+import { enqueue } from "@/lib/db/repos/jobs";
 import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { createOutgoing } from "@/lib/db/repos/messages";
 import { addLead, listLeads } from "@/lib/db/repos/leads";
 import { addDnc, removeDnc } from "@/lib/db/repos/dnc";
+import { openLoginWindowJob } from "@/lib/services/login-window-job";
+import { buildIsolatedNextApp, cleanupIsolatedNextApp, type IsolatedNextBuild } from "./isolated-next-build";
 
 async function stopServer(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
@@ -26,47 +30,57 @@ async function screenshot(page: Page, options: Parameters<Page["screenshot"]>[0]
   await page.screenshot(options);
 }
 
+async function tryLoad(url: string): Promise<Response | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1_000);
+  try { return await fetch(url, { signal: controller.signal }); }
+  catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
 async function main() {
 const temp = mkdtempSync(path.join(os.tmpdir(), "outreach-ui-"));
 const dbPath = path.join(temp, "review.db");
 const screenshots = path.resolve(process.env.UI_SCREENSHOT_DIR ?? "data/ui-smoke");
-const distDir = `.next-smoke-ui-${randomBytes(4).toString("hex")}`;
-const tsconfigPath = `.tsconfig-smoke-ui-${randomBytes(4).toString("hex")}.json`;
-writeFileSync(tsconfigPath, JSON.stringify({ extends: "./tsconfig.json" }));
 const port = 3190;
 const base = `http://127.0.0.1:${port}`;
 mkdirSync(screenshots, { recursive: true });
 const sessionSecret = randomBytes(48).toString("hex");
-let serverStderr = "";
-const startServer = (apifyToken = "") => {
-  serverStderr = "";
-  const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
-    env: { ...process.env, OUTREACH_SMOKE_DIST_DIR: distDir, OUTREACH_SMOKE_TSCONFIG: tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
-    stdio: ["ignore", "ignore", "pipe"],
+let serverOutput = "";
+const startServer = (build: IsolatedNextBuild, apifyToken = "") => {
+  serverOutput = "";
+  const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], {
+    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
+    stdio: ["ignore", "pipe", "pipe"],
   });
-  child.stderr?.on("data", (chunk: Buffer) => {
-    serverStderr = `${serverStderr}${chunk.toString("utf8")}`.slice(-4000);
-  });
+  const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4000); };
+  child.stdout?.on("data", capture);
+  child.stderr?.on("data", capture);
   return child;
 };
 const serverStartError = (name: string) => {
-  const diagnostic = serverStderr
+  const diagnostic = serverOutput
     .replaceAll(sessionSecret, "[redacted]")
     .replaceAll(temp, "[temporary smoke directory]")
     .replaceAll("fixture-apify-token-never-used", "[redacted]")
     .trim();
   return new Error(`${name}${diagnostic ? `:\n${diagnostic}` : ""}`);
 };
-let server = startServer();
+let build: IsolatedNextBuild | undefined;
+let server: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {
+  build = buildIsolatedNextApp("ui", [sessionSecret]);
+  server = startServer(build);
   let ready = false;
-  for (let attempt = 0; attempt < 90; attempt++) {
-    if (server.exitCode !== null) throw serverStartError("Review server exited before starting");
-    try { if ((await fetch(`${base}/setup`)).ok) { ready = true; break; } } catch { /* server is starting */ }
+  const startupDeadline = Date.now() + 45_000;
+  while (!ready && Date.now() < startupDeadline) {
+    if (!server || server.exitCode !== null) throw serverStartError("Review server exited before starting");
+    if ((await tryLoad(`${base}/setup`))?.ok) ready = true;
+    if (ready) break;
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  assert(ready, "Review server did not start");
+  if (!ready) throw serverStartError("Review server did not start");
   browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
   context.setDefaultTimeout(30000);
@@ -144,6 +158,10 @@ try {
   await page.getByRole("link", { name: "Lead progress", exact: true }).waitFor();
   await page.getByRole("link", { name: "Review messages", exact: true }).waitFor();
   await page.getByRole("link", { name: "History", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Automatic message drafts are off" }).waitFor();
+  await page.getByText(/Claude does not need to be installed/).waitFor();
+  await page.getByText(/No leads are ready for manual message writing yet/).waitFor();
+  await page.getByRole("link", { name: "See AI setup in Settings", exact: true }).waitFor();
   await page.goto(`${base}/activity`);
   await page.getByRole("heading", { name: "No history yet" }).waitFor();
   await page.getByText("Campaign changes and outreach activity will appear here as they happen.", { exact: true }).waitFor();
@@ -168,6 +186,14 @@ try {
   await page.waitForURL(/\/campaigns\/\d+$/);
   const campaignUrl = page.url();
   const id = Number(new URL(campaignUrl).pathname.split("/").pop());
+  const disposableDraft = createCampaign(db, { name: "Disposable empty draft", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+  await page.goto(`${base}/campaigns/${disposableDraft.id}`);
+  await page.getByRole("button", { name: "Delete empty draft", exact: true }).waitFor();
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Delete empty draft", exact: true }).click();
+  await page.waitForURL(`${base}/campaigns`);
+  assert.equal((db.prepare("SELECT count(*) n FROM campaigns WHERE id=?").get(disposableDraft.id) as { n: number }).n, 0, "Deleting an empty draft removes only that campaign");
+  await page.goto(campaignUrl);
   await page.goto(`${base}/pipeline?campaign=${id}`);
   await page.getByText("No leads in this campaign yet", { exact: true }).waitFor();
   await page.getByRole("link", { name: "Add leads to this campaign", exact: true }).waitFor();
@@ -183,6 +209,49 @@ try {
   await page.getByRole("button", { name: "Start campaign", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "Choose a sending account" }).waitFor();
   await screenshot(page, { path: path.join(screenshots, "campaign-empty.png"), fullPage: true, caret: "initial" });
+  const manualAccount = createAccount(db, { handle: "manual.sender", profileDir: path.join(temp, "manual.sender"), dailyCap: 35 }, "ui-fixture");
+  setCampaignAccounts(db, id, [manualAccount.id]);
+  await page.getByRole("button", { name: "Start campaign", exact: true }).click();
+  await page.getByRole("heading", { name: "US business coaches" }).waitFor();
+  db.prepare("UPDATE ig_accounts SET browser_mode='chrome_read_only' WHERE id=?").run(manualAccount.id);
+  const waitingLead = addLead(db, { handle: "chrome-wait.fixture", campaignId: id }, "ui-fixture").lead;
+  db.prepare("UPDATE leads SET stage='qualified',account_id=? WHERE id=?").run(manualAccount.id, waitingLead.id);
+  await page.goto(campaignUrl);
+  await page.getByRole("status").filter({ hasText: "Matched leads need preparation" }).waitFor();
+  await page.getByText(/This matched lead needs Instagram activity before Outreach can prepare a first message/).waitFor();
+  await page.getByText(/Signed-in Chrome supports this step/).waitFor();
+  await page.getByText(/To work without paid AI, complete the engagement on Instagram/).waitFor();
+  await page.getByRole("link", { name: "Review writing setup", exact: true }).waitFor();
+  for (const mode of ["light", "dark"]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Chrome warm-up notice must fit on screen");
+      await screenshot(page, { path: path.join(screenshots, `campaign-preparation-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    }
+  }
+  await page.getByRole("button", { name: "Use system appearance", exact: true }).click();
+  db.transaction(() => {
+    db.prepare("DELETE FROM activity WHERE lead_id=?").run(waitingLead.id);
+    db.prepare("DELETE FROM leads WHERE id=?").run(waitingLead.id);
+    db.prepare("UPDATE ig_accounts SET browser_mode='isolated' WHERE id=?").run(manualAccount.id);
+  })();
+  await page.goto(campaignUrl);
+  const retryLead = addLead(db, { handle: "retry-check.fixture", campaignId: id }, "ui-fixture").lead;
+  db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(manualAccount.id, retryLead.id);
+  db.prepare("INSERT INTO jobs (type,lead_id,account_id,status,last_error) VALUES ('qualify',?,?,'failed','temporary read failure')").run(retryLead.id, manualAccount.id);
+  await page.goto(`${base}/leads/${retryLead.id}`);
+  await page.getByRole("button", { name: "Retry lead check", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Retry lead check", exact: true }).click();
+  await page.getByRole("heading", { name: "Lead check queued" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='qualify' AND lead_id=? AND status='queued'").get(retryLead.id) as { n: number }).n, 1, "Manual retry should queue exactly one read-only qualification");
+  assert.equal((db.prepare("SELECT count(*) n FROM messages WHERE lead_id=?").get(retryLead.id) as { n: number }).n, 0, "Read-only qualification retry must not create messages");
+  db.transaction(() => {
+    db.prepare("DELETE FROM jobs WHERE lead_id=?").run(retryLead.id);
+    db.prepare("DELETE FROM activity WHERE lead_id=?").run(retryLead.id);
+    db.prepare("DELETE FROM leads WHERE id=?").run(retryLead.id);
+  })();
+  await page.goto(campaignUrl);
   await page.getByRole("link", { name: "Add leads", exact: true }).click();
   assert(await page.locator("#add-leads").getAttribute("open") !== null, "In-page link must open the disclosure");
   await page.getByLabel("Instagram handles").fill("maya.coaches\ngrowthwithalex\nstudio.sarah");
@@ -191,6 +260,17 @@ try {
   await page.getByLabel("Instagram handles").fill("MAYA.COACHES, growthwithalex, studio.sarah, https://invalid.example.test");
   await page.getByRole("button", { name: "Add to campaign", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "3 duplicate" }).waitFor();
+  const manualLead = listLeads(db, { campaignId: id })[0];
+  db.prepare("UPDATE leads SET stage='warmed',account_id=? WHERE id=?").run(manualAccount.id, manualLead.id);
+  await page.goto(`${base}/leads/${manualLead.id}`);
+  await page.getByRole("heading", { name: "Write a first message" }).waitFor();
+  await page.getByLabel("Message 1").fill("Your workshop has a clear and practical structure.");
+  await page.getByLabel("Message 2").fill("I’m Rudra at Infyum. https://portfolio.infyum.com/sales-funnel");
+  await page.getByLabel("Message 3").fill("What do people usually do after attending?");
+  await page.getByRole("button", { name: "Send to review", exact: true }).click();
+  await page.getByText("First message · Needs review", { exact: false }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM messages WHERE lead_id=? AND direction='out' AND kind='dm'").get(manualLead.id) as { status: string }).status, "pending_approval");
+  assert.equal((db.prepare("SELECT count(*) n FROM messages WHERE lead_id=? AND direction='out' AND status='sent'").get(manualLead.id) as { n: number }).n, 0, "Manual composer must never send directly");
   const quietLead = addLead(db, { handle: "quiet.fixture", campaignId: null }, "ui-fixture").lead;
   db.prepare("DELETE FROM activity WHERE lead_id=?").run(quietLead.id);
   await page.goto(`${base}/leads/${quietLead.id}`);
@@ -205,6 +285,29 @@ try {
   await page.goto(campaignUrl);
   const other = createCampaign(db, { name: "Other campaign", niches: [], audienceText: "", country: "United States", minFollowers: 2000,
     maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [], "ui-fixture");
+  const movableLead = addLead(db, { handle: "move.fixture", campaignId: other.id }, "ui-fixture").lead;
+  await page.goto(`${base}/leads/${movableLead.id}`);
+  await page.getByRole("heading", { name: "Move to another campaign" }).waitFor();
+  await page.getByLabel("Active campaign").selectOption(String(id));
+  db.prepare("INSERT INTO jobs (type,lead_id) VALUES ('qualify',?)").run(movableLead.id);
+  await page.getByRole("button", { name: "Move lead", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "work in progress" }).waitFor();
+  assert.equal((db.prepare("SELECT campaign_id FROM leads WHERE id=?").get(movableLead.id) as { campaign_id: number }).campaign_id, other.id, "A lead with active work must remain in its current campaign");
+  db.prepare("DELETE FROM jobs WHERE lead_id=?").run(movableLead.id);
+  await page.getByRole("button", { name: "Move lead", exact: true }).click();
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const currentCampaign = (db.prepare("SELECT campaign_id FROM leads WHERE id=?").get(movableLead.id) as { campaign_id: number | null }).campaign_id;
+    if (currentCampaign === id) break;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  const movedLead = db.prepare("SELECT campaign_id,account_id,stage FROM leads WHERE id=?").get(movableLead.id) as { campaign_id: number; account_id: number | null; stage: string };
+  assert.equal(movedLead.campaign_id, id, "Moving a lead must retain one record and assign it to the selected campaign");
+  assert.equal(movedLead.account_id, null, "Moving a lead must clear its previous sender assignment");
+  assert.equal(movedLead.stage, "found", "The new campaign must run its usual checks");
+  assert.equal((db.prepare("SELECT count(*) n FROM leads WHERE handle='move.fixture'").get() as { n: number }).n, 1, "Global deduplication must retain one lead record");
+  assert.equal((db.prepare("SELECT count(*) n FROM activity WHERE lead_id=? AND action='lead.campaign_moved'").get(movableLead.id) as { n: number }).n, 1, "A campaign move must be recorded in lead history");
+  await page.goto(`${base}/leads/${movableLead.id}`);
+  await page.getByRole("heading", { name: "Move to another campaign" }).waitFor({ state: "detached" });
   await page.goto(`${base}/campaigns/${other.id}#add-leads`);
   await page.locator('#add-leads').evaluate((element: HTMLDetailsElement) => { element.open = true; });
   const upload = page.getByLabel("Or choose a CSV file", { exact: true });
@@ -235,8 +338,8 @@ try {
   }
   removeDnc(db, "csv.blocked");
   await page.goto(campaignUrl);
-  for (const lead of listLeads(db, { campaignId: id })) {
-    db.prepare("UPDATE leads SET stage='warmed' WHERE id=?").run(lead.id);
+  for (const lead of listLeads(db, { campaignId: id }).filter((lead) => lead.id !== manualLead.id && lead.id !== movableLead.id)) {
+    db.prepare("UPDATE leads SET stage='warmed',account_id=? WHERE id=?").run(manualAccount.id, lead.id);
     createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"], campaign: { approvalRequired: true } }, "ui-fixture");
   }
   const unrelated = addLead(db, { handle: "another.campaign", campaignId: other.id }, "ui-fixture").lead;
@@ -272,10 +375,13 @@ try {
   await page.getByRole("heading", { name: "3 drafts need your review" }).waitFor();
   await page.goto(`${base}/accounts`);
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
+  await page.getByLabel("How should it connect?", { exact: true }).selectOption("chrome_read_only");
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
+  await page.locator('div[role="status"]').filter({ hasText: "Chrome sign-in check is waiting" }).waitFor();
+  await page.getByText("Connecting", { exact: true }).waitFor();
   const account = db.prepare("SELECT id,profile_dir FROM ig_accounts WHERE handle='review.account'").get() as { id: number; profile_dir: string };
   assert(account.profile_dir.startsWith(temp));
+  const reviewAccountCard = page.locator(".card.divide-y > div").filter({ hasText: "@review.account" });
   setCampaignAccounts(db, id, [account.id]);
   db.prepare("UPDATE leads SET account_id=? WHERE campaign_id=?").run(account.id, id);
   db.prepare("UPDATE messages SET account_id=? WHERE lead_id IN (SELECT id FROM leads WHERE campaign_id=?) AND direction='out'").run(account.id, id);
@@ -294,14 +400,16 @@ try {
         return ["--ink", "--surface", "--muted", "--accent", "--on-accent", "--button-top"].map(name => css.getPropertyValue(name).trim());
       });
       const luminance = (hex: string) => {
-        const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+        const rawColor = hex.replace(/^#/, "");
+        const color = rawColor.length === 3 ? [...rawColor].map(channel => channel + channel).join("") : rawColor;
+        const rgb = [0, 2, 4].map(i => parseInt(color.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
         return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
       };
       const contrast = [[0, 1], [2, 1], [3, 1], [4, 5]].map(([a, b]) => {
         const x = luminance(palette[a]), y = luminance(palette[b]);
         return (Math.max(x, y) + .05) / (Math.min(x, y) + .05);
       });
-      assert(contrast.every(ratio => ratio >= 4.5), `Text token contrast must meet 4.5:1 in ${mode}`);
+      assert(contrast.every(ratio => ratio >= 4.5), `Text token contrast must meet 4.5:1 in ${mode}: ${JSON.stringify({ palette, contrast })}`);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Campaign overflow: ${mode} ${width}`);
       await screenshot(page, { path: path.join(screenshots, `campaign-${mode}-${width}.png`), fullPage: true, caret: "initial" });
     }
@@ -322,7 +430,8 @@ try {
   assert(await page.locator("#settings").getAttribute("open") !== null);
   await page.goto(campaignUrl);
   await page.getByRole("link", { name: "Review drafts", exact: true }).click();
-  await page.waitForURL(`${base}/approvals?campaign=${id}`);
+  await page.waitForURL(new RegExp(`${base}/approvals\\?campaign=${id}$`));
+  await page.locator("article").first().waitFor();
   assert.equal(await page.locator("article").count(), 3);
   assert.equal(await page.getByText("@another.campaign", { exact: true }).count(), 0);
   const firstDraft = page.locator("article").first();
@@ -398,7 +507,9 @@ try {
   await stageForm.getByRole("alert").filter({ hasText: "stage change is not available" }).waitFor();
   assert.equal((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage, "found");
   await page.reload();
-  await page.locator('form').filter({ has: page.locator('input[name="to"][value="qualified"]') }).getByRole("button").click();
+  const validStageForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Matches", exact: true }) });
+  await validStageForm.locator('input[name="to"]').evaluate((el: HTMLInputElement) => { el.value = "qualified"; });
+  await validStageForm.getByRole("button").click();
   await page.locator(".badge").filter({ hasText: /^Matches$/ }).waitFor();
   assert.equal((db.prepare("SELECT stage FROM leads WHERE id=?").get(unrelated.id) as { stage: string }).stage, "qualified");
   await page.getByLabel("Reason (optional)", { exact: true }).fill("Read-only fixture stop");
@@ -413,15 +524,15 @@ try {
   // Operational controls must change real rows and give honest feedback without a worker.
   await page.goto(`${base}/`);
   await page.getByRole("heading", { name: "Get started" }).waitFor();
-  await page.getByText("1 account saved. Open its login window and sign in by hand.", { exact: true }).waitFor();
+  await page.getByText("2 accounts saved. Check Accounts to see which are signed in.", { exact: true }).waitFor();
   await page.getByRole("link", { name: "Go to Campaigns", exact: true }).waitFor();
-  await page.getByText("Outreach is waiting", { exact: true }).waitFor();
+  await page.getByText("Outreach is stopped", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.getByRole("button", { name: "Check background status" }).click();
-  await page.getByText("Outreach is running", { exact: true }).waitFor();
+  await page.getByText("Outreach is running from a terminal", { exact: true }).waitFor();
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60000).toISOString());
   await page.getByRole("button", { name: "Check background status" }).click();
-  await page.getByText("Outreach is waiting", { exact: true }).waitFor();
+  await page.getByText("Outreach is stopped", { exact: true }).waitFor();
 
   await page.goto(`${base}/settings`);
   await page.getByRole("heading", { name: "AI message writing", exact: true }).waitFor();
@@ -548,32 +659,51 @@ try {
   await page.getByLabel("Instagram handle", { exact: true }).fill("@review.account");
   await page.getByRole("button", { name: "Connect account", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "already saved" }).waitFor();
-  assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 1);
-  await page.getByRole("button", { name: "Open login window", exact: true }).click();
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
+  assert.equal((db.prepare("SELECT count(*) n FROM ig_accounts").get() as { n: number }).n, 2);
+  await reviewAccountCard.getByRole("button", { name: "Check Chrome sign-in", exact: true }).click();
+  await page.locator('div[role="status"]').filter({ hasText: "Chrome sign-in check is waiting" }).waitFor();
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='open_login' AND account_id=?").get(account.id) as { n: number }).n, 1);
-  await page.getByText("Sign-in request saved for the browser check.", { exact: true }).waitFor();
+  await page.getByText("Chrome sign-in check saved.", { exact: true }).waitFor();
   db.prepare("INSERT INTO settings(key,value) VALUES('worker_heartbeat',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(new Date().toISOString());
   await page.reload();
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting to open" }).waitFor();
+  await page.locator('div[role="status"]').filter({ hasText: "Chrome sign-in check is waiting" }).waitFor();
+  const loginJob = db.prepare("SELECT id FROM jobs WHERE type='open_login' AND account_id=? ORDER BY id DESC LIMIT 1").get(account.id) as { id: number };
+  db.prepare("UPDATE jobs SET status='done',payload=? WHERE id=?").run(JSON.stringify({ authenticated: false }), loginJob.id);
+  await page.reload();
+  await reviewAccountCard.locator(".badge").filter({ hasText: "Sign-in needed" }).waitFor();
+  assert.equal(await reviewAccountCard.getByText("active", { exact: true }).count(), 0, "An unverified account must not appear active");
   for (const mode of ["light", "dark"] as const) for (const width of [1440, 1024, 390]) {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Account login status must fit on screen");
     await screenshot(page, { path: path.join(screenshots, `account-login-request-${mode}-${width}.png`), fullPage: true, caret: "initial" });
   }
+  db.prepare("UPDATE jobs SET payload=? WHERE id=?").run(JSON.stringify({ authenticated: true }), loginJob.id);
+  await page.reload();
+  await reviewAccountCard.getByText("Connected", { exact: true }).waitFor();
   db.prepare("UPDATE settings SET value=? WHERE key='worker_heartbeat'").run(new Date(Date.now() - 60_000).toISOString());
   await page.goto(`${base}/accounts`);
-  await page.locator('div[role="status"]').filter({ hasText: "Sign-in window is waiting" }).waitFor();
-  await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await page.getByRole("button", { name: "Resume", exact: true }).waitFor();
+  await page.locator('div[role="status"]').filter({ hasText: "Instagram is connected" }).waitFor();
+  await reviewAccountCard.getByRole("button", { name: "Pause", exact: true }).click();
+  await reviewAccountCard.getByRole("button", { name: "Resume", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "paused");
-  await page.getByRole("button", { name: "Resume", exact: true }).click();
-  await page.getByRole("button", { name: "Pause", exact: true }).waitFor();
-  await page.getByLabel("Daily cap", { exact: true }).fill("20");
-  await page.getByRole("button", { name: "Set cap", exact: true }).click();
+  await reviewAccountCard.getByRole("button", { name: "Resume", exact: true }).click();
+  await reviewAccountCard.getByRole("button", { name: "Pause", exact: true }).waitFor();
+  await reviewAccountCard.getByLabel("Daily cap", { exact: true }).fill("20");
+  await reviewAccountCard.getByRole("button", { name: "Set cap", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Daily limit saved" }).waitFor();
   assert.equal((db.prepare("SELECT daily_cap FROM ig_accounts WHERE id=?").get(account.id) as { daily_cap: number }).daily_cap, 20);
+  setAccountStatus(db, account.id, "blocked", "The saved Instagram account is not signed in in Chrome.", "ui-fixture");
+  await page.reload();
+  await reviewAccountCard.getByText("Chrome isn’t signed in as this account", { exact: true }).waitFor();
+  await reviewAccountCard.locator(".badge").filter({ hasText: "Sign-in needed" }).waitFor();
+  assert.equal(await reviewAccountCard.getByText("Instagram showed a warning.", { exact: false }).count(), 0, "A sign-in problem must not be described as an Instagram warning");
+  const recoveryJobId = enqueue(db, { type: "open_login", accountId: account.id });
+  db.prepare("UPDATE jobs SET status='running' WHERE id=?").run(recoveryJobId);
+  await openLoginWindowJob(db, recoveryJobId, account.id, { openLogin: async () => true });
+  await page.reload();
+  await reviewAccountCard.getByText("Connected", { exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "active");
   setCampaignStatus(db, id, "paused", "ui-fixture");
   await page.goto(campaignUrl);
   await page.getByRole("link", { name: "Edit audience", exact: true }).click();
@@ -625,13 +755,14 @@ try {
   // A second local-only phase uses a fake configured key to test queueing. No worker exists.
   if (server.exitCode === null) {
     expectedServerRestart = true;
+    if (!server) throw new Error("Review server stopped before queue check");
     await stopServer(server);
   }
-  server = startServer("fixture-apify-token-never-used");
+  server = startServer(build!, "fixture-apify-token-never-used");
   let restarted = false;
   for (let attempt = 0; attempt < 90; attempt++) {
-    if (server.exitCode !== null) throw serverStartError("Queue review server exited");
-    try { if ((await fetch(`${base}/login`)).ok) { restarted = true; break; } } catch {}
+    if (!server || server.exitCode !== null) throw serverStartError("Queue review server exited");
+    if ((await tryLoad(`${base}/login`))?.ok) { restarted = true; break; }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   assert(restarted, "Queue review server did not restart");
@@ -643,6 +774,13 @@ try {
   await page.goto(campaignUrl);
   await page.getByRole("button", { name: "Resume campaign", exact: true }).click();
   await page.getByRole("button", { name: "Pause campaign", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "active");
+  await page.goto(`${base}/campaigns`);
+  await page.getByRole("button", { name: "Pause US business coaches revised", exact: true }).click();
+  await page.getByRole("button", { name: "Resume US business coaches revised", exact: true }).waitFor();
+  assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "paused");
+  await page.getByRole("button", { name: "Resume US business coaches revised", exact: true }).click();
+  await page.getByRole("button", { name: "Pause US business coaches revised", exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "active");
   await page.goto(campaignUrl);
   await page.locator("#add-leads summary").click();
@@ -658,11 +796,14 @@ try {
   assert.equal((db.prepare("SELECT count(*) n FROM jobs WHERE type='find_leads'").get() as { n: number }).n, 2);
 
   await page.goto(campaignUrl);
-  page.once("dialog", dialog => dialog.accept());
-  await page.getByRole("button", { name: "Finish campaign", exact: true }).click();
+  let stopConfirmation = "";
+  page.once("dialog", dialog => { stopConfirmation = dialog.message(); void dialog.accept(); });
+  await page.getByRole("button", { name: "Stop campaign", exact: true }).click();
+  assert.match(stopConfirmation, /marked finished and can’t be restarted/i);
+  assert.match(stopConfirmation, /message already being sent may still complete/i);
   await page.getByText("Finished", { exact: true }).waitFor();
   assert.equal((db.prepare("SELECT status FROM campaigns WHERE id=?").get(id) as { status: string }).status, "done");
-  await page.getByRole("button", { name: "Finish campaign", exact: true }).waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "Stop campaign", exact: true }).waitFor({ state: "detached" });
 
   await page.goto(`${base}/approvals?campaign=invalid`);
   await page.getByRole("heading", { name: "404", exact: true }).waitFor();
@@ -687,9 +828,8 @@ try {
   console.log(`Screenshots: ${screenshots}`);
 } finally {
   await browser?.close();
-  await stopServer(server);
-  rmSync(path.resolve(distDir), { recursive: true, force: true });
-  rmSync(path.resolve(tsconfigPath), { force: true });
+  if (server) await stopServer(server);
+  if (build) cleanupIsolatedNextApp(build);
   rmSync(temp, { recursive: true, force: true });
 }
 

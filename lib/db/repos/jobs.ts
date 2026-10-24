@@ -1,6 +1,7 @@
 import type { Db } from "../core";
 import type { Job } from "../types";
 import { getMessage, markFailed } from "./messages";
+import { mayRecoverAfterCrash } from "@/lib/domain/job-recovery";
 
 const MAX_ATTEMPTS = 3;
 
@@ -20,8 +21,9 @@ export function enqueue(db: Db, job: { type: string; leadId?: number | null; acc
 export type Lane = { accountId: number | null };
 
 /** Takes the oldest due job, optionally only from one lane. The transaction makes it safe even if two workers ever ran. */
-export function claimNext(db: Db, types?: string[], lane?: Lane): Job | null {
+export function claimNext(db: Db, types?: string[], lane?: Lane, mayClaim?: () => boolean): Job | null {
   return db.transaction(() => {
+    if (mayClaim && !mayClaim()) return null;
     const where = ["status='queued'", "run_after <= datetime('now')"];
     const args: unknown[] = [];
     if (types?.length) { where.push(`type IN (${types.map(() => "?").join(",")})`); args.push(...types); }
@@ -29,14 +31,20 @@ export function claimNext(db: Db, types?: string[], lane?: Lane): Job | null {
       if (lane.accountId === null) where.push("account_id IS NULL");
       else { where.push("account_id = ?"); args.push(lane.accountId); }
     }
-    const r = db.prepare(`SELECT * FROM jobs WHERE ${where.join(" AND ")} ORDER BY run_after, id LIMIT 1`).get(...args) as Record<string, unknown> | undefined;
+    // Check for a first reply before processing a waiting send in the same account lane.
+    const r = db.prepare(`SELECT * FROM jobs WHERE ${where.join(" AND ")} ORDER BY CASE WHEN type='check_inbox' THEN 0 ELSE 1 END, run_after, id LIMIT 1`).get(...args) as Record<string, unknown> | undefined;
     if (!r) return null;
     db.prepare("UPDATE jobs SET status='running', attempts = attempts + 1 WHERE id = ?").run(r.id);
     return map({ ...r, status: "running", attempts: (r.attempts as number) + 1 });
   })();
 }
 export function completeJob(db: Db, id: number): void {
-  db.prepare("UPDATE jobs SET status='done' WHERE id = ?").run(id);
+  db.prepare("UPDATE jobs SET status='done', last_error='' WHERE id = ?").run(id);
+}
+/** A later successful inbox read supersedes earlier terminal failures for the same account. */
+export function resolveSupersededInboxJobs(db: Db, accountId: number): number {
+  return db.prepare(`UPDATE jobs SET status='done', last_error=''
+    WHERE type='check_inbox' AND account_id=? AND status='failed'`).run(accountId).changes;
 }
 /** Retries up to three times with growing delays, then gives up and keeps the error. */
 export function failJob(db: Db, job: Job, error: string): void {
@@ -63,13 +71,21 @@ export function resolveFailedSendJob(db: Db, messageId: number): void {
   db.prepare(`UPDATE jobs SET status='done',last_error='' WHERE type='send' AND status='failed'
     AND json_extract(payload,'$.messageId')=?`).run(messageId);
 }
-/** A worker that crashed mid-job leaves it 'running'. On start, put those back in the queue. */
+/** Recover only idempotent reads; hold interrupted writes and paid jobs for human review. */
 export function requeueStuck(db: Db): number {
   return db.transaction(() => {
     const stuck = db.prepare("SELECT id,type,payload FROM jobs WHERE status='running'").all() as { id: number; type: string; payload: string }[];
     const requeue = db.prepare("UPDATE jobs SET status='queued' WHERE id=?");
     for (const job of stuck) {
-      if (job.type !== "send") { requeue.run(job.id); continue; }
+      if (job.type !== "send" && mayRecoverAfterCrash(job.type)) { requeue.run(job.id); continue; }
+      if (job.type !== "send") {
+        const reason = job.type === "open_login"
+          ? "The sign-in window task was interrupted. Check Accounts before requesting another window."
+          : "Paused after interruption. This task may already have changed Instagram or used a paid provider. Review it before trying again.";
+        db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=?")
+          .run(reason, job.id);
+        continue;
+      }
       let messageId = 0;
       try { messageId = Number((JSON.parse(job.payload) as { messageId?: unknown }).messageId); } catch { /* malformed send payloads are still held for review */ }
       const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(db, messageId) : undefined;
@@ -97,6 +113,11 @@ export function activeJobExists(db: Db, type: string, leadId: number | null, acc
   ).get(...args);
 }
 
+/** A terminal failed task is not silently recreated by the planner on every pass. */
+export function failedJobExists(db: Db, type: string, leadId: number | null): boolean {
+  return !!db.prepare("SELECT 1 FROM jobs WHERE type=? AND status='failed' AND COALESCE(lead_id,0)=COALESCE(?,0) LIMIT 1").get(type, leadId);
+}
+
 /** Try again later without counting it as a failure (used when a daily limit is reached). */
 export function deferJob(db: Db, job: Job, minutes: number): void {
   db.prepare("UPDATE jobs SET status='queued', attempts = attempts - 1, run_after = datetime('now', ?) WHERE id = ?").run(`+${minutes} minutes`, job.id);
@@ -106,4 +127,11 @@ export function deferJob(db: Db, job: Job, minutes: number): void {
 export function deferJobUntil(db: Db, job: Job, until: Date): void {
   db.prepare("UPDATE jobs SET status='queued', attempts = attempts - 1, run_after = ? WHERE id = ?")
     .run(until.toISOString().replace("T", " ").slice(0, 19), job.id);
+}
+
+/** Recheck queued read-only work against the new team clock; the worker still enforces all pacing gates. */
+export function rescheduleQueuedReadOnlyJobs(db: Db, now = new Date()): number {
+  const due = now.toISOString().replace("T", " ").slice(0, 19);
+  return db.prepare(`UPDATE jobs SET run_after=?
+    WHERE status='queued' AND type IN ('qualify','check_inbox') AND run_after>?`).run(due, due).changes;
 }

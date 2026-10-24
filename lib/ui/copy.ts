@@ -1,4 +1,5 @@
 import { STAGES, type Stage } from "@/lib/domain/stages";
+import { accountNeedsSignIn } from "@/lib/domain/account-recovery";
 
 /** UI wording only; the stored stage and activity codes stay unchanged. */
 export const stageCopy: Record<Stage, { label: string; description: string }> = {
@@ -47,6 +48,7 @@ const activityCopy: Record<string, string> = {
   "campaign.active": "Campaign started",
   "campaign.paused": "Campaign paused",
   "campaign.done": "Campaign finished",
+  "campaign.deleted": "Empty draft deleted",
   "leads.found": "Lead search completed",
   "lead.added": "Lead added",
   "message.sent.dm": "First message sent",
@@ -55,6 +57,7 @@ const activityCopy: Record<string, string> = {
   "message.pending_approval": "Message ready for review",
   "message.approved": "Message approved and queued",
   "message.received": "Message received",
+  "inbox.checked": "Reply check succeeded",
   "message.approved_by_human": "Message approved by a team member",
   "message.rejected": "Message not approved",
   "message.failed": "Message couldn’t be sent",
@@ -98,25 +101,59 @@ export type LoginJobSummary = {
   tone: "neutral" | "waiting" | "attention" | "error" | "success";
 };
 
+export type AccountStatusBadge = { label: string; tone: "ok" | "warn" | "bad" };
+
+/** Show a connected badge only after Instagram confirms the saved account session. */
+export function accountStatusBadge(status: "active" | "paused" | "blocked", signInTone: LoginJobSummary["tone"], statusNote = ""): AccountStatusBadge {
+  if (status === "blocked" && accountNeedsSignIn(statusNote)) return { label: "Sign-in needed", tone: "warn" };
+  if (status === "blocked") return { label: "Stopped", tone: "bad" };
+  if (status === "paused") return { label: "Paused", tone: "warn" };
+  if (signInTone === "success") return { label: "Connected", tone: "ok" };
+  if (signInTone === "waiting") return { label: "Connecting", tone: "warn" };
+  return { label: "Sign-in needed", tone: "warn" };
+}
+
 /** Describes the sign-in window job only; it never treats a saved account as authenticated. */
-export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean): LoginJobSummary {
+export function loginJobSummary(job: { status: "queued" | "running" | "done" | "failed"; lastError: string; payload?: Record<string, unknown> } | null, workerRunning: boolean, browserMode: "isolated" | "chrome_read_only" = "isolated", statusNote = "", inboxVerified = false): LoginJobSummary {
+  const usesChrome = browserMode === "chrome_read_only";
+  if (inboxVerified) return {
+    title: "Instagram is connected",
+    detail: "Outreach successfully checked for new replies using this account.",
+    tone: "success",
+  };
+  if (accountNeedsSignIn(statusNote) && job?.status !== "queued" && job?.status !== "running") return {
+    title: usesChrome ? "Chrome isn’t signed in as this account" : "Sign-in needed",
+    detail: usesChrome
+      ? "Sign in to this Instagram account in Chrome, then choose Check Chrome sign-in. Outreach will resume only after that check succeeds."
+      : "Sign in to Instagram, then check this account again. Outreach will resume only after that check succeeds.",
+    tone: "attention",
+  };
   if (!job) return {
     title: "Sign-in status not checked",
-    detail: "Open the sign-in window if this account still needs Instagram access. Saving the account alone does not confirm sign-in.",
+    detail: usesChrome
+      ? "Check whether your existing Chrome is signed in to this account. Saving the account alone does not confirm sign-in."
+      : "Open the sign-in window if this account still needs Instagram access. Saving the account alone does not confirm sign-in.",
     tone: "neutral",
   };
   if (job.status === "queued") return workerRunning ? {
+    ...(usesChrome ? {
+      title: "Chrome sign-in check is waiting",
+      detail: "Outreach will check the current Chrome account shortly.",
+    } : {
     title: "Sign-in window is waiting to open",
     detail: "Outreach will open it shortly. Sign in to Instagram by hand when it appears.",
+    }),
     tone: "waiting",
   } : {
-    title: "Sign-in window is waiting",
-    detail: loginWindowHint(false),
+    title: usesChrome ? "Chrome sign-in check is waiting" : "Sign-in window is waiting",
+    detail: usesChrome ? "Start Outreach to check the current Chrome account." : loginWindowHint(false),
     tone: "waiting",
   };
   if (job.status === "running") return {
-    title: "Opening sign-in window",
-    detail: "Sign in to Instagram by hand. When the window closes, refresh this page to see whether it connected.",
+    title: usesChrome ? "Checking Chrome sign-in" : "Opening sign-in window",
+    detail: usesChrome
+      ? "Outreach is confirming that Chrome is signed in to this Instagram account."
+      : "Sign in to Instagram by hand. When the window closes, refresh this page to see whether it connected.",
     tone: "waiting",
   };
   if (job.status === "done" && job.payload?.authenticated === true) return {
@@ -125,18 +162,22 @@ export function loginJobSummary(job: { status: "queued" | "running" | "done" | "
     tone: "success",
   };
   if (job.status === "done" && job.payload?.authenticated === false) return {
-    title: "Sign-in wasn’t completed",
-    detail: "Open the sign-in window and finish signing in. Outreach will confirm when it’s connected.",
+    title: usesChrome ? "Chrome isn’t signed in as this account" : "Sign-in wasn’t completed",
+    detail: usesChrome
+      ? "Switch Chrome to this Instagram account, then choose Check Chrome sign-in."
+      : "Sign in in the separate window, then check this account again.",
     tone: "attention",
   };
   if (job.status === "done") return {
-    title: "Sign-in window opened",
-    detail: "Complete sign-in in the Instagram window. Opening the window does not confirm the account is signed in.",
+    title: usesChrome ? "Chrome sign-in could not be confirmed" : "Sign-in window opened",
+    detail: usesChrome
+      ? "Switch Chrome to this Instagram account, then choose Check Chrome sign-in."
+      : "Complete sign-in in the Instagram window. Opening the window does not confirm the account is signed in.",
     tone: "attention",
   };
   return {
-    title: "Could not open the sign-in window",
-    detail: jobErrorLabel("open_login", job.lastError) || "Try opening the sign-in window again.",
+    title: usesChrome ? "Could not check Chrome sign-in" : "Could not open the sign-in window",
+    detail: jobErrorLabel("open_login", job.lastError) || (usesChrome ? "Try checking Chrome sign-in again." : "Try opening the sign-in window again."),
     tone: "error",
   };
 }

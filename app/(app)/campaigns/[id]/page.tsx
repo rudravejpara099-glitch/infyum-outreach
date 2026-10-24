@@ -11,11 +11,12 @@ import { Icon } from "@/components/icon";
 import { CampaignDetails } from "@/components/campaign-details";
 import { ActionForm } from "@/components/action-form";
 import { workerStatus } from "@/lib/queries/worker-status";
-import { changeCampaignStatus } from "../actions";
+import { changeCampaignStatus, deleteEmptyDraftCampaign } from "../actions";
 import { campaignHistory } from "@/lib/queries/campaign-history";
 import { validTimeZone } from "../../settings/validation";
 import { messageKindLabel } from "@/lib/ui/copy";
 import { CAMPAIGN_STATUS_LABEL } from "@/components/campaign-status";
+import { campaignSendBlockers, chromeWarmupNotice } from "@/lib/ui/campaign-send-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   const overview = campaignOverview(db, campaign.id);
   const accounts = listAccounts(db);
   const selected = campaignAccountIds(db, campaign.id);
+  const senderBlockers = campaignSendBlockers(accounts, selected);
+  const warmupNotice = chromeWarmupNotice(accounts, selected, overview.stages.qualified ?? 0);
   const next = campaign.status === "active" ? { to: "paused", label: "Pause campaign" } : { to: "active", label: campaign.status === "draft" ? "Start campaign" : "Resume campaign" };
   const cap = getSetting(db, "apify_monthly_cap_usd");
   const savedZone = getSetting(db, "team_timezone") ?? "America/New_York";
@@ -47,14 +50,28 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
           <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value={next.to} />
           <button className="btn">{campaign.status === "active" && <Icon name="pause" size={16} />}{next.label}</button>
         </ActionForm>
-        <ActionForm action={changeCampaignStatus} confirmMessage="Finish this campaign? No new work will run. A message already being sent may still complete; saved drafts will remain in the campaign. This can’t be undone.">
+        <ActionForm action={changeCampaignStatus} confirmMessage="Stop this campaign? It will be marked finished and can’t be restarted. No new work will run. A message already being sent may still complete; saved drafts will remain in the campaign.">
           <input type="hidden" name="id" value={campaign.id} /><input type="hidden" name="status" value="done" />
-          <button className="btn">Finish campaign</button>
+          <button className="btn">Stop campaign</button>
         </ActionForm>
       </div>}
+      {campaign.status === "draft" && overview.total === 0 && <ActionForm action={deleteEmptyDraftCampaign} className="campaign-delete-form" confirmMessage="Delete this empty draft campaign permanently? This can’t be undone.">
+        <input type="hidden" name="id" value={campaign.id} />
+        <button className="btn">Delete empty draft</button>
+      </ActionForm>}
     </header>
     {campaign.status === "done" && <p className="card mb-4 p-4 text-sm text-muted">This campaign is finished. No new lead searches or messages will run. Any message already being sent may complete.</p>}
     {!worker.running && <p className="card mb-4 p-4 text-sm text-warn">Outreach is waiting. Campaign work will not start until its background service is running on this computer.</p>}
+    {campaign.status === "active" && senderBlockers.length > 0 && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
+      <p className="font-medium">This campaign can’t run yet</p>
+      <p className="mt-1">{senderBlockers.join(" · ")}. Choose an account that is active and set up for campaign actions in <Link href="#settings" className="underline">Campaign settings</Link>.</p>
+    </div>}
+    {warmupNotice && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
+      <p className="font-medium">Matched leads need preparation</p>
+      <p className="mt-1">{warmupNotice.matchedLeadCount === 1 ? "This matched lead needs" : `These ${warmupNotice.matchedLeadCount} matched leads need`} Instagram activity before Outreach can prepare a first message. Signed-in Chrome supports this step. Automatic comments and drafts require a connected writing service and an approved spending limit.</p>
+      <p className="mt-2 text-muted">To work without paid AI, complete the engagement on Instagram, open the lead and mark it Engaged, then write its three-part message. It will wait for your approval.</p>
+      <Link href="/settings" className="mt-2 inline-flex underline">Review writing setup</Link>
+    </div>}
     <section className="audience-summary" aria-labelledby="audience-title">
       <div><h2 id="audience-title">Who you’re reaching</h2><p>{campaign.audienceText || campaign.niches.join(", ") || "Describe your audience in campaign settings."}</p></div>
       <Link href="#settings" className="text-link">Edit audience <Icon name="arrow" size={15} /></Link>

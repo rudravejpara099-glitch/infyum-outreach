@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STAGES } from "@/lib/domain/stages";
-import { activityLabel, actorLabel, jobErrorLabel, jobTypeLabel, loginJobSummary, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
+import { accountStatusBadge, activityLabel, actorLabel, jobErrorLabel, jobTypeLabel, loginJobSummary, loginWindowHint, messageKindLabel, messageStatusLabel, navigationCopy, stageCopy } from "@/lib/ui/copy";
 
 describe("plain-language UI copy", () => {
   it("covers only the current first-reply pipeline stages", () => {
@@ -23,6 +23,8 @@ describe("plain-language UI copy", () => {
   it("hides internal event and actor identifiers from history labels", () => {
     expect(activityLabel("lead.handoff")).toBe("Lead replied; conversation handed over");
     expect(activityLabel("message.sent.dm")).toBe("First message sent");
+    expect(activityLabel("inbox.checked")).toBe("Reply check succeeded");
+    expect(activityLabel("campaign.deleted")).toBe("Empty draft deleted");
     expect(activityLabel("pace.after_send")).toBe("Work break scheduled");
     expect(activityLabel("unknown.internal.event")).toBe("Activity recorded");
     expect(actorLabel("worker")).toBe("Outreach assistant");
@@ -38,6 +40,46 @@ describe("plain-language UI copy", () => {
     expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: true } }, false)).toMatchObject({ title: "Instagram is connected", tone: "success" });
     expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: false } }, false)).toMatchObject({ title: "Sign-in wasn’t completed", tone: "attention" });
     expect(loginJobSummary({ status: "done", lastError: "" }, false).title).toBe("Sign-in window opened");
+  });
+
+  it("explains the existing Chrome sign-in check without claiming it opens a window", () => {
+    expect(loginJobSummary(null, false, "chrome_read_only").detail).toContain("existing Chrome");
+    expect(loginJobSummary({ status: "queued", lastError: "" }, true, "chrome_read_only")).toMatchObject({ title: "Chrome sign-in check is waiting", tone: "waiting" });
+    expect(loginJobSummary({ status: "running", lastError: "" }, true, "chrome_read_only")).toMatchObject({ title: "Checking Chrome sign-in", tone: "waiting" });
+    expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: false } }, false, "chrome_read_only")).toMatchObject({ title: "Chrome isn’t signed in as this account", detail: expect.stringContaining("Switch Chrome"), tone: "attention" });
+    expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: true } }, false, "chrome_read_only")).toMatchObject({ title: "Instagram is connected", tone: "success" });
+    expect(loginJobSummary({ status: "failed", lastError: "Chrome could not connect" }, false, "chrome_read_only").title).toBe("Could not check Chrome sign-in");
+  });
+
+  it("uses a successful newer inbox check to correct an older Chrome sign-in failure", () => {
+    expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: false } }, false, "chrome_read_only", "", true)).toEqual({
+      title: "Instagram is connected",
+      detail: "Outreach successfully checked for new replies using this account.",
+      tone: "success",
+    });
+  });
+
+  it("does not label an unverified or paused account as connected", () => {
+    expect(accountStatusBadge("active", "attention")).toEqual({ label: "Sign-in needed", tone: "warn" });
+    expect(accountStatusBadge("active", "neutral")).toEqual({ label: "Sign-in needed", tone: "warn" });
+    expect(accountStatusBadge("active", "waiting")).toEqual({ label: "Connecting", tone: "warn" });
+    expect(accountStatusBadge("active", "success")).toEqual({ label: "Connected", tone: "ok" });
+    expect(accountStatusBadge("paused", "success")).toEqual({ label: "Paused", tone: "warn" });
+    expect(accountStatusBadge("blocked", "success")).toEqual({ label: "Stopped", tone: "bad" });
+    expect(accountStatusBadge("blocked", "success", "The saved Instagram account is not signed in in Chrome.")).toEqual({ label: "Sign-in needed", tone: "warn" });
+    expect(accountStatusBadge("blocked", "success", "Instagram showed a warning or a human check.")).toEqual({ label: "Stopped", tone: "bad" });
+  });
+
+  it("shows the current sign-in problem instead of a stale successful check", () => {
+    expect(loginJobSummary({ status: "done", lastError: "", payload: { authenticated: true } }, true, "chrome_read_only", "The saved Instagram account is not signed in in Chrome.")).toMatchObject({
+      title: "Chrome isn’t signed in as this account",
+      detail: expect.stringContaining("Outreach will resume only after that check succeeds"),
+      tone: "attention",
+    });
+    expect(loginJobSummary({ status: "queued", lastError: "" }, true, "chrome_read_only", "The saved Instagram account is not signed in in Chrome.")).toMatchObject({
+      title: "Chrome sign-in check is waiting",
+      tone: "waiting",
+    });
   });
 
   it("shows the real sign-in window outcome without claiming the account is authenticated", () => {

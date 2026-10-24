@@ -33,8 +33,10 @@ describe("test-only hosted checkout", () => {
     expect(checkoutUrlAllowed("https://evil.test")).toBe(false);
     expect(checkoutUrlAllowed("https://checkout.stripe.com.evil.test")).toBe(false);
     expect(checkoutUrlAllowed("https://checkout.stripe.com/c/pay/cs_test_x")).toBe(true);
-    vi.stubEnv("NODE_ENV", "production"); vi.stubEnv("BILLING_TEST_API_BASE", "http://127.0.0.1:3333");
+    vi.stubEnv("NODE_ENV", "production"); vi.stubEnv("BILLING_TEST_API_BASE", "http://127.0.0.1:3333"); vi.stubEnv("OUTREACH_SMOKE_MODE", "");
     expect(() => localTestApi()).toThrow();
+    vi.stubEnv("OUTREACH_SMOKE_MODE", "1");
+    expect(localTestApi()).toBe("http://127.0.0.1:3333");
   });
   it("freezes the total, authorizes the payer and uses one durable idempotency key", async () => {
     const fake = fakeStripe(), sdk = fake as unknown as Stripe;

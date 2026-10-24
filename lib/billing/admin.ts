@@ -1,6 +1,6 @@
 import { BillingError } from "./errors";
 import type { Db } from "@/lib/db/core";
-import { assertOwner, billingConfig } from "./config";
+import { assertOwner, billingConfig, setActiveAiModel } from "./config";
 import { integer } from "./money";
 import { periodFor } from "./periods";
 export function saveBillingConfig(db: Db, ownerId: number, input: { feeBps: number; fixedFeeMicros: number }, now = new Date().toISOString()): void {
@@ -17,4 +17,8 @@ export function saveModelRate(db: Db, ownerId: number, input: { model: string; i
   integer(input.inputMicros); integer(input.outputMicros);
   if (input.cacheReadMicros !== null) integer(input.cacheReadMicros); if (input.cacheWriteMicros !== null) integer(input.cacheWriteMicros);
   db.prepare("INSERT INTO billing_model_rates(model,input_micros_per_million,output_micros_per_million,cache_read_micros_per_million,cache_write_micros_per_million,verified,source,created_at) VALUES(?,?,?,?,?,1,?,?)").run(input.model.trim(), input.inputMicros, input.outputMicros, input.cacheReadMicros, input.cacheWriteMicros, input.source.trim(), now);
+}
+export function saveActiveAiModel(db: Db, ownerId: number, model: string): void {
+  assertOwner(ownerId);
+  setActiveAiModel(db, model.trim());
 }

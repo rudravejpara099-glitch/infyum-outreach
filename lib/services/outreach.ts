@@ -3,7 +3,7 @@ import { isAutoReply } from "@/lib/domain/autoreply";
 import { getCampaign } from "@/lib/db/repos/campaigns";
 import { addDnc } from "@/lib/db/repos/dnc";
 import { getLead, moveStage, scheduleFollowup } from "@/lib/db/repos/leads";
-import { getMessage, markSent, recordIncoming } from "@/lib/db/repos/messages";
+import { getMessage, hasIncomingText, markSent, recordIncoming } from "@/lib/db/repos/messages";
 import { logActivity } from "@/lib/db/repos/activity";
 
 export const FIRST_FOLLOWUP_DAYS = 2;
@@ -33,17 +33,26 @@ export function afterSent(db: Db, messageId: number, now = new Date(), actor = "
 
 /** Called by the worker when it reads a message from a lead. A real reply ends the app's job for that lead. */
 export function handleIncoming(db: Db, leadId: number, text: string): { counted: boolean } {
-  recordIncoming(db, leadId, null, text);
-  if (isAutoReply(text)) {
-    logActivity(db, "worker", "message.auto_reply_ignored", { leadId });
-    return { counted: false };
-  }
-  const lead = getLead(db, leadId)!;
-  // The first real message is the goal. Mark the hand-off, stop follow-ups, and leave the rest to a person or the GHL agent.
-  if (lead.stage === "dm_sent" || lead.stage === "closed") moveStage(db, leadId, "replied", "worker");
-  scheduleFollowup(db, leadId, null);
-  logActivity(db, "worker", "lead.handoff", { leadId, accountId: lead.accountId, detail: text.slice(0, 200) });
-  return { counted: true };
+  return db.transaction(() => {
+    const lead = getLead(db, leadId);
+    if (!lead) throw new Error(`Lead ${leadId} not found`);
+    // After the first hand-off, inbox polling belongs to the person handling the conversation.
+    const handedOff = lead.stage === "replied" || !!db.prepare(
+      "SELECT 1 FROM activity WHERE lead_id=? AND action='lead.handoff' LIMIT 1",
+    ).get(leadId);
+    if (handedOff || hasIncomingText(db, leadId, text)) return { counted: false };
+
+    recordIncoming(db, leadId, null, text);
+    if (isAutoReply(text)) {
+      logActivity(db, "worker", "message.auto_reply_ignored", { leadId });
+      return { counted: false };
+    }
+    // The first real message is the goal. Mark the hand-off, stop follow-ups, and leave the rest to a person or the GHL agent.
+    moveStage(db, leadId, "replied", "worker");
+    scheduleFollowup(db, leadId, null);
+    logActivity(db, "worker", "lead.handoff", { leadId, accountId: lead.accountId, detail: text.slice(0, 200) });
+    return { counted: true };
+  })();
 }
 
 /** "Stop" means stop: close the lead and never contact the handle again. */

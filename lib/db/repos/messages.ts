@@ -3,6 +3,7 @@ import type { Campaign, Message, MessageKind, MessageStatus } from "../types";
 import { decideApproval } from "@/lib/domain/approval";
 import { checkAgainstRecent } from "@/lib/domain/similarity";
 import { logActivity } from "./activity";
+import { utcRangeForLocalDate } from "@/lib/domain/time-zone";
 
 const map = (r: Record<string, unknown>): Message => ({
   id: r.id as number, leadId: r.lead_id as number, accountId: r.account_id as number | null,
@@ -46,6 +47,12 @@ export function recordIncoming(db: Db, leadId: number, accountId: number | null,
   ).run(leadId, accountId, "in", "incoming", JSON.stringify([text]), "sent");
   logActivity(db, "worker", "message.received", { leadId, accountId });
   return getMessage(db, Number(info.lastInsertRowid))!;
+}
+
+/** Inbox checks can return the same latest message repeatedly. */
+export function hasIncomingText(db: Db, leadId: number, text: string): boolean {
+  return !!db.prepare("SELECT 1 FROM messages WHERE lead_id=? AND direction='in' AND kind='incoming' AND parts=? LIMIT 1")
+    .get(leadId, JSON.stringify([text]));
 }
 
 export function getMessage(db: Db, id: number): Message | null {
@@ -94,10 +101,11 @@ export function markFailed(db: Db, id: number, reason: string): void {
 }
 
 /** Messages that count against the daily limit: first DMs and follow-ups. Replies do not. */
-export function sentTodayForAccount(db: Db, accountId: number, dateIso: string): number {
+export function sentTodayForAccount(db: Db, accountId: number, dateIso: string, timeZone = "UTC"): number {
+  const { start, end } = utcRangeForLocalDate(dateIso, timeZone);
   return (db.prepare(
-    "SELECT COUNT(*) c FROM messages WHERE account_id = ? AND direction='out' AND status='sent' AND kind IN ('dm','followup') AND date(sent_at) = ?",
-  ).get(accountId, dateIso) as { c: number }).c;
+    "SELECT COUNT(*) c FROM messages WHERE account_id = ? AND direction='out' AND status='sent' AND kind IN ('dm','followup') AND sent_at >= ? AND sent_at < ?",
+  ).get(accountId, start.toISOString().replace("T", " ").slice(0, 19), end.toISOString().replace("T", " ").slice(0, 19)) as { c: number }).c;
 }
 export function approvedQueue(db: Db): Message[] {
   return (db.prepare(`SELECT m.* FROM messages m

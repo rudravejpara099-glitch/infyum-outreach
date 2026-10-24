@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/dal";
 import { getDb } from "@/lib/db";
 import { isOwner } from "@/lib/billing/rules";
-import { billingConfig, modelRates, integrationReady } from "@/lib/billing/config";
+import { activeAiModel, billingConfig, modelRates, integrationReady } from "@/lib/billing/config";
 import { billingOverview } from "@/lib/billing/queries";
 import { syncBilling } from "@/lib/billing/sync";
 import { usd } from "@/lib/billing/money";
@@ -11,7 +11,7 @@ import { deployment } from "@/lib/billing/resources";
 import { paymentConfigured } from "@/lib/billing/provider";
 import { PageHeader } from "@/components/ui";
 import { BillingForm } from "@/components/billing-form";
-import { changeBillingConfig, confirmModelPrices, confirmResourceExpense, refreshPaymentFees } from "../actions";
+import { changeActiveAiModel, changeBillingConfig, confirmModelPrices, confirmResourceExpense, refreshPaymentFees } from "../actions";
 export const dynamic = "force-dynamic";
 export default async function BillingAdmin() {
   const me = await requireUser(); if (!isOwner(me.id, process.env.BILLING_OWNER_USER_ID)) notFound();
@@ -32,6 +32,7 @@ export default async function BillingAdmin() {
     </section></div>
     <section className="card p-5"><h2>Model token prices</h2><p className="mt-2 text-sm text-muted">USD per million tokens. The $3 input / $15 output seed remains an unverified placeholder. Sonnet 5.5 has its own price from the linked provider page; billed work uses the exact model rate saved at dispatch.</p>
       <ul className="billing-rate-list">{rates.map(rate => <li key={rate.id}><strong className="break-words">{rate.model}</strong><span className={`badge ${rate.verified ? "badge-ok" : "badge-warn"}`}>{rate.verified ? "Owner-confirmed" : "Unverified placeholder"}</span><p className="text-sm text-muted">Input {usd(rate.input_micros_per_million)} · output {usd(rate.output_micros_per_million)} per million tokens. {rate.source}</p></li>)}</ul>
+      <BillingForm action={changeActiveAiModel}><label className="label" htmlFor="activeAiModel">AI model for new drafts</label><select className="input" id="activeAiModel" name="model" defaultValue={activeAiModel(db)} required>{rates.filter(rate => rate.verified).map(rate => <option key={rate.id} value={rate.model}>{rate.model} · ${usd(rate.input_micros_per_million)} input / ${usd(rate.output_micros_per_million)} output per million</option>)}</select><p className="mt-2 text-xs text-muted">Only models with owner-confirmed prices can be selected. This applies to new metered drafts; saved messages and charges stay unchanged.</p><button className="btn">Save AI model</button></BillingForm>
       <details><summary className="cursor-pointer font-medium">Record a new model price version</summary><BillingForm action={confirmModelPrices}><div className="billing-input-grid"><div><label className="label" htmlFor="model">Exact provider model ID</label><input id="model" name="model" className="input" maxLength={100} required /></div><div><label className="label" htmlFor="source">Provider price-page URL</label><input id="source" name="source" className="input" type="url" required /></div><div><label className="label" htmlFor="inputPrice">Input (USD / million)</label><input id="inputPrice" name="inputPrice" className="input" type="number" min="0" step="0.000001" required /></div><div><label className="label" htmlFor="outputPrice">Output (USD / million)</label><input id="outputPrice" name="outputPrice" className="input" type="number" min="0" step="0.000001" required /></div><div><label className="label" htmlFor="cacheRead">Cache read (optional)</label><input id="cacheRead" name="cacheRead" className="input" type="number" min="0" step="0.000001" /></div><div><label className="label" htmlFor="cacheWrite">Cache write (optional)</label><input id="cacheWrite" name="cacheWrite" className="input" type="number" min="0" step="0.000001" /></div></div><label className="billing-check"><input name="confirmed" type="checkbox" required /><span>I checked these exact model prices against the provider’s price page.</span></label><button className="btn">Save confirmed prices</button></BillingForm></details>
     </section>
   </div>;

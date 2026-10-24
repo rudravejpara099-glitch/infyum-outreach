@@ -4,7 +4,7 @@ import { saveCeiling } from "@/lib/billing/config";
 import { claimResource } from "@/lib/billing/attribution";
 import { reserveUsage, settleUsage, releaseUsage, budgetSnapshot, billingHold } from "@/lib/billing/budget";
 import { recordUsage } from "@/lib/billing/ledger";
-import { syncBilling } from "@/lib/billing/sync";
+import { syncBilling, syncConsentedBilling } from "@/lib/billing/sync";
 import { addResourceCost } from "@/lib/billing/resources";
 import { finalizeStatement, breakdown, listStatements } from "@/lib/billing/statements";
 import type { UsageEvent } from "@/lib/billing/types";
@@ -24,7 +24,7 @@ beforeEach(() => {
 afterEach(() => { db.close(); delete process.env.BILLING_OWNER_USER_ID; });
 describe("durable ledger and reservations", () => {
   it("appends a migration and seeds placeholders without billing old users", () => {
-    expect((db.prepare("SELECT count(*) n FROM schema_migrations").get() as { n: number }).n).toBe(4);
+    expect((db.prepare("SELECT count(*) n FROM schema_migrations").get() as { n: number }).n).toBe(5);
     expect((db.prepare("SELECT verified FROM billing_model_rates").get() as { verified: number }).verified).toBe(0);
     expect(db.prepare("SELECT model,input_micros_per_million,output_micros_per_million,verified FROM billing_model_rates WHERE model='claude-sonnet-5-5'").get()).toEqual({ model: "claude-sonnet-5-5", input_micros_per_million: 2000000, output_micros_per_million: 10000000, verified: 1 });
     expect((db.prepare("SELECT count(*) n FROM billing_usage_events").get() as { n: number }).n).toBe(0);
@@ -102,6 +102,18 @@ describe("durable ledger and reservations", () => {
   });
 });
 describe("actual costs, months and holds", () => {
+  it("periodically syncs consenting users independently and leaves nonconsenting users untouched", () => {
+    db.prepare("UPDATE billing_profiles SET consented_at=? WHERE user_id=1").run(jan);
+    db.prepare("UPDATE billing_profiles SET consented_at=NULL WHERE user_id=2").run();
+    db.exec("CREATE TRIGGER fail_first_user_statement BEFORE INSERT ON billing_statements WHEN NEW.user_id=1 BEGIN SELECT RAISE(FAIL, 'fixture sync failure'); END;");
+    expect(syncConsentedBilling(db, feb)).toEqual({ synced: 0, failedUserIds: [1] });
+    expect((db.prepare("SELECT count(*) n FROM billing_statements WHERE user_id=2").get() as { n: number }).n).toBe(0);
+    db.exec("DROP TRIGGER fail_first_user_statement");
+    expect(syncConsentedBilling(db, feb)).toEqual({ synced: 1, failedUserIds: [] });
+    expect((db.prepare("SELECT count(*) n FROM billing_statements WHERE user_id=1").get() as { n: number }).n).toBe(1);
+    expect((db.prepare("SELECT count(*) n FROM billing_statements WHERE user_id=2").get() as { n: number }).n).toBe(0);
+  });
+
   it("accrues only confirmed fixed costs, with idempotency and hosting zero locally", () => {
     addResourceCost(db, 1, { userId: 1, accountId: 1, kind: "proxy_share", amountMicros: 10000000, reference: "invoice-1" }, jan);
     syncBilling(db, 1, feb); syncBilling(db, 1, feb);

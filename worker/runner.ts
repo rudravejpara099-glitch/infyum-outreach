@@ -1,15 +1,15 @@
 import type { Db } from "@/lib/db/core";
-import type { AiEngine } from "@/lib/engine/types";
+import type { AiEngine, MeteredAiCall } from "@/lib/engine/types";
 import { AiUsageUncertainError } from "@/lib/engine/anthropic";
 import type { InstagramDriver } from "./driver";
-import { InstagramBlockedError, InstagramSendUncertainError } from "./driver";
+import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError } from "./driver";
 import { commentPrompt, SYSTEM } from "@/lib/engine/prompts";
 import { qualify } from "@/lib/domain/qualify";
 import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failJob, failJobPermanently, type Lane } from "@/lib/db/repos/jobs";
+import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, resolveSupersededInboxJobs, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
@@ -17,9 +17,16 @@ import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
 import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
 import { afterSent, handleIncoming } from "@/lib/services/outreach";
+import { workerControl } from "@/lib/services/worker-lifecycle";
 import { findLeadsForCampaign } from "@/lib/services/findLeads";
 import { openLoginWindowJob } from "@/lib/services/login-window-job";
 import { payerFor } from "@/lib/billing/attribution";
+import { browserModeAllowsJob, browserModeAllowsLeadSearch } from "@/lib/domain/browser-mode";
+import { canSendAtStage } from "@/lib/domain/stages";
+import { accountNeedsSignIn, canResumeAfterVerifiedSignIn } from "@/lib/domain/account-recovery";
+import { dateInTimeZone } from "@/lib/domain/time-zone";
+import { warmupCommentError } from "@/lib/domain/warmup-comment";
+import { warmupComplete } from "@/lib/domain/warmup";
 import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
@@ -32,11 +39,13 @@ export type Deps = {
   humanPace?: { cfg?: Partial<PacingConfig>; rng?: Rng };
   /** Present only when APIFY_TOKEN is set. */
   apify?: ApifySearchClient;
+  /** Checked atomically with job claim when a live local worker owns the lease. */
+  mayClaim?: () => boolean;
 };
 
 const WARMUP_PIECES = 10;
 const INBOX_EVERY_MINUTES = 30;
-const todayOf = (d: Date) => d.toISOString().slice(0, 10);
+const teamDate = (db: Db, now: Date) => dateInTimeZone(now, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz);
 
 /** Looks at the whole database and queues whatever work is due. Safe to run as often as you like. */
 export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
@@ -48,7 +57,9 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
       const chosen = lead.accountId ?? leastLoadedAccount(db, accounts)!;
       if (!lead.accountId) assignLead(db, lead.id, c.id, chosen);
       const step = { found: "qualify", qualified: "warmup", warmed: "draft_dm" }[lead.stage as "found" | "qualified" | "warmed"];
-      if (!step || activeJobExists(db, step, lead.id)) continue;
+      if (!step || activeJobExists(db, step, lead.id) || failedJobExists(db, step, lead.id)) continue;
+      const account = getAccount(db, chosen);
+      if (!account || !browserModeAllowsJob(account.browserMode, step)) continue;
       if (step === "draft_dm" && hasOutgoing(db, lead.id, "dm")) continue;
       enqueue(db, { type: step, leadId: lead.id, accountId: chosen });
     }
@@ -56,21 +67,32 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   for (const lead of dueFollowups(db, now().toISOString().replace("T", " ").slice(0, 19))) {
     const c = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
     if (c?.status !== "active" || !c.followupsEnabled || isDnc(db, lead.handle)) continue;
+    const account = lead.accountId ? getAccount(db, lead.accountId) : null;
+    if (!account || !browserModeAllowsJob(account.browserMode, "draft_followup")) continue;
     if (!activeJobExists(db, "draft_followup", lead.id) && !hasOutgoing(db, lead.id, "followup", ["pending_approval", "approved", "failed"])) {
       enqueue(db, { type: "draft_followup", leadId: lead.id, accountId: lead.accountId });
     }
   }
   for (const m of approvedQueue(db)) {
+    const lead = getLead(db, m.leadId);
+    if (!lead || !canSendAtStage(lead.stage, m.kind)) continue;
+    const account = m.accountId ? getAccount(db, m.accountId) : null;
+    if (!account || !browserModeAllowsJob(account.browserMode, "send")) continue;
     if (!activeJobExists(db, "send", m.leadId) ) enqueue(db, { type: "send", leadId: m.leadId, accountId: m.accountId, payload: { messageId: m.id } });
   }
-  for (const c of active) {
-    for (const accountId of campaignAccountIds(db, c.id)) {
-      const key = `inbox_checked_${accountId}`;
-      const last = Number(getSetting(db, key) ?? 0);
-      if (now().getTime() - last >= INBOX_EVERY_MINUTES * 60_000 && !activeJobExists(db, "check_inbox", null, accountId)) {
-        enqueue(db, { type: "check_inbox", accountId });
-        setSetting(db, key, String(now().getTime()));
-      }
+  const inboxAccounts = new Set(active.flatMap((c) => campaignAccountIds(db, c.id)));
+  // A paused campaign can still receive the reply we were waiting for.
+  for (const row of db.prepare("SELECT DISTINCT account_id FROM leads WHERE stage='dm_sent' AND account_id IS NOT NULL").all() as { account_id: number }[]) {
+    inboxAccounts.add(row.account_id);
+  }
+  for (const accountId of inboxAccounts) {
+    const account = getAccount(db, accountId);
+    if (!account || !browserModeAllowsJob(account.browserMode, "check_inbox")) continue;
+    const key = `inbox_checked_${accountId}`;
+    const last = Number(getSetting(db, key) ?? 0);
+    if (now().getTime() - last >= INBOX_EVERY_MINUTES * 60_000 && !activeJobExists(db, "check_inbox", null, accountId)) {
+      enqueue(db, { type: "check_inbox", accountId });
+      setSetting(db, key, String(now().getTime()));
     }
   }
 }
@@ -81,7 +103,7 @@ function hasOutgoing(db: Db, leadId: number, kind: string, statuses = ["draft", 
 
 /** Runs at most one job (from one lane when given). Returns false when nothing was due. */
 export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
-  const job = claimNext(deps.db, undefined, lane);
+  const job = claimNext(deps.db, undefined, lane, deps.mayClaim);
   if (!job) return false;
   try {
     await process(deps, job);
@@ -97,6 +119,16 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
     if (e instanceof AiUsageUncertainError) {
       failJobPermanently(deps.db, job.id, msg);
       logActivity(deps.db, "worker", "job.ai_usage_uncertain", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: usage requires owner review` });
+    } else if (e instanceof InstagramWarmupUncertainError) {
+      failJobPermanently(deps.db, job.id, msg);
+      if (e.blockedByInstagram && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
+      logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
+    } else if (job.type === "warmup") {
+      // Both browser adapters can have partially engaged before a later error.
+      // A generic failure is not proof that it is safe to repeat comments.
+      failJobPermanently(deps.db, job.id, msg);
+      if (e instanceof InstagramBlockedError && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
+      logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
     } else if (e instanceof InstagramSendUncertainError) {
       const messageId = Number(job.payload.messageId);
       const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(deps.db, messageId) : null;
@@ -123,7 +155,24 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
 async function process(deps: Deps, job: Job): Promise<void> {
   const { db, driver, engine } = deps;
   const account = job.accountId ? getAccount(db, job.accountId) : null;
-  if (job.accountId && account?.status !== "active" && job.type !== "open_login") {
+  // Restrict the signed-in Chrome integration to its supported job types before
+  // dispatch, in addition to the driver-level checks.
+  if (account && !browserModeAllowsJob(account.browserMode, job.type)) {
+    deferJob(db, job, 60);
+    return;
+  }
+  if (job.type === "find_leads") {
+    const campaignId = Number(job.payload.campaignId);
+    const modes = Number.isSafeInteger(campaignId) && campaignId > 0
+      ? campaignAccountIds(db, campaignId).map((id) => getAccount(db, id)?.browserMode).filter((mode): mode is NonNullable<typeof mode> => Boolean(mode))
+      : [];
+    if (modes.length > 0 && !browserModeAllowsLeadSearch(modes)) {
+      deferJob(db, job, 60);
+      return;
+    }
+  }
+  const recoverableInboxCheck = job.type === "check_inbox" && account?.status === "blocked" && accountNeedsSignIn(account.statusNote);
+  if (job.accountId && account?.status !== "active" && job.type !== "open_login" && !recoverableInboxCheck) {
     deferJob(db, job, 60); // paused or blocked: wait until the team resumes it
     return;
   }
@@ -181,17 +230,36 @@ async function process(deps: Deps, job: Job): Promise<void> {
       const campaignPayer = campaign ? payerFor(db, "campaign", campaign.id) : null;
       const accountPayer = payerFor(db, "account", account.id);
       let commentCall = 0;
+      const meteringFor = (call: number): MeteredAiCall | undefined => campaign && campaignPayer && campaignPayer === accountPayer ? {
+        db, userId: campaignPayer, operationId: `ai:${job.id}:warmup-comment:${call}`,
+        source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
+      } : undefined;
+      // Never like/follow a post before discovering writing/billing is disconnected.
+      engine.assertReady?.(meteringFor(1));
+      const mayContinue = () => {
+        const freshLead = getLead(db, lead.id), freshAccount = getAccount(db, account.id);
+        const freshCampaign = campaign ? getCampaign(db, campaign.id) : null;
+        return !!freshLead && freshLead.stage === "qualified" && freshLead.accountId === account.id
+          && !!freshAccount && freshAccount.status === "active" && !!freshCampaign && freshCampaign.status === "active"
+          && campaignAccountIds(db, freshCampaign.id).includes(account.id) && !isDnc(db, freshLead.handle)
+          && workerControl(db).phase !== "stopping";
+      };
       const result = await driver.warmUp(account, lead.handle, WARMUP_PIECES, async (context) => {
         commentCall += 1;
-        const metering = campaign && campaignPayer && campaignPayer === accountPayer ? {
-          db, userId: campaignPayer, operationId: `ai:${job.id}:warmup-comment:${commentCall}`,
-          source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
-        } : undefined;
+        const metering = meteringFor(commentCall);
         const raw = await engine.complete({ system: SYSTEM, prompt: commentPrompt(context), metering });
-        return raw.replace(/[—–]/g, ",").replace(/^["']|["']$/g, "").trim();
-      });
-      logActivity(db, "worker", "lead.warmed_up", { leadId: lead.id, accountId: account.id, detail: `${result.likes} likes, ${result.comments} comments, followed: ${result.followed}` });
-      moveStage(db, lead.id, "warmed", "worker");
+        const comment = raw.replace(/[—–]/g, ",").replace(/^["']|["']$/g, "").trim();
+        const error = warmupCommentError(comment);
+        if (error) throw new Error(error);
+        return comment;
+      }, mayContinue);
+      if (!mayContinue() || !warmupComplete(result, WARMUP_PIECES)) throw new InstagramWarmupUncertainError();
+      try {
+        db.transaction(() => {
+          logActivity(db, "worker", "lead.warmed_up", { leadId: lead.id, accountId: account.id, detail: `${result.likes} likes, ${result.comments} comments, followed: ${result.followed}` });
+          moveStage(db, lead.id, "warmed", "worker");
+        }).immediate();
+      } catch { throw new InstagramWarmupUncertainError(); }
       return;
     }
 
@@ -213,14 +281,30 @@ async function process(deps: Deps, job: Job): Promise<void> {
     case "send": {
       const message = getMessage(db, Number(job.payload.messageId));
       if (!message || message.status !== "approved" || !lead || !account || message.leadId !== lead.id || message.accountId !== account.id) return;
+      if (!canSendAtStage(lead.stage, message.kind)) return;
       const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
       if (!campaign || campaign.status !== "active" || !campaignAccountIds(db, campaign.id).includes(account.id)) return;
       if (message.kind !== "reply") {
-        const left = remainingToday(account, todayOf(deps.now()), sentTodayForAccount(db, account.id, todayOf(deps.now())));
+        const today = teamDate(db, deps.now());
+        const left = remainingToday(account, today, sentTodayForAccount(db, account.id, today, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz));
         if (left <= 0) { deferJob(db, job, 120); logActivity(db, "worker", "send.limit_reached", { accountId: account.id }); return; }
       }
       if (isDnc(db, lead.handle)) { markFailed(db, message.id, "Handle is on the do-not-contact list"); return; }
       await deps.pace();
+      if (workerControl(db).phase === "stopping") return;
+      // Approval, campaign state, or first-reply handoff can change while the worker waits.
+      const freshLead = getLead(db, lead.id), freshMessage = getMessage(db, message.id);
+      const freshAccount = getAccount(db, account.id);
+      const freshCampaign = freshLead?.campaignId ? getCampaign(db, freshLead.campaignId) : null;
+      if (!freshLead || !freshMessage || freshMessage.status !== "approved" || !canSendAtStage(freshLead.stage, freshMessage.kind)
+        || !freshAccount || freshAccount.status !== "active" || !browserModeAllowsJob(freshAccount.browserMode, "send")
+        || !freshCampaign || freshCampaign.status !== "active" || !campaignAccountIds(db, freshCampaign.id).includes(account.id)
+        || isDnc(db, freshLead.handle)) return;
+      const freshToday = teamDate(db, deps.now());
+      if (remainingToday(freshAccount, freshToday, sentTodayForAccount(db, account.id, freshToday, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz)) <= 0) {
+        deferJob(db, job, 120);
+        return;
+      }
       await driver.sendMessages(account, lead.handle, message.parts);
       try { db.transaction(() => afterSent(db, message.id, deps.now())).immediate(); }
       catch { throw new InstagramSendUncertainError(); }
@@ -229,9 +313,25 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
     case "check_inbox": {
       if (!account) return;
+      if (account.status === "blocked" && accountNeedsSignIn(account.statusNote)) {
+        const authenticated = await driver.openLogin(account);
+        if (!canResumeAfterVerifiedSignIn(account.status, account.statusNote, authenticated)) {
+          deferJob(db, job, 60);
+          return;
+        }
+        setAccountStatus(db, account.id, "active", "", "worker");
+      }
+      let handoffs = 0;
       for (const incoming of await driver.readInbox(account)) {
         const known = findLeadByHandle(db, incoming.handle);
-        if (known) handleIncoming(db, known.id, incoming.text); // strangers who message us are ignored
+        if (known && handleIncoming(db, known.id, incoming.text).counted) handoffs++;
+      }
+      const superseded = resolveSupersededInboxJobs(db, account.id);
+      if (superseded || handoffs) {
+        const detail = handoffs
+          ? `${handoffs} new ${handoffs === 1 ? "reply" : "replies"} handed off.`
+          : `This successful check cleared ${superseded} earlier inbox ${superseded === 1 ? "error" : "errors"}.`;
+        logActivity(db, "worker", "inbox.checked", { accountId: account.id, detail });
       }
       return;
     }

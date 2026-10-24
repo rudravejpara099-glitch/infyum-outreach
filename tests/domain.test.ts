@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canMove } from "@/lib/domain/stages";
+import { canMove, canSendAtStage } from "@/lib/domain/stages";
 import { qualify } from "@/lib/domain/qualify";
 import { dailyAllowance, remainingToday } from "@/lib/domain/limits";
 import { checkAgainstRecent } from "@/lib/domain/similarity";
@@ -15,8 +15,19 @@ describe("stages", () => {
   it("allows the normal path and blocks skipping ahead", () => {
     expect(canMove("found", "qualified")).toBe(true);
     expect(canMove("found", "dm_sent")).toBe(false);
+    expect(canMove("found", "replied")).toBe(true);
     expect(canMove("closed", "found")).toBe(false);
     expect(canMove("skipped", "found")).toBe(true);
+    expect(canMove("skipped", "replied")).toBe(true);
+  });
+  it("only sends a first DM before first contact and follow-ups while waiting for a reply", () => {
+    expect(canSendAtStage("warmed", "dm")).toBe(true);
+    expect(canSendAtStage("dm_sent", "followup")).toBe(true);
+    for (const stage of ["found", "qualified", "replied", "closed", "skipped"] as const) {
+      expect(canSendAtStage(stage, "dm")).toBe(false);
+      expect(canSendAtStage(stage, "followup")).toBe(false);
+    }
+    expect(canSendAtStage("replied", "reply")).toBe(false);
   });
 });
 

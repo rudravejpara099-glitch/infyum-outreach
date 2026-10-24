@@ -13,6 +13,7 @@ import { assertCampaignCanStart } from "@/lib/billing/guards";
 import { queueLeadSearch } from "./queue-search";
 import { getSetting } from "@/lib/db/repos/settings";
 import { workerStatus } from "@/lib/queries/worker-status";
+import { logActivity } from "@/lib/db/repos/activity";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { MAX_LEAD_FILE_BYTES, normalizeHandle, parseLeadCsv, parsePastedHandles } from "@/lib/ui/lead-input";
 const validId = (id: number) => Number.isSafeInteger(id) && id > 0;
@@ -53,6 +54,29 @@ export async function changeCampaignStatus(form: FormData): Promise<ActionResult
   return { message: parsed.data === "active" && !workerStatus(db, new Date()).running ? "Campaign is active. Tasks will wait until the worker starts." : "Campaign status saved." };
 }
 
+/** Permanently remove only an empty draft; campaigns with leads keep their history. */
+export async function deleteEmptyDraftCampaign(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const id = Number(form.get("id")), db = getDb();
+  if (!validId(id)) return { error: "Campaign not found. Refresh the page." };
+  const result = db.transaction(() => {
+    const campaign = db.prepare(`SELECT name, status, (SELECT count(*) FROM leads WHERE campaign_id=campaigns.id) AS lead_count
+      FROM campaigns WHERE id=?`).get(id) as { name: string; status: string; lead_count: number } | undefined;
+    if (!campaign) return { error: "Campaign not found. Refresh the page." };
+    if (campaign.status !== "draft") return { error: "Only an empty draft can be deleted. Stop or finish this campaign instead." };
+    if (campaign.lead_count !== 0) return { error: "This campaign has leads, so its history is kept. Stop the campaign instead." };
+    db.prepare("DELETE FROM campaigns WHERE id=? AND status='draft'").run(id);
+    logActivity(db, user.email, "campaign.deleted", { detail: campaign.name });
+    return { message: "Empty draft deleted.", url: "/campaigns" };
+  }).immediate();
+  if (!result.error) {
+    revalidatePath(`/campaigns/${id}`);
+    revalidatePath("/campaigns");
+    revalidatePath("/activity");
+  }
+  return result;
+}
+
 /** Paste handles. Global duplicates, invalid handles and do-not-contact entries are skipped with counts. */
 export async function addLeads(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
@@ -74,12 +98,17 @@ export async function addLeads(form: FormData): Promise<ActionResult> {
   const invalid = normalized.filter(handle => handle === null).length;
   let added = 0;
   let duplicates = normalized.length - invalid - unique.size, blocked = 0;
-  db.transaction(() => {
+  const error = db.transaction(() => {
+    const current = db.prepare("SELECT status FROM campaigns WHERE id=?").get(campaignId) as { status: string } | undefined;
+    if (!current) return "Campaign not found. Refresh the page.";
+    if (current.status === "done") return "This campaign is finished. Create a new campaign to add leads.";
     for (const handle of unique) {
       if (isDnc(db, handle)) { blocked++; continue; }
       if (addLead(db, { handle, campaignId, source: file instanceof File && file.size ? "csv" : "pasted" }, user.email).created) added++; else duplicates++;
     }
+    return null;
   }).immediate();
+  if (error) return { error };
   revalidatePath(`/campaigns/${campaignId}`); revalidatePath("/pipeline");
   return { message: `${added} lead${added === 1 ? "" : "s"} added. ${duplicates} duplicate, ${blocked} do-not-contact and ${invalid} invalid handle${invalid === 1 ? "" : "s"} skipped.` };
 }

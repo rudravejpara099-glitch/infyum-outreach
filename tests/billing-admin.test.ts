@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { saveBillingConfig, saveModelRate } from "@/lib/billing/admin";
-import { billingConfig, saveCeiling, verifiedModelRate, tokenRate } from "@/lib/billing/config";
+import { saveActiveAiModel, saveBillingConfig, saveModelRate } from "@/lib/billing/admin";
+import { activeAiModel, billingConfig, DEFAULT_AI_MODEL, saveCeiling, verifiedModelRate, tokenRate } from "@/lib/billing/config";
 import { claimResource } from "@/lib/billing/attribution";
 import { assertCampaignCanStart } from "@/lib/billing/guards";
 import { addResourceCost } from "@/lib/billing/resources";
@@ -21,6 +21,13 @@ describe("owner, payer and price controls", () => {
   it("allows only the explicit owner to change processor/model prices", () => {
     expect(() => saveBillingConfig(db, 2, { feeBps: 290, fixedFeeMicros: 300000 }, jan)).toThrow("owner");
     expect(() => saveModelRate(db, 2, { model: "test-model", inputMicros: 3, outputMicros: 15, cacheReadMicros: null, cacheWriteMicros: null, source: "https://provider.test/prices", confirmed: true }, jan)).toThrow();
+  });
+  it("lets only the owner select a model with a confirmed price", () => {
+    expect(activeAiModel(db)).toBe(DEFAULT_AI_MODEL);
+    expect(() => saveActiveAiModel(db, 2, "fixture-model")).toThrow("owner");
+    expect(() => saveActiveAiModel(db, 1, "unverified-model")).toThrow("Confirm this exact model");
+    saveActiveAiModel(db, 1, "fixture-model");
+    expect(activeAiModel(db)).toBe("fixture-model");
   });
   it("rejects negative processor fees at the action boundary", () => {
     expect(() => saveBillingConfig(db, 1, { feeBps: -1, fixedFeeMicros: 300000 }, jan)).toThrow("valid processor rate");

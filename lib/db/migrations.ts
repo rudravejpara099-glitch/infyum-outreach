@@ -133,4 +133,9 @@ VALUES(100,'claude-sonnet-5-5',2000000,10000000,100000,NULL,1,'https://platform.
     name: "durable_apify_run_id",
     sql: "ALTER TABLE billing_reservations ADD COLUMN provider_run_id TEXT;",
   },
+  {
+    id: 5,
+    name: "instagram_browser_mode",
+    sql: "ALTER TABLE ig_accounts ADD COLUMN browser_mode TEXT NOT NULL DEFAULT 'isolated' CHECK (browser_mode IN ('isolated','chrome_read_only'))",
+  },
 ];

@@ -11,7 +11,7 @@ export function testStripe(secret = process.env.STRIPE_SECRET_KEY): Stripe {
 export function localTestApi(): string | null {
   const raw = process.env.BILLING_TEST_API_BASE;
   if (!raw) return null;
-  if (process.env.NODE_ENV === "production" || !/^http:\/\/127\.0\.0\.1:\d+$/.test(raw)) throw new BillingError("Local payment simulator is allowed only on loopback outside production");
+  if ((process.env.NODE_ENV === "production" && process.env.OUTREACH_SMOKE_MODE !== "1") || !/^http:\/\/127\.0\.0\.1:\d+$/.test(raw)) throw new BillingError("Local payment simulator is allowed only on loopback in development or smoke tests");
   return raw;
 }
 export function checkoutUrlAllowed(raw: string): boolean {

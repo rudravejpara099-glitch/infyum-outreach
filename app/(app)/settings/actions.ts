@@ -8,6 +8,7 @@ import { addDnc, removeDnc } from "@/lib/db/repos/dnc";
 import { findLeadByHandle } from "@/lib/db/repos/leads";
 import { markDoNotContact } from "@/lib/services/outreach";
 import { setSetting } from "@/lib/db/repos/settings";
+import { rescheduleQueuedReadOnlyJobs } from "@/lib/db/repos/jobs";
 import { logActivity } from "@/lib/db/repos/activity";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { handleSchema, teammateSchema, validCap, validTimeZone } from "./validation";
@@ -72,10 +73,12 @@ export async function saveTimeZone(form: FormData): Promise<ActionResult> {
   const zone = String(form.get("timeZone") ?? "");
   if (!validTimeZone(zone)) return { error: "Choose a valid time zone from the list.", field: "timeZone" };
   const db = getDb();
+  let rechecked = 0;
   if (!commitAtomically(db, () => {
     setSetting(db, "team_timezone", zone);
+    rechecked = rescheduleQueuedReadOnlyJobs(db);
     logActivity(db, user.email, "settings.team_timezone", { detail: zone });
   })) return { error: "Couldn’t save this change. Try again shortly." };
   revalidatePath("/settings"); revalidatePath("/");
-  return { message: "Team time zone saved. The worker uses it for working hours." };
+  return { message: rechecked ? "Team time zone saved. Queued lead and reply checks will use the updated hours." : "Team time zone saved. The worker uses it for working hours." };
 }

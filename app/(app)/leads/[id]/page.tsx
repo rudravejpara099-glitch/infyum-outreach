@@ -7,13 +7,16 @@ import { listMessages } from "@/lib/db/repos/messages";
 import { failedSendError } from "@/lib/db/repos/jobs";
 import { listActivity } from "@/lib/db/repos/activity";
 import { isDnc } from "@/lib/db/repos/dnc";
-import { getCampaign } from "@/lib/db/repos/campaigns";
+import { getCampaign, listCampaigns, campaignAccountIds } from "@/lib/db/repos/campaigns";
+import { listAccounts } from "@/lib/db/repos/accounts";
+import { activeJobExists, failedJobExists } from "@/lib/db/repos/jobs";
+import { browserModeAllowsJob } from "@/lib/domain/browser-mode";
 import { STAGES, canMove } from "@/lib/domain/stages";
 import { ago, number, STAGE_BADGE } from "@/lib/format";
 import { activityLabel, actorLabel, messageKindLabel, messageStatusLabel, stageCopy } from "@/lib/ui/copy";
 import { ActionForm } from "@/components/action-form";
 import { PageHeader } from "@/components/ui";
-import { changeStage, doNotContact, resolveUncertainSend, saveNotes } from "../actions";
+import { changeStage, createManualFirstDm, doNotContact, moveLeadToCampaign, resolveUncertainSend, retryQualification, saveNotes } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +31,17 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   const activity = listActivity(db, { leadId: lead.id, limit: 30 });
   const campaign = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
   const options = STAGES.filter((s) => s !== lead.stage && canMove(lead.stage, s));
+  const hasFirstDm = messages.some((message) => message.direction === "out" && message.kind === "dm" && message.status !== "rejected");
+  const accounts = listAccounts(db);
+  const movableCampaigns = lead.stage === "found" && !isDnc(db, lead.handle) && messages.length === 0
+    ? listCampaigns(db).filter((candidate) => candidate.id !== lead.campaignId && candidate.status === "active" && candidate.approvalRequired
+      && accounts.some((account) => campaignAccountIds(db, candidate.id).includes(account.id) && account.status === "active" && browserModeAllowsJob(account.browserMode, "send")))
+    : [];
+  const hasFailedQualification = failedJobExists(db, "qualify", lead.id);
+  const hasActiveQualification = activeJobExists(db, "qualify", lead.id);
+  const canManageQualificationRetry = lead.stage === "found" && campaign?.status === "active" && !isDnc(db, lead.handle)
+    && (hasFailedQualification || hasActiveQualification)
+    && accounts.some((account) => campaignAccountIds(db, campaign.id).includes(account.id) && account.status === "active" && browserModeAllowsJob(account.browserMode, "qualify"));
 
   return (
     <>
@@ -79,6 +93,29 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         </section>
 
         <aside className="flex flex-col gap-6">
+          {canManageQualificationRetry && (hasActiveQualification
+            ? <section><h2 className="mb-2 text-base font-semibold">Lead check queued</h2><p className="text-sm text-muted">This read-only check will run when the background service is available.</p></section>
+            : <section><h2 className="mb-2 text-base font-semibold">Lead check stopped</h2>
+              <p className="mb-3 text-sm text-muted">Retry runs a read-only profile check. It won’t contact this person or use a paid provider.</p>
+              <ActionForm action={retryQualification} className="flex flex-col gap-2">
+                <input type="hidden" name="id" value={lead.id} />
+                <button className="btn">Retry lead check</button>
+              </ActionForm>
+            </section>)}
+          {movableCampaigns.length > 0 && (
+            <section><h2 className="mb-2 text-base font-semibold">Move to another campaign</h2>
+              <p className="mb-3 text-sm text-muted">This lead has no conversation history. The new campaign will check it against its own rules before preparing a message.</p>
+              <ActionForm action={moveLeadToCampaign} className="flex flex-col gap-2">
+                <input type="hidden" name="id" value={lead.id} />
+                <label className="label" htmlFor="moveCampaign">Active campaign</label>
+                <select className="input" id="moveCampaign" name="campaignId" required defaultValue="">
+                  <option value="" disabled>Choose a campaign</option>
+                  {movableCampaigns.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}
+                </select>
+                <button className="btn">Move lead</button>
+              </ActionForm>
+            </section>
+          )}
           {options.length > 0 && (
             <section><h2 className="mb-2 text-base font-semibold">Move to</h2>
               <div className="flex flex-wrap gap-2">
@@ -92,6 +129,17 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
           <section><h2 className="mb-2 text-base font-semibold">Notes</h2>
             <ActionForm action={saveNotes} className="flex flex-col gap-2"><input type="hidden" name="id" value={lead.id} />
               <textarea name="notes" rows={5} defaultValue={lead.notes} className="input" aria-label="Notes" /><button className="btn">Save notes</button></ActionForm></section>
+          {campaign?.status === "active" && campaign.approvalRequired && lead.stage === "warmed" && !hasFirstDm && !isDnc(db, lead.handle) && (
+            <section><h2 className="mb-2 text-base font-semibold">Write a first message</h2>
+              <p className="mb-3 text-sm text-muted">Write three short parts. This does not call AI. The message goes to review and cannot send until you approve it.</p>
+              <ActionForm action={createManualFirstDm} className="flex flex-col gap-2">
+                <input type="hidden" name="id" value={lead.id} />
+                {[1, 2, 3].map((part) => <div key={part}><label className="label" htmlFor={`manual-part-${part}`}>Message {part}</label><textarea id={`manual-part-${part}`} name={`part${part}`} rows={3} className="input" required maxLength={380} /></div>)}
+                <p className="text-xs text-muted">Include the campaign link once in message 2.</p>
+                <button className="btn">Send to review</button>
+              </ActionForm>
+            </section>
+          )}
           {!isDnc(db, lead.handle) && (
             <section><h2 className="mb-2 text-base font-semibold">Stop contact</h2>
               <ActionForm action={doNotContact} className="flex flex-col gap-2"><input type="hidden" name="id" value={lead.id} />

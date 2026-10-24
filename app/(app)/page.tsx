@@ -2,13 +2,18 @@ import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { WorkerStatusRefresh } from "@/components/worker-status-refresh";
-import { workerStatus } from "@/lib/queries/worker-status";
+import { ActionForm } from "@/components/action-form";
+import { startWorker, stopWorker } from "./worker/actions";
+import { nextQueuedWork, workerStatus } from "@/lib/queries/worker-status";
+import { workerStartProblem } from "@/lib/services/worker-start-readiness";
 import { dashboardData } from "@/lib/queries/dashboard";
-import { listActivity } from "@/lib/db/repos/activity";
 import { STAGES, type Stage } from "@/lib/domain/stages";
-import { ago, number, todayIso } from "@/lib/format";
+import { ago, number } from "@/lib/format";
+import { getSetting } from "@/lib/db/repos/settings";
+import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { stageCopy } from "@/lib/ui/copy";
 import { activityLabel } from "@/lib/ui/copy";
+import { automaticWritingCopy, failedWorkCopy, runningWorkerCopy } from "@/lib/ui/worker-status-copy";
 import { PageHeader, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +22,14 @@ export default async function Dashboard() {
   await requireUser();
   const db = getDb();
   const worker = workerStatus(db, new Date());
-  const d = dashboardData(db, todayIso());
-  const recent = listActivity(db, { limit: 8 });
+  const nextWork = worker.running ? nextQueuedWork(db) : null;
+  const workerProblem = workerStartProblem(db);
+  const workerLabel = ({ running: "Outreach is running", starting: "Outreach is starting", stopping: "Outreach is stopping", unresponsive: "Outreach needs attention", legacy_running: "Outreach is running from a terminal", stopped: "Outreach is stopped" } as const)[worker.phase];
+  const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
+  const d = dashboardData(db, dateInTimeZone(new Date(), timeZone), timeZone);
+  const failedCopy = failedWorkCopy(d.failedJobTypes);
+  const writingCopy = automaticWritingCopy(Boolean(process.env.ANTHROPIC_API_KEY), d.stages.warmed ?? 0);
+  const recent = d.recentActivity;
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
 
@@ -32,13 +43,13 @@ export default async function Dashboard() {
           <li className="rounded-2xl border border-line bg-bg p-4">
             <p className="text-xs font-medium text-muted">STEP 1</p>
             <p className="mt-1 font-medium">Connect Instagram</p>
-            <p className="mt-1 text-sm text-muted">{d.accounts.length ? `${d.accounts.length} account${d.accounts.length === 1 ? "" : "s"} saved. Open its login window and sign in by hand.` : "Add an account, then sign in by hand in the browser window."}</p>
+            <p className="mt-1 text-sm text-muted">{d.accounts.length ? `${d.accounts.length} account${d.accounts.length === 1 ? "" : "s"} saved. Check Accounts to see which are signed in.` : "Add an account, then sign in by hand in the browser window."}</p>
             <Link href="/accounts" className="mt-3 inline-block text-sm text-accent underline">Go to Accounts</Link>
           </li>
           <li className="rounded-2xl border border-line bg-bg p-4">
             <p className="text-xs font-medium text-muted">STEP 2</p>
             <p className="mt-1 font-medium">Keep Outreach running</p>
-            <p className="mt-1 text-sm text-muted">{worker.running ? "Outreach is handling work on this computer." : "Campaigns wait until Outreach’s background service starts on this computer. You can still connect an Instagram account."}</p>
+            <p className="mt-1 text-sm text-muted">{worker.running ? runningWorkerCopy(nextWork, new Date(), timeZone) : "Campaigns wait until Outreach’s background service starts on this computer. You can still connect an Instagram account."}</p>
             <Link href="/accounts" className="mt-3 inline-block text-sm text-accent underline">See account setup</Link>
           </li>
           <li className="rounded-2xl border border-line bg-bg p-4">
@@ -49,15 +60,26 @@ export default async function Dashboard() {
           </li>
         </ol>
       </section>
+      {writingCopy && <section className="card mb-4 p-4" aria-labelledby="automatic-writing-title">
+        <h2 id="automatic-writing-title" className="font-semibold">Automatic message drafts are off</h2>
+        <p className="mt-1 text-sm text-muted">{writingCopy}</p>
+        <Link href="/settings" className="mt-2 inline-block text-sm text-accent underline">See AI setup in Settings</Link>
+      </section>}
       <section className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Background service status">
-        <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{worker.running ? "Outreach is running" : "Outreach is waiting"}</span>
-          <p className="mt-2 text-sm text-muted">{worker.running ? "It is handling campaign tasks on this computer. Approvals and account limits still apply." : "Campaign and sign-in tasks are waiting for Outreach’s background service to start on this computer."}</p>
+        <div><span className={`badge ${worker.running ? "badge-ok" : "badge-warn"}`}>{workerLabel}</span>
+          <p className="mt-2 text-sm text-muted">{worker.phase === "running" ? runningWorkerCopy(nextWork, new Date(), timeZone) : worker.phase === "stopping" ? "The current task can finish; no new tasks should start." : worker.phase === "starting" ? "The service is opening. Status will update shortly." : worker.phase === "unresponsive" ? "The process still exists but has not reported recently. Stop it and wait for its current task to finish." : worker.phase === "legacy_running" ? "This service was started in a terminal. Stop it there before using these controls." : "Campaign tasks are waiting. Account sign-in can still run separately."}</p>
           {!worker.running && worker.lastSeen && <p className="mt-1 text-xs text-muted">Last seen {ago(worker.lastSeen)}.</p>}
-        </div><div className="flex flex-wrap gap-2"><WorkerStatusRefresh /><Link href="/activity" className="btn">View activity</Link></div>
+          {worker.phase === "stopped" && workerProblem && <p className="mt-2 text-sm text-warn">{workerProblem}</p>}
+          {worker.phase === "stopped" && !workerProblem && <p className="mt-2 text-xs text-muted">Starting may process approved outreach tasks, including sending DMs. Turn on campaign approval before a live test.</p>}
+        </div><div className="flex flex-wrap items-start gap-2">
+          {worker.phase === "stopped" && !workerProblem && <ActionForm action={startWorker} className="flex flex-col gap-1"><button className="btn btn-primary">Start Outreach</button></ActionForm>}
+          {(worker.phase === "running" || worker.phase === "starting" || worker.phase === "unresponsive") && <ActionForm action={stopWorker} className="flex flex-col gap-1"><button className="btn">Stop after current task</button></ActionForm>}
+          <WorkerStatusRefresh /><Link href="/activity" className="btn">View activity</Link>
+        </div>
       </section>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Leads" value={number(d.totalLeads)} />
-        <Stat label="DMs sent today (UTC)" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
+        <Stat label="DMs sent today" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
         <Stat label="Replies" value={d.stages.replied ?? 0} />
         <Stat label="Reply rate" value={`${Math.round(((d.stages.replied ?? 0) / Math.max(1, (d.stages.dm_sent ?? 0) + (d.stages.replied ?? 0))) * 100)}%`} hint="of leads we messaged" />
       </div>
@@ -68,8 +90,8 @@ export default async function Dashboard() {
           <span>Review →</span>
         </Link>
       )}
-      {d.failedJobs > 0 && (
-        <div className="card mt-4 border-bad bg-bad-soft p-4 text-bad">{d.failedJobs} background task{d.failedJobs === 1 ? "" : "s"} failed. See Activity.</div>
+      {failedCopy && (
+        <Link href="/activity" className="card mt-4 block border-bad bg-bad-soft p-4 text-bad">{failedCopy}{" "}<span className="underline">View activity →</span></Link>
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -89,7 +111,7 @@ export default async function Dashboard() {
         </section>
 
         <section className="card p-5">
-          <h2 className="mb-4 text-base font-semibold">Accounts today (UTC)</h2>
+          <h2 className="mb-4 text-base font-semibold">Accounts today</h2>
           {d.accounts.length === 0 ? (
             <p className="text-muted">No Instagram account connected yet. <Link href="/accounts" className="text-accent underline">Connect one</Link>.</p>
           ) : (

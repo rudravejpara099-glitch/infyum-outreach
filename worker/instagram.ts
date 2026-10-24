@@ -11,10 +11,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class PlaywrightInstagram implements InstagramDriver {
   private contexts = new Map<number, BrowserContext>();
 
+  async close(): Promise<void> {
+    const contexts = [...this.contexts.values()];
+    this.contexts.clear();
+    await Promise.all(contexts.map(async (context) => { await context.close().catch(() => {}); }));
+  }
+
   private async context(account: IgAccount): Promise<BrowserContext> {
     const existing = this.contexts.get(account.id);
     if (existing) return existing;
-    const ctx = await chromium.launchPersistentContext(account.profileDir, { channel: "chrome", headless: false, ignoreDefaultArgs: ["--enable-automation"], chromiumSandbox: true, viewport: { width: 1280, height: 900 }, locale: "en-US" });
+    // Use Playwright's bundled Chromium, not the owner's already-running Chrome app. A
+    // Chrome channel launch can be routed into the owner's single-instance session.
+    const ctx = await chromium.launchPersistentContext(account.profileDir, { headless: false, ignoreDefaultArgs: ["--enable-automation"], chromiumSandbox: true, viewport: { width: 1280, height: 900 }, locale: "en-US" });
     ctx.on("close", () => this.contexts.delete(account.id));
     this.contexts.set(account.id, ctx);
     return ctx;
@@ -35,8 +43,8 @@ export class PlaywrightInstagram implements InstagramDriver {
   }
 
   private async guard(page: Page): Promise<void> {
-    if (looksLoggedOut(page.url())) throw new InstagramBlockedError("Not logged in. Use Open login window on the Accounts page.");
     const text = await page.locator("body").innerText().catch(() => "");
+    if (looksLoggedOut(page.url(), text)) throw new InstagramBlockedError("Not logged in. Use Open login window on the Accounts page.");
     if (looksBlocked(text, page.url())) throw new InstagramBlockedError("Instagram showed a warning or a human check. Review the account by hand.");
   }
 

@@ -1,12 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "@/lib/db/core";
-import { createAccount, getAccount } from "@/lib/db/repos/accounts";
-import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
+import { createAccount, getAccount, setAccountBrowserMode, setAccountStatus } from "@/lib/db/repos/accounts";
+import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
-import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages } from "@/lib/db/repos/messages";
-import { enqueue } from "@/lib/db/repos/jobs";
-import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver } from "@/worker/driver";
+import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages, markSent } from "@/lib/db/repos/messages";
+import { enqueue, requeueStuck } from "@/lib/db/repos/jobs";
+import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
+import { handleIncoming } from "@/lib/services/outreach";
 
 const LINK = "https://portfolio.infyum.com/sales-funnel";
 const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudra at Infyum, a small team in India. ${LINK}`, "Which link do most callers use?"] });
@@ -14,21 +15,23 @@ const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudr
 class FakeDriver implements InstagramDriver {
   sent: { handle: string; parts: string[] }[] = [];
   inbox: { handle: string; text: string }[] = [];
+  factsRead = 0; warmups = 0; inboxReads = 0;
+  authenticated = true;
   facts = { isPublic: true, country: "United States", followers: 5000, linkedToInfyum: false };
   blockOnSend = false;
   uncertainOnSend = false;
   errorOnSend = false;
-  async openLogin() { return true; }
-  async readFacts(account?: unknown) { void account; return this.facts; }
+  async openLogin() { return this.authenticated; }
+  async readFacts(account?: unknown) { void account; this.factsRead++; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
-  async warmUp() { return { likes: 10, comments: 10, followed: true }; }
+  async warmUp() { this.warmups++; return { likes: 10, comments: 10, followed: true }; }
   async sendMessages(_a: unknown, handle: string, parts: string[]) {
     if (this.blockOnSend) throw new InstagramBlockedError("Action blocked");
     if (this.errorOnSend) throw new Error("Chat did not open");
     this.sent.push({ handle, parts });
     if (this.uncertainOnSend) throw new InstagramSendUncertainError();
   }
-  async readInbox() { const out = this.inbox; this.inbox = []; return out; }
+  async readInbox() { this.inboxReads++; const out = this.inbox; this.inbox = []; return out; }
 }
 
 let db: Db; let driver: FakeDriver; let deps: Deps; let clock: Date;
@@ -53,6 +56,99 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe("worker pipeline", () => {
+  it("does not recreate a qualification job after its automatic retries are exhausted", () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "failed-qualification", campaignId: camp.id }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    db.prepare("INSERT INTO jobs (type,lead_id,account_id,status,last_error) VALUES ('qualify',?,?,'failed','read failed')").run(lead.id, acct.id);
+
+    planWork(deps);
+
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='qualify' AND lead_id=? AND status='queued'").get(lead.id)).toEqual({ n: 0 });
+  });
+
+  it("does not repeat a warm-up after crash recovery held it for review", () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "interrupted-warmup", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    db.prepare("INSERT INTO jobs (type,lead_id,account_id,status) VALUES ('warmup',?,?,'running')").run(lead.id, acct.id);
+
+    expect(requeueStuck(db)).toBe(1);
+    planWork(deps);
+
+    expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").get(lead.id)).toEqual({ status: "failed" });
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='warmup' AND lead_id=? AND status='queued'").get(lead.id)).toEqual({ n: 0 });
+    expect(driver.warmups).toBe(0);
+  });
+
+  it("takes Chrome leads through preparation and holds the first message for approval", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "manual-first-dm", campaignId: camp.id }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+
+    planWork(deps);
+    expect(db.prepare("SELECT type FROM jobs WHERE lead_id=? AND status='queued'").all(lead.id)).toContainEqual({ type: "qualify" });
+    await runUntilIdle(deps);
+    expect(getLead(db, lead.id)?.stage).toBe("warmed");
+    expect(driver.warmups).toBe(1);
+    expect(listMessages(db, { leadId: lead.id })[0].status).toBe("pending_approval");
+    expect(driver.sent).toHaveLength(0);
+
+    planWork(deps);
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE lead_id=? AND type IN ('warmup','draft_dm','draft_followup') AND status='queued'").get(lead.id)).toEqual({ n: 0 });
+  });
+
+  it("checks writing readiness before any Chrome preparation action", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "read-only-target", campaignId: camp.id }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const complete = vi.fn();
+    deps.engine = { complete, assertReady: () => { throw new Error("Paid writing is off"); } };
+    enqueue(db, { type: "qualify", leadId: lead.id, accountId: acct.id });
+    await runOne(deps);
+    expect(driver.factsRead).toBe(1);
+    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    await runOne(deps);
+    expect(driver.warmups).toBe(0);
+    expect(driver.sent).toHaveLength(0);
+    expect(complete).not.toHaveBeenCalled();
+    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+  });
+
+  it("holds a partly completed warm-up permanently so the planner cannot duplicate comments", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "partly-prepared", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    driver.warmUp = async () => { throw new InstagramWarmupUncertainError(true); };
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    await runOne(deps);
+    planWork(deps);
+    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+    expect(getAccount(db, acct.id)?.status).toBe("blocked");
+    expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").all(lead.id)).toEqual([{ status: "failed" }]);
+  });
+
+  it("allows Chrome mode inbox reads for matching accounts only", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "known-lead", stage: "dm_sent" }, "t");
+    const oldCheck = enqueue(db, { type: "check_inbox", accountId: acct.id });
+    db.prepare("UPDATE jobs SET status='failed',last_error='old timeout' WHERE id=?").run(oldCheck);
+    driver.inbox = [{ handle: "known-lead", text: "Can you explain the funnel?" }];
+    enqueue(db, { type: "check_inbox", accountId: acct.id });
+    await runOne(deps);
+    expect(driver.inboxReads).toBe(1);
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(listMessages(db, { leadId: lead.id }).some((message) => message.direction === "in" && message.parts.join(" ").includes("explain the funnel"))).toBe(true);
+    expect(db.prepare("SELECT status,last_error FROM jobs WHERE id=?").get(oldCheck)).toEqual({ status: "done", last_error: "" });
+    expect(db.prepare("SELECT action,detail FROM activity WHERE action='inbox.checked'").get()).toEqual({ action: "inbox.checked", detail: "1 new reply handed off." });
+    expect(driver.sent).toHaveLength(0);
+  });
+
   it("takes a lead from found to dm_sent on its own when approval is off", async () => {
     const { camp } = setup(false);
     const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");
@@ -75,6 +171,53 @@ describe("worker pipeline", () => {
     expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
   });
 
+  it("sends an approved Chrome-mode DM while preserving campaign approval", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "chrome-approved-target", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A human-approved message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+
+    await runOne(deps);
+
+    expect(driver.sent).toEqual([{ handle: "chrome-approved-target", parts: ["A human-approved message"] }]);
+    expect(getMessage(db, message.id)?.status).toBe("sent");
+    expect(getLead(db, lead.id)?.stage).toBe("dm_sent");
+  });
+
+  it("sends an approved Chrome-mode first DM then durably hands off the first reply", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "first-contact-cycle", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, {
+      leadId: lead.id, accountId: acct.id, kind: "dm",
+      parts: ["Relevant observation.", "Who I am and the permitted portfolio link.", "One simple question."],
+      campaign: { approvalRequired: true },
+    }, "t");
+    expect(message.status).toBe("pending_approval");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+
+    await runOne(deps);
+
+    expect(driver.sent).toEqual([{ handle: "first-contact-cycle", parts: message.parts }]);
+    expect(getMessage(db, message.id)?.status).toBe("sent");
+    expect(getLead(db, lead.id)?.stage).toBe("dm_sent");
+
+    driver.inbox = [{ handle: "first-contact-cycle", text: "Yes, please tell me more." }];
+    enqueue(db, { type: "check_inbox", accountId: acct.id });
+    await runOne(deps);
+
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(listMessages(db, { leadId: lead.id }).filter((item) => item.direction === "in")).toHaveLength(1);
+    expect(db.prepare("SELECT count(*) n FROM activity WHERE lead_id=? AND action='lead.handoff'").get(lead.id)).toEqual({ n: 1 });
+    expect(db.prepare("SELECT next_followup_at FROM leads WHERE id=?").get(lead.id)).toEqual({ next_followup_at: null });
+    expect(driver.sent).toHaveLength(1);
+  });
+
   it("does not dispatch an already queued approved message after its campaign is finished", async () => {
     const { acct, camp } = setup(true);
     const { lead } = addLead(db, { handle: "finish-before-send", campaignId: camp.id, stage: "warmed" }, "t");
@@ -90,6 +233,72 @@ describe("worker pipeline", () => {
     expect(getMessage(db, message.id)?.status).toBe("approved");
     expect(approvedQueue(db)).toHaveLength(0);
     expect((db.prepare("SELECT status FROM jobs WHERE type='send'").get() as { status: string }).status).toBe("done");
+  });
+  it("does not send when the campaign is paused during the final send wait", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "paused-during-wait", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    deps.pace = async () => { setCampaignStatus(db, camp.id, "paused", "t"); };
+
+    await runOne(deps);
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("approved");
+  });
+  it("does not send when its account is removed from the campaign during the final wait", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "sender-removed", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    deps.pace = async () => { setCampaignAccounts(db, camp.id, []); };
+
+    await runOne(deps);
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("approved");
+  });
+  it("does not send a queued approved DM once the prospect writes first", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "early-reply", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    handleIncoming(db, lead.id, "I reached out first");
+    await runOne(deps);
+    planWork(deps);
+    expect(driver.sent).toHaveLength(0);
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='send' AND status='queued'").get()).toEqual({ n: 0 });
+  });
+
+  it("rechecks the handoff after pacing an approved follow-up", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "reply-during-wait", campaignId: camp.id, stage: "dm_sent" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "followup", parts: ["A reviewed follow-up"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    deps.pace = async () => { handleIncoming(db, lead.id, "I have a question"); };
+    await runOne(deps);
+    expect(driver.sent).toHaveLength(0);
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+  });
+  it("keeps checking for a first reply after a campaign is paused", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "waiting-for-reply", campaignId: camp.id, stage: "dm_sent" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    setCampaignStatus(db, camp.id, "paused", "t");
+    driver.inbox = [{ handle: lead.handle, text: "I am interested" }];
+    planWork(deps);
+    await runOne(deps);
+    expect(driver.inboxReads).toBe(1);
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
   });
 
   it("holds an uncertain multi-part send for human checking instead of retrying", async () => {
@@ -158,6 +367,27 @@ describe("worker pipeline", () => {
     expect(driver.sent).toHaveLength(3);
   });
 
+  it("enforces the cap by the saved team-local day after UTC midnight", async () => {
+    const { camp, acct } = setup(false);
+    db.prepare("UPDATE ig_accounts SET daily_cap=1").run();
+    db.prepare("INSERT INTO settings (key,value) VALUES ('team_timezone','Asia/Kolkata')").run();
+    const earlier = addLead(db, { handle: "already-sent", campaignId: camp.id }, "t").lead;
+    const earlierMessage = createOutgoing(db, { leadId: earlier.id, accountId: acct.id, kind: "dm", parts: ["Earlier local-day message"], campaign: camp }, "t");
+    markSent(db, earlierMessage.id, new Date("2026-10-20T20:00:00Z"));
+
+    const next = addLead(db, { handle: "must-wait", campaignId: camp.id }, "t").lead;
+    moveStage(db, next.id, "qualified", "t"); moveStage(db, next.id, "warmed", "t");
+    const message = createOutgoing(db, { leadId: next.id, accountId: acct.id, kind: "dm", parts: ["Another unique message"], campaign: camp }, "t");
+    enqueue(db, { type: "send", leadId: next.id, accountId: acct.id, payload: { messageId: message.id } });
+    clock = new Date("2026-10-21T00:15:00Z"); // Oct 21 in Kolkata, while the previous send is still today's local send.
+
+    await runOne(deps, { accountId: acct.id });
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("approved");
+    expect(db.prepare("SELECT status FROM jobs WHERE type='send' ORDER BY id DESC LIMIT 1").get()).toMatchObject({ status: "queued" });
+  });
+
   it("blocks the account the moment Instagram shows a warning", async () => {
     const { camp, acct } = setup(false);
     driver.blockOnSend = true;
@@ -192,6 +422,50 @@ describe("worker pipeline", () => {
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(2);
     expect(getLead(db, lead.id)!.followupsSent).toBe(1);
+  });
+
+  it("recovers a sign-in-only stop during the scheduled read-only inbox check", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    setAccountStatus(db, acct.id, "blocked", "The saved Instagram account is not signed in in Chrome.", "worker");
+    const { lead } = addLead(db, { handle: "known-lead", stage: "dm_sent" }, "t");
+    driver.inbox = [{ handle: "known-lead", text: "Can you explain the funnel?" }];
+    const jobId = enqueue(db, { type: "check_inbox", accountId: acct.id });
+
+    await runOne(deps);
+
+    expect(driver.authenticated).toBe(true);
+    expect(driver.inboxReads).toBe(1);
+    expect(getAccount(db, acct.id)?.status).toBe("active");
+    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(db.prepare("SELECT status FROM jobs WHERE id=?").get(jobId)).toEqual({ status: "done" });
+  });
+
+  it("keeps a sign-in stop blocked and defers replies when Chrome does not confirm the account", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    setAccountStatus(db, acct.id, "blocked", "The saved Instagram account is not signed in in Chrome.", "worker");
+    driver.authenticated = false;
+    const jobId = enqueue(db, { type: "check_inbox", accountId: acct.id });
+
+    await runOne(deps);
+
+    expect(driver.inboxReads).toBe(0);
+    expect(getAccount(db, acct.id)?.status).toBe("blocked");
+    expect(db.prepare("SELECT status,run_after FROM jobs WHERE id=?").get(jobId)).toMatchObject({ status: "queued" });
+  });
+
+  it("does not retry Chrome for an Instagram warning during inbox recovery", async () => {
+    const { acct } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    setAccountStatus(db, acct.id, "blocked", "Instagram showed a warning or human check.", "worker");
+    const jobId = enqueue(db, { type: "check_inbox", accountId: acct.id });
+
+    await runOne(deps);
+
+    expect(driver.inboxReads).toBe(0);
+    expect(getAccount(db, acct.id)?.status).toBe("blocked");
+    expect(db.prepare("SELECT status,run_after FROM jobs WHERE id=?").get(jobId)).toMatchObject({ status: "queued" });
   });
 });
 
@@ -291,6 +565,7 @@ describe("human pace in the worker", () => {
     moveStage(db, lead.id, "qualified", "t"); moveStage(db, lead.id, "warmed", "t");
     clock = new Date("2026-10-21T03:00:00Z");                  // night
     deps = { ...deps, now: () => clock, humanPace: { rng } };
+    db.prepare("INSERT INTO settings (key,value) VALUES (?,?)").run("inbox_checked_1", String(clock.getTime()));
     planWork(deps);
     await runOne(deps, { accountId: 1 });
     expect(listMessages(db, { leadId: lead.id }).some((m) => m.kind === "dm")).toBe(true);
