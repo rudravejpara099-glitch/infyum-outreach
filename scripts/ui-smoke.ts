@@ -219,12 +219,18 @@ try {
   await page.goto(campaignUrl);
   await page.getByRole("status").filter({ hasText: "Matched leads need preparation" }).waitFor();
   await page.getByText(/This matched lead needs Instagram activity before Outreach can prepare a first message/).waitFor();
-  await page.getByText(/can’t like, comment on, or follow posts/).waitFor();
-  await page.getByRole("link", { name: "Review Instagram accounts", exact: true }).waitFor();
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Chrome warm-up notice must fit on screen");
+  await page.getByText(/Signed-in Chrome supports this step/).waitFor();
+  await page.getByText(/To work without paid AI, complete the engagement on Instagram/).waitFor();
+  await page.getByRole("link", { name: "Review writing setup", exact: true }).waitFor();
+  for (const mode of ["light", "dark"]) {
+    await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Chrome warm-up notice must fit on screen");
+      await screenshot(page, { path: path.join(screenshots, `campaign-preparation-${mode}-${width}.png`), fullPage: true, caret: "initial" });
+    }
   }
+  await page.getByRole("button", { name: "Use system appearance", exact: true }).click();
   db.transaction(() => {
     db.prepare("DELETE FROM activity WHERE lead_id=?").run(waitingLead.id);
     db.prepare("DELETE FROM leads WHERE id=?").run(waitingLead.id);

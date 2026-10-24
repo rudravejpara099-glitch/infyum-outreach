@@ -10,6 +10,13 @@ export class InstagramSendUncertainError extends Error {
   }
 }
 
+/** Some engagement may already exist. Hold the job for review rather than duplicate it. */
+export class InstagramWarmupUncertainError extends Error {
+  constructor(readonly blockedByInstagram = false) {
+    super("Warm-up may be partly complete. Check this profile on Instagram before preparing it again.");
+  }
+}
+
 export type ProfileFacts = { isPublic: boolean; country: string | null; followers: number; linkedToInfyum: boolean };
 export type WarmUpResult = { likes: number; comments: number; followed: boolean };
 
@@ -18,7 +25,7 @@ export interface InstagramDriver {
   openLogin(account: IgAccount): Promise<boolean>;
   readFacts(account: IgAccount, handle: string): Promise<ProfileFacts>;
   readProfileNotes(account: IgAccount, handle: string): Promise<string>;
-  warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>): Promise<WarmUpResult>;
+  warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue?: () => boolean): Promise<WarmUpResult>;
   sendMessages(account: IgAccount, handle: string, parts: string[]): Promise<void>;
   /** New messages from other people since the last read. */
   readInbox(account: IgAccount): Promise<{ handle: string; text: string }[]>;

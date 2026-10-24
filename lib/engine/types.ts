@@ -11,5 +11,7 @@ export type MeteredAiCall = {
 
 // The shared AI contract. Live paid calls require the durable metering context.
 export interface AiEngine {
+  /** Local-only readiness check before a job can begin Instagram engagement. */
+  assertReady?(metering?: MeteredAiCall): void;
   complete(input: { system: string; prompt: string; timeoutMs?: number; metering?: MeteredAiCall }): Promise<string>;
 }

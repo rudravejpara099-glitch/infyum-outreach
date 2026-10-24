@@ -5,7 +5,7 @@ import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages, markSent } from "@/lib/db/repos/messages";
 import { enqueue, requeueStuck } from "@/lib/db/repos/jobs";
-import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver } from "@/worker/driver";
+import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 import { handleIncoming } from "@/lib/services/outreach";
 
@@ -81,7 +81,7 @@ describe("worker pipeline", () => {
     expect(driver.warmups).toBe(0);
   });
 
-  it("does not queue Chrome jobs for steps that need AI or prohibited automation", async () => {
+  it("takes Chrome leads through preparation and holds the first message for approval", async () => {
     const { acct, camp } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
     const { lead } = addLead(db, { handle: "manual-first-dm", campaignId: camp.id }, "t");
@@ -90,31 +90,46 @@ describe("worker pipeline", () => {
     planWork(deps);
     expect(db.prepare("SELECT type FROM jobs WHERE lead_id=? AND status='queued'").all(lead.id)).toContainEqual({ type: "qualify" });
     await runUntilIdle(deps);
-    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+    expect(getLead(db, lead.id)?.stage).toBe("warmed");
+    expect(driver.warmups).toBe(1);
+    expect(listMessages(db, { leadId: lead.id })[0].status).toBe("pending_approval");
+    expect(driver.sent).toHaveLength(0);
 
     planWork(deps);
     expect(db.prepare("SELECT count(*) n FROM jobs WHERE lead_id=? AND type IN ('warmup','draft_dm','draft_followup') AND status='queued'").get(lead.id)).toEqual({ n: 0 });
   });
 
-  it("allows Chrome mode to qualify, sync replies, and dispatch send jobs while keeping warm-up and drafting disabled", async () => {
+  it("checks writing readiness before any Chrome preparation action", async () => {
     const { acct, camp } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
     const { lead } = addLead(db, { handle: "read-only-target", campaignId: camp.id }, "t");
     db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
-    const complete = vi.spyOn(engine, "complete");
+    const complete = vi.fn();
+    deps.engine = { complete, assertReady: () => { throw new Error("Paid writing is off"); } };
     enqueue(db, { type: "qualify", leadId: lead.id, accountId: acct.id });
     await runOne(deps);
     expect(driver.factsRead).toBe(1);
     expect(getLead(db, lead.id)?.stage).toBe("qualified");
 
-    for (const type of ["warmup", "draft_dm", "draft_followup", "send"]) {
-      enqueue(db, { type, leadId: lead.id, accountId: acct.id, payload: { messageId: 999 } });
-    }
-    for (let i = 0; i < 4; i++) await runOne(deps);
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    await runOne(deps);
     expect(driver.warmups).toBe(0);
     expect(driver.sent).toHaveLength(0);
     expect(complete).not.toHaveBeenCalled();
-    expect(db.prepare("SELECT count(*) n FROM jobs WHERE status='queued' AND type IN ('warmup','draft_dm','draft_followup','send')").get()).toEqual({ n: 3 });
+    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+  });
+
+  it("holds a partly completed warm-up permanently so the planner cannot duplicate comments", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "partly-prepared", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    driver.warmUp = async () => { throw new InstagramWarmupUncertainError(true); };
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    await runOne(deps);
+    planWork(deps);
+    expect(getLead(db, lead.id)?.stage).toBe("qualified");
+    expect(getAccount(db, acct.id)?.status).toBe("blocked");
+    expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").all(lead.id)).toEqual([{ status: "failed" }]);
   });
 
   it("allows Chrome mode inbox reads for matching accounts only", async () => {

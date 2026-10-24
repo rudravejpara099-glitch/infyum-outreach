@@ -68,8 +68,9 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     </div>}
     {warmupNotice && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
       <p className="font-medium">Matched leads need preparation</p>
-      <p className="mt-1">{warmupNotice.matchedLeadCount === 1 ? "This matched lead needs" : `These ${warmupNotice.matchedLeadCount} matched leads need`} Instagram activity before Outreach can prepare a first message. {warmupNotice.accountHandles.length === 1 ? `@${warmupNotice.accountHandles[0]} uses` : `${warmupNotice.accountHandles.map((handle) => `@${handle}`).join(", ")} use`} signed-in Chrome, which can check profiles and replies and send messages you approve, but can’t like, comment on, or follow posts.</p>
-      <Link href="/accounts" className="mt-2 inline-flex underline">Review Instagram accounts</Link>
+      <p className="mt-1">{warmupNotice.matchedLeadCount === 1 ? "This matched lead needs" : `These ${warmupNotice.matchedLeadCount} matched leads need`} Instagram activity before Outreach can prepare a first message. Signed-in Chrome supports this step. Automatic comments and drafts require a connected writing service and an approved spending limit.</p>
+      <p className="mt-2 text-muted">To work without paid AI, complete the engagement on Instagram, open the lead and mark it Engaged, then write its three-part message. It will wait for your approval.</p>
+      <Link href="/settings" className="mt-2 inline-flex underline">Review writing setup</Link>
     </div>}
     <section className="audience-summary" aria-labelledby="audience-title">
       <div><h2 id="audience-title">Who you’re reaching</h2><p>{campaign.audienceText || campaign.niches.join(", ") || "Describe your audience in campaign settings."}</p></div>

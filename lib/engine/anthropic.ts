@@ -2,6 +2,8 @@ import { reserveUsage, settleUsage, tokenEvent } from "@/lib/billing";
 import { activeAiModel, verifiedModelRate } from "@/lib/billing/config";
 import { tokenCostMicros } from "@/lib/billing/money";
 import type { AiEngine, MeteredAiCall } from "./types";
+import { assertAttribution } from "@/lib/billing/attribution";
+import { billingHold } from "@/lib/billing/budget";
 
 const MAX_INPUT_BYTES = 30_000;
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -18,6 +20,18 @@ export class AiUsageUncertainError extends Error {
 /** Paid provider calls are always reserved and metered; this class has no CLI fallback. */
 export class AnthropicEngine implements AiEngine {
   constructor(private readonly options: { apiKey?: string; fetcher?: Fetcher; model?: string } = {}) {}
+
+  assertReady(call?: MeteredAiCall): void {
+    if (!call) throw new Error("Paid AI needs a metered campaign call");
+    if (!(this.options.apiKey ?? process.env.ANTHROPIC_API_KEY)) throw new Error("Paid AI is not connected. Add an Anthropic API key in the local environment.");
+    verifiedModelRate(call.db, this.options.model ?? activeAiModel(call.db));
+    assertAttribution(call.db, call.userId, call.source);
+    const hold = billingHold(call.db, call.userId);
+    if (hold) throw new Error(hold);
+    if (call.db.prepare("SELECT operation_id FROM billing_reservations WHERE user_id=? AND status='held' AND json_extract(source_json,'$.leadId')=? LIMIT 1").get(call.userId, call.source.leadId)) {
+      throw new AiUsageUncertainError("This lead has an unresolved AI charge. Preparation is paused until its usage is reconciled.");
+    }
+  }
 
   async complete(input: { system: string; prompt: string; timeoutMs?: number; metering?: MeteredAiCall }): Promise<string> {
     const call = input.metering;

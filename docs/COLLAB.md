@@ -48,6 +48,9 @@ Migration numbers: shipped = 1. Next free = 2. Claim it here before writing it: 
 - No owner action blocks the current no-spend code and test work. Paid AI, Apify and Stripe TEST calls remain disabled until separately authorized and configured.
 - For the owner: should the repo go back to private now that Sunil has what he needs?
 
+## Current implementation claim — 2026-10-24
+Codex is completing the missing signed-in Chrome warm-up driver and its worker preflight under the owner's explicit backend takeover ruling and latest instruction to fix the platform. Scope: `worker/`, the existing browser-mode rule, AI readiness checks, associated tests, and accurate campaign readiness copy. No live warm-up/send, paid request, or migration is part of verification. The worker was drained and stopped before restarting the owner's existing Chrome profile to recover its failed networking.
+
 ## Message log (newest at the bottom)
 
 ### [2026-10-20] Claude #1: Merged PR #1, proposing a split
@@ -1403,3 +1406,12 @@ NOT verified: successful inbox sync after Chrome networking recovers, live app-s
 Decisions made: preserve approval ON and the no-spend/social-write gates.
 Needs from Rudra: none for this local fix.
 Next I will: inspect job #39 after its normal scheduled retry and continue the ordered no-spend checklist.
+
+
+### [2026-10-24] Codex #179: Restore Chrome networking and complete preparation adapter
+Changed: `fix/first-run-operability` / PR #13. Added Chrome warm-up adapter/data parsing and pure comment/completion rules; implemented local paid-writing preflight; enabled Chrome warm-up/drafting dispatch; held all failed/partial warm-ups instead of replaying comments; transactional completion/history; updated campaign guidance and browser smoke. No dependency or migration. Backend work is under the owner's takeover ruling and current explicit instruction to complete the platform.
+Verified: `npm test` 386 passed; `npm run typecheck`; `npm run lint`; `npm run build` (Webpack); `npm run smoke:ui`; `git diff --check`. Visually inspected preparation guidance at 390/1440 px, light/dark. Fake browser/provider tests cover normal and sensitive posts, existing likes, bad comments, account/page change, stopping, partial failures, preflight/no reservations, and approval. Read-only live inspection confirmed username-prefixed grid URLs and post-modal controls, then the temporary profile tab was closed. Normal Chrome restart recovered networking without changing VPN/security/privacy settings. Selected the existing saved sender `@timelessmoments.al`; after the safe worker restart, inbox job #40 completed on attempt 1 and cleared two old inbox failures. No new reply handoff.
+NOT verified: live likes/comments/follow, an app-sent first DM followed by a fresh reply, paid providers or real Stripe TEST. No social write, paid API, payment or spend occurred. Current data has zero warmed leads, zero approved outgoing messages, 23 drafts pending approval.
+Decisions made: preserve ten-piece warm-up, follow-last, campaign approval, no-spend, daily limits/warning stops, first-reply handoff and local-only scope. Keep Chrome-only Apify search disabled; do not fabricate engagement or auto-approve a first message for a live test. Historical `chrome_read_only` storage values remain for compatibility, but the implemented driver now supports preparation and drafting.
+Needs from you: no owner input for completed code/read-only recovery. Live preparation and exact-message approval remain explicit live verification gates; provider credentials/calls remain separately authorized.
+Next I will: publish these reviewable changes to the existing PR, reload the idle worker with the final code, and leave the remaining live proof clearly unverified.

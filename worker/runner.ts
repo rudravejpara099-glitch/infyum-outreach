@@ -1,8 +1,8 @@
 import type { Db } from "@/lib/db/core";
-import type { AiEngine } from "@/lib/engine/types";
+import type { AiEngine, MeteredAiCall } from "@/lib/engine/types";
 import { AiUsageUncertainError } from "@/lib/engine/anthropic";
 import type { InstagramDriver } from "./driver";
-import { InstagramBlockedError, InstagramSendUncertainError } from "./driver";
+import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError } from "./driver";
 import { commentPrompt, SYSTEM } from "@/lib/engine/prompts";
 import { qualify } from "@/lib/domain/qualify";
 import { remainingToday } from "@/lib/domain/limits";
@@ -25,6 +25,8 @@ import { browserModeAllowsJob, browserModeAllowsLeadSearch } from "@/lib/domain/
 import { canSendAtStage } from "@/lib/domain/stages";
 import { accountNeedsSignIn, canResumeAfterVerifiedSignIn } from "@/lib/domain/account-recovery";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
+import { warmupCommentError } from "@/lib/domain/warmup-comment";
+import { warmupComplete } from "@/lib/domain/warmup";
 import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
 
@@ -117,6 +119,16 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
     if (e instanceof AiUsageUncertainError) {
       failJobPermanently(deps.db, job.id, msg);
       logActivity(deps.db, "worker", "job.ai_usage_uncertain", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: usage requires owner review` });
+    } else if (e instanceof InstagramWarmupUncertainError) {
+      failJobPermanently(deps.db, job.id, msg);
+      if (e.blockedByInstagram && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
+      logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
+    } else if (job.type === "warmup") {
+      // Both browser adapters can have partially engaged before a later error.
+      // A generic failure is not proof that it is safe to repeat comments.
+      failJobPermanently(deps.db, job.id, msg);
+      if (e instanceof InstagramBlockedError && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
+      logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
     } else if (e instanceof InstagramSendUncertainError) {
       const messageId = Number(job.payload.messageId);
       const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(deps.db, messageId) : null;
@@ -218,17 +230,36 @@ async function process(deps: Deps, job: Job): Promise<void> {
       const campaignPayer = campaign ? payerFor(db, "campaign", campaign.id) : null;
       const accountPayer = payerFor(db, "account", account.id);
       let commentCall = 0;
+      const meteringFor = (call: number): MeteredAiCall | undefined => campaign && campaignPayer && campaignPayer === accountPayer ? {
+        db, userId: campaignPayer, operationId: `ai:${job.id}:warmup-comment:${call}`,
+        source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
+      } : undefined;
+      // Never like/follow a post before discovering writing/billing is disconnected.
+      engine.assertReady?.(meteringFor(1));
+      const mayContinue = () => {
+        const freshLead = getLead(db, lead.id), freshAccount = getAccount(db, account.id);
+        const freshCampaign = campaign ? getCampaign(db, campaign.id) : null;
+        return !!freshLead && freshLead.stage === "qualified" && freshLead.accountId === account.id
+          && !!freshAccount && freshAccount.status === "active" && !!freshCampaign && freshCampaign.status === "active"
+          && campaignAccountIds(db, freshCampaign.id).includes(account.id) && !isDnc(db, freshLead.handle)
+          && workerControl(db).phase !== "stopping";
+      };
       const result = await driver.warmUp(account, lead.handle, WARMUP_PIECES, async (context) => {
         commentCall += 1;
-        const metering = campaign && campaignPayer && campaignPayer === accountPayer ? {
-          db, userId: campaignPayer, operationId: `ai:${job.id}:warmup-comment:${commentCall}`,
-          source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
-        } : undefined;
+        const metering = meteringFor(commentCall);
         const raw = await engine.complete({ system: SYSTEM, prompt: commentPrompt(context), metering });
-        return raw.replace(/[—–]/g, ",").replace(/^["']|["']$/g, "").trim();
-      });
-      logActivity(db, "worker", "lead.warmed_up", { leadId: lead.id, accountId: account.id, detail: `${result.likes} likes, ${result.comments} comments, followed: ${result.followed}` });
-      moveStage(db, lead.id, "warmed", "worker");
+        const comment = raw.replace(/[—–]/g, ",").replace(/^["']|["']$/g, "").trim();
+        const error = warmupCommentError(comment);
+        if (error) throw new Error(error);
+        return comment;
+      }, mayContinue);
+      if (!mayContinue() || !warmupComplete(result, WARMUP_PIECES)) throw new InstagramWarmupUncertainError();
+      try {
+        db.transaction(() => {
+          logActivity(db, "worker", "lead.warmed_up", { leadId: lead.id, accountId: account.id, detail: `${result.likes} likes, ${result.comments} comments, followed: ${result.followed}` });
+          moveStage(db, lead.id, "warmed", "worker");
+        }).immediate();
+      } catch { throw new InstagramWarmupUncertainError(); }
       return;
     }
 

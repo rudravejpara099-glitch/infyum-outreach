@@ -34,6 +34,16 @@ beforeEach(() => setup());
 afterEach(() => { db.close(); delete process.env.BILLING_OWNER_USER_ID; });
 
 describe("metered Anthropic engine", () => {
+  it("checks readiness locally without a provider request or cost reservation", () => {
+    const fetcher = vi.fn();
+    const engine = new AnthropicEngine({ apiKey: "test-only", fetcher });
+    expect(() => engine.assertReady()).toThrow("metered campaign call");
+    expect(() => engine.assertReady(metering)).not.toThrow();
+    db.prepare("DELETE FROM billing_integration_ack").run();
+    expect(() => engine.assertReady(metering)).toThrow("metering integration is reviewed");
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(db.prepare("SELECT count(*) n FROM billing_reservations").get()).toEqual({ n: 0 });
+  });
   it("settles exact input, output and cache-read usage from a fake response", async () => {
     const fetcher = vi.fn(async () => response({ id: "msg_test_1", model: "claude-sonnet-5-5", content: [{ type: "text", text: "draft" }], usage: { input_tokens: 100, output_tokens: 25, cache_read_input_tokens: 10, cache_creation_input_tokens: 0 } }));
     const engine = new AnthropicEngine({ apiKey: "test-only", fetcher });
@@ -80,6 +90,7 @@ describe("metered Anthropic engine", () => {
     const fetcher = vi.fn(async () => { throw new Error("network down"); });
     const engine = new AnthropicEngine({ apiKey: "test-only", fetcher });
     await expect(engine.complete({ system: "system", prompt: "hello", metering })).rejects.toBeInstanceOf(AiUsageUncertainError);
+    expect(() => engine.assertReady(metering)).toThrow(AiUsageUncertainError);
     await expect(engine.complete({ system: "system", prompt: "hello", metering })).rejects.toBeInstanceOf(AiUsageUncertainError);
     await expect(engine.complete({ system: "system", prompt: "hello", metering: { ...metering, operationId: "ai:10:draft_dm:1", source: { ...source, jobId: 10 } } })).rejects.toBeInstanceOf(AiUsageUncertainError);
     expect(fetcher).toHaveBeenCalledTimes(1);

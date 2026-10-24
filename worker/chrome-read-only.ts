@@ -5,6 +5,9 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { IgAccount } from "@/lib/db/types";
 import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { looksBlocked, looksLoggedOut } from "./parse";
+import { runChromeWarmup } from "./chrome-warmup";
+import { warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
+import { humanDelayMs, type DelayKind } from "@/lib/domain/pacing";
 import { INBOX_LOADING_ERROR, inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadIsLoadingFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
 
 type Page = { id: number; url: string };
@@ -69,7 +72,9 @@ export function instagramLoginCheckScript(handle: string): string {
 export class ChromeInstagram implements InstagramDriver {
   private client?: Client;
   private transport?: StdioClientTransport;
-  constructor(testClient?: Client) { this.client = testClient; }
+  constructor(testClient?: Client, private readonly pause: (kind: DelayKind) => Promise<void> = async kind => {
+    await new Promise(resolve => setTimeout(resolve, humanDelayMs(kind, Math.random)));
+  }) { this.client = testClient; }
   private async connect(): Promise<Client> {
     if (this.client) return this.client;
     const entry = createRequire(import.meta.url).resolve("chrome-devtools-mcp");
@@ -250,7 +255,34 @@ export class ChromeInstagram implements InstagramDriver {
     }
     throw identityError ?? new Error("The saved Instagram account could not be confirmed before reading replies.");
   }
-  async warmUp(): Promise<WarmUpResult> { throw new Error("Likes, comments, and follows are not enabled for signed-in Chrome campaigns."); }
+  async warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue = () => true): Promise<WarmUpResult> {
+    await this.verifyOwner(account);
+    const target = await this.openProfile(account, handle);
+    const call = async (name: string, args: Record<string, unknown>, error: string) =>
+      ensureChromeToolSucceeded(await (await this.connect()).callTool({ name, arguments: { pageId: target.pageId, ...args } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, error);
+    return runChromeWarmup({
+      navigate: async (url) => { await call("navigate_page", { type: "url", url }, "Chrome could not open the Instagram post."); },
+      read: async (url, comment) => {
+        const parsed = jsonFromToolResult(await this.evaluate(target.pageId, warmupPageScript(url, account.handle, comment), "Chrome could not inspect warm-up progress."));
+        if (!parsed || typeof parsed !== "object") throw new Error("Instagram returned no warm-up progress.");
+        return parsed as WarmupPage;
+      },
+      click: async (name) => {
+        const snapshot = await this.snapshot(target.pageId);
+        await this.clickNamed(target.pageId, snapshot, name === "Like" && /image\s+"Like"/.test(snapshot) ? "image" : "button", name);
+      },
+      comment: async (text) => {
+        const snapshot = await this.snapshot(target.pageId);
+        const uid = snapshot.match(/uid=([^\s]+)\s+textbox\s+"[^"]*(?:add a comment|write a comment)[^"]*"/i)?.[1];
+        if (!uid) throw new Error("Instagram did not show a comment box.");
+        await call("fill", { uid, value: text }, "Chrome could not enter the prepared comment.");
+        await this.pause("beforeSend");
+        if (!mayContinue()) throw new Error("Campaign preparation was stopped.");
+        await call("press_key", { key: "Enter" }, "Chrome could not post the prepared comment.");
+      },
+      wait: kind => this.pause(kind),
+    }, target.url, pieces, makeComment, mayContinue);
+  }
   async sendMessages(account: IgAccount, handle: string, parts: string[]): Promise<void> {
     if (parts.length === 0 || parts.some((part) => !part.trim())) throw new Error("The approved message is empty.");
     await this.verifyOwner(account);
