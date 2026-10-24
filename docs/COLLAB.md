@@ -1363,3 +1363,19 @@ NOT verified: successful app inbox sync, a new reply handoff, first-contact send
 Decisions made: preserve the retry schedule, message approval, no-spend, and social-write boundaries.
 Needs from Rudra: none for the authorized read-only retry.
 Next I will: report the present readiness and keep the scheduled retry in the handoff.
+
+### [2026-10-24] Codex #174: Identify the inbox page-load failure
+Changed: no application or owner data. At the owner's request not to wait, brought forward only the already-authorized read-only inbox job #36 once, then checked its result and the normal Instagram inbox page.
+Verified: Chrome remote debugging approval allowed app connection on attempt 2. The app opened a conversation, but Instagram returned “Sorry, something went wrong” and the app reported `Instagram's conversation is still loading; replies were not verified.` Navigating to Instagram's direct inbox through normal UI showed the same page-load error. No inbox content was read; no Instagram action, paid call, or spend occurred. Worker remains running and job #36 is queued for `2026-10-24 05:06:43 UTC` (10:36 IST).
+NOT verified: successful app inbox sync or a new reply handoff; live first-contact/reply; warm-up; paid integrations or payment.
+Decisions made: preserve no-spend, message-approval, account identity, and Instagram-action boundaries.
+Needs from Rudra: none for this read-only diagnosis.
+Next I will: stop waiting on this failed page-load loop and report the exact ready/not-ready status with the remaining task list.
+
+### [2026-10-24] Codex #175: Re-run current no-spend checks
+Changed: refreshed `HANDOFF.md` and `docs/FUNCTIONAL-AUDIT.md` with the latest app/inbox evidence and verification results. No application code, owner data, account settings, job schedule, or outreach state changed.
+Verified: 370 tests, typecheck, lint, Next.js 16 Webpack build, isolated Playwright UI smoke, and local billing simulator smoke pass. The UI smoke sent no messages; billing used a local simulator, not Stripe. Current Overview shows 27 matched leads, 0 engaged, 23 drafts awaiting review, and 0 messages sent today. Signed-in Chrome remains on Instagram's loading screen after reload; no inbox content was read. No paid API, payment, or Instagram write occurred.
+NOT verified: successful inbox sync, Chrome warm-up, live first-contact/reply handoff, or live paid-provider/payment behavior.
+Decisions made: preserve no-spend, message approval, account guards, and first-reply handoff.
+Needs from Rudra: none for this local verification.
+Next I will: continue the ordered completion checklist; don't count the pending retry as success or run an Instagram write outside the existing approval gate.
