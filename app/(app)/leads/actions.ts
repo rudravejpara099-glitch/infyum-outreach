@@ -23,7 +23,7 @@ function refresh(id: number) { revalidatePath(`/leads/${id}`); revalidatePath("/
 
 export async function changeStage(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), to = String(form.get("to")), db = getDb();
+  const id = Number(form.get("id")), to = String(form.get("to")), db = (await getDb(form));
   if (!validId(id) || !isStage(to)) return { error: "Choose a valid lead and stage." };
   const result: ActionResult = db.transaction(() => {
     const lead = getLead(db, id);
@@ -42,7 +42,7 @@ export async function changeStage(form: FormData): Promise<ActionResult> {
 }
 export async function saveNotes(form: FormData): Promise<ActionResult> {
   await requireUser();
-  const id = Number(form.get("id")), db = getDb();
+  const id = Number(form.get("id")), db = (await getDb(form));
   if (!validId(id) || !getLead(db, id)) return { error: "This lead could not be found. Refresh the page." };
   setNotes(db, id, String(form.get("notes") ?? ""));
   revalidatePath(`/leads/${id}`); return { message: "Notes saved." };
@@ -51,7 +51,7 @@ export async function saveNotes(form: FormData): Promise<ActionResult> {
 /** Reassigns a never-contacted lead without creating a second global lead record. */
 export async function moveLeadToCampaign(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), targetId = Number(form.get("campaignId")), db = getDb();
+  const id = Number(form.get("id")), targetId = Number(form.get("campaignId")), db = (await getDb(form));
   if (!validId(id) || !validId(targetId)) return { error: "Choose a valid lead and campaign." };
   let previousCampaignId: number | null = null;
   const result = db.transaction((): ActionResult => {
@@ -84,7 +84,7 @@ export async function moveLeadToCampaign(form: FormData): Promise<ActionResult> 
 /** Explicitly retries a failed read-only qualification check; it can never contact the lead. */
 export async function retryQualification(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), db = getDb();
+  const id = Number(form.get("id")), db = (await getDb(form));
   if (!validId(id)) return { error: "This lead could not be found. Refresh the page." };
   const result = db.transaction((): ActionResult => {
     const lead = getLead(db, id), campaign = lead?.campaignId ? getCampaign(db, lead.campaignId) : null;
@@ -109,7 +109,7 @@ export async function retryQualification(form: FormData): Promise<ActionResult> 
 /** Creates a human-written first DM in review without using a paid AI call. */
 export async function createManualFirstDm(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), db = getDb();
+  const id = Number(form.get("id")), db = (await getDb(form));
   if (!validId(id)) return { error: "This lead could not be found. Refresh the page." };
   const parts = [1, 2, 3].map((index) => String(form.get(`part${index}`) ?? "").trim());
   const portfolioLink = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
@@ -143,7 +143,7 @@ export async function createManualFirstDm(form: FormData): Promise<ActionResult>
 }
 export async function doNotContact(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), db = getDb();
+  const id = Number(form.get("id")), db = (await getDb(form));
   if (!validId(id) || !getLead(db, id)) return { error: "This lead could not be found. Refresh the page." };
   const reason = String(form.get("reason") || "Asked to stop").trim();
   if (reason.length > 500) return { error: "Keep the reason under 500 characters.", field: "reason" };
@@ -158,7 +158,7 @@ export async function resolveUncertainSend(form: FormData): Promise<ActionResult
   const id = Number(form.get("id")), decision = String(form.get("decision"));
   if (!validId(id) || !["sent", "unsent"].includes(decision)) return { error: "Choose a valid message outcome." };
   if (form.get(decision === "sent" ? "confirmedSent" : "confirmedUnsent") !== "on") return { error: "Confirm the Instagram conversation check first." };
-  const db = getDb();
+  const db = (await getDb(form));
   const result: ActionResult = db.transaction(() => {
     const message = getMessage(db, id), lead = message ? getLead(db, message.leadId) : null;
     const campaign = lead?.campaignId ? getCampaign(db, lead.campaignId) : null;

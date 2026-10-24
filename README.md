@@ -1,79 +1,74 @@
-# Infyum Outreach
+# Outreach
 
-Internal web app for Instagram outreach: choose an audience, find and check leads, warm them up, send three custom DMs and follow up, until the lead sends a first reply. Our job ends there: a person or the GoHighLevel agent handles the conversation and the booking.
+Instagram outreach from a campaign to a prospect's first real reply. The app organizes leads, preparation, message approval, sending and follow-ups. Once someone replies, the app hands the conversation to a person; booking and later conversation are outside this product.
 
-## Quick start for a teammate (about 10 minutes)
+## For a user
 
-You need: a Mac or PC with Node.js 22 or newer, Git, and Google Chrome.
+The person running Outreach gives you its address. You do not need to install Node.js, run a terminal or sign in to Claude.
 
-1. Get the code and install:
-   ```bash
-   git clone https://github.com/rudravejpara099-glitch/infyum-outreach.git
-   cd infyum-outreach
-   npm install
-   npx playwright install chromium
-   ```
-2. Copy `.env.example` to `.env.local` and set `SESSION_SECRET` to any long random text.
-3. Start the app in one terminal: `npm run dev`, then open http://localhost:3000. The first visit asks you to create the first account (this creates the workspace’s first account; internal teammates share one role). Add teammates later in Settings.
-4. Optional, to let the app work on its own, start the worker in a second terminal: `npm run worker`.
-5. Run `claude` once in a terminal and sign in (the worker uses it to write DMs).
-6. On the Accounts page, connect an Instagram account and sign in by hand in the window that opens.
+- **Your own company (default):** choose **Create a private workspace**, enter your company name and create your account. Your company's campaigns, Instagram accounts, history and billing records are separate from other companies.
+- **Joining a team:** open the owner's invitation link, use the invited email, and enter your existing password or create a new account. Invitations expire and work once.
+- **Both:** one account can belong to several workspaces. Open **Workspaces** to switch between your private company and teams you have joined. Workspace owners manage invitations and members there.
 
-Each computer has its own private database (`data/`, never uploaded). Leads and settings do NOT sync between computers yet. To share one set of data, run the app on one computer and have everyone use that one.
+Start from **Overview** and follow the setup steps. Connect Instagram from **Accounts**, create a campaign, add leads and keep message approval on. An account is connected only after its sign-in has actually been confirmed. Saved account details alone do not prove a connection.
 
-Start here to understand it: `HANDOFF.md` (rules, decisions, what is done and what is not), `docs/DESIGN.md` (how it must look), `AGENTS.md` (for coding agents).
+Automatic preparation and writing require a configured, independently metered AI provider, confirmed prices, a payer and an available spending limit. The app does not use the owner's personal Claude subscription. Without paid AI, complete the actual engagement yourself, mark the qualified lead Engaged, then write the three message parts and submit them for approval. The app never treats a planning estimate as real usage.
 
-Check it works: `npm test`, `npm run typecheck`, and `npm run smoke:ui`. Current verification gaps are listed in `docs/FUNCTIONAL-AUDIT.md`.
+## For the person running the app
 
-## Run it
+This version uses a persistent computer for SQLite, browser sessions and the background worker. Opening the web app remotely does not move those services to another computer. Public hosting and a customer-ready remote Instagram connection still need separate deployment and live verification; this repository's self-service screens alone do not prove a hosted SaaS release.
+
+Install Node.js 22 or newer, Git and Google Chrome, then:
 
 ```bash
+git clone https://github.com/rudravejpara099-glitch/infyum-outreach.git
+cd infyum-outreach
 npm install
-npx playwright install chromium     # once
-npm run dev                         # the web app, http://localhost:3000
-npm run worker                      # the background worker (separate terminal)
-npm run import -- "<path>/engaged.csv"   # optional: import the old spreadsheet
-npm test                            # unit tests
+npx playwright install chromium
 ```
 
-First visit asks you to create the first account. Add teammates in Settings.
-Set `SESSION_SECRET` in `.env.local` before anyone else uses it.
+Copy `.env.example` to `.env.local` and set a unique, random `SESSION_SECRET` of at least 32 characters. Start the app:
 
-Two sign-ins are yours to do, the app never handles passwords:
-1. **Claude:** run `claude` once in a terminal and sign in. The worker uses it to write DMs (your subscription, no API key).
-2. **Instagram:** Accounts page, Connect account. A browser window opens; sign in there and close it.
+```bash
+npm run dev
+```
 
-## How it is organised (change one thing without breaking another)
+Open http://localhost:3000. The initial setup creates the original team's owner. Subsequent users can register a private workspace or join an invitation. Use the app's **Start Outreach** control to run its local worker; `npm run worker` remains available for the original workspace's operator.
 
-| Folder | Job | Touches |
-|---|---|---|
-| `lib/domain/` | The rules: pipeline stages, who qualifies, daily limits, similarity guard, what needs approval. Pure functions, no database, no browser. | nothing else |
-| `lib/db/` | SQLite schema (append-only migrations) and one small file per table. | domain types |
-| `lib/services/` | Multi-step flows: after a message is sent, when a reply arrives, drafting. | domain, db, engine |
-| `lib/engine/` | The AI. One interface, one implementation (the `claude` command). All prompts live in `prompts.ts`. | nothing else |
-| `worker/` | Plans work, runs jobs, talks to Instagram through one interface (`driver.ts`). | services |
-| `app/` | Screens and server actions. Every action calls `requireUser()` first. | db, services |
+Workspace data lives beneath the configured `DB_PATH` directory, with a separate operational SQLite database and browser-profile directory for each new company. The identity catalog is stored beside the original database as `<DB_PATH>.identity.db`. `npm run backup` snapshots the original database, identity catalog and company databases with a restore manifest. Browser profiles are excluded: reconnect Instagram after restoring, or securely preserve required profiles separately. Keep the complete backup set private; keep them private and out of Git. Existing original-team users and data are preserved when workspace support initializes.
 
-Where to change common things:
-- **Voice or message rules:** `lib/engine/prompts.ts` and `lib/engine/validate.ts`
-- **Who qualifies:** `lib/domain/qualify.ts`
-- **Daily limits and ramp-up:** `lib/domain/limits.ts`
-- **What always needs a human:** `lib/domain/sensitive.ts`
-- **Follow-up timing:** `lib/services/outreach.ts` (2 days, then 4, max 2)
-- **Pipeline columns:** `lib/domain/stages.ts`
-- **Switch to paid Claude API:** add a class implementing `AiEngine`, change one line in `lib/engine/index.ts`
-- **Brand colours and fonts:** `app/globals.css`
+An Instagram sign-in happens in the browser window, never through a password field in Outreach. The owner's existing signed-in Chrome connection is restricted to the original workspace; a new company must use its own isolated browser session. Do not present a browser opening on the operator's computer as a remote customer's finished connection flow.
 
-Rule for changes: edit the pure rule, run `npm test`, then look at the screen. The tests cover the parts that matter most (limits, dedupe, approval, similarity, the whole worker flow with a fake Instagram).
+AI, Apify and Stripe credentials belong to the operator's private configuration. Apify also requires a saved monthly cap. Billing remains in **test mode**. Do not enable paid calls, real charges or Instagram actions without the owner's approval. Confirm the actual configured provider and exact model prices before enabling automatic writing.
 
-## Safety built in
-- Per-account daily cap with slow ramp-up, hard ceiling in `lib/config.ts`
-- Account is stopped the moment Instagram shows a warning or a human check
-- Price, contract, date, guarantee, partnership and upset-reply talk always waits for a person
-- DMs too similar to the last 10 are held
-- "Never contact again" is permanent
-- Every action is logged (Activity page, CSV export)
+## Verification
 
-## Not built yet
-- Apify lead search is built and tested against canned data only. It has not run against the real Apify yet: check the first run's results and the actor's output fields (`lib/leads/apify.ts`). Needs `APIFY_TOKEN` in the worker's environment and a monthly limit in Settings.
-- Running on a live server (this version is for one computer)
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run smoke:ui
+npm run smoke:billing
+npx tsx scripts/workspace-smoke.ts
+```
+
+Browser smoke tests use disposable data. Billing smoke uses a local fake payment provider. Workspace smoke checks two separate companies, invitations, switching, access removal and session revocation without a worker or external provider calls. These checks do not substitute for an approved live first-message and first-reply test.
+
+Read `HANDOFF.md` for current evidence and remaining verification, `docs/DESIGN.md` for the interface rules, `docs/COLLAB.md` for ownership, and `AGENTS.md` before changing code.
+
+## Code map
+
+| Folder | Responsibility |
+|---|---|
+| `lib/domain/` | Pure rules for qualification, stages, limits, similarity and workspace validation |
+| `lib/db/` | SQLite schema and small table repositories; migrations are append-only |
+| `lib/workspaces/` | Company membership, invitations, sessions and isolated storage |
+| `lib/auth/` | Password verification and request authentication |
+| `lib/services/` | Outreach transitions, drafting and first-reply handoff |
+| `lib/engine/` | Metered AI provider and message prompts/validation |
+| `lib/billing/` | Integer micro-dollar accounting, usage, limits and test payments |
+| `worker/` | Background planning, jobs and Instagram browser adapters |
+| `app/` | Pages and server actions; protected entry points authenticate first |
+
+For a rule change, update its pure function and regression test. Run tests and typecheck before committing. Never edit a shipped migration.

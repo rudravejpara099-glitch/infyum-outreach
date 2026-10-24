@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { listDnc } from "@/lib/db/repos/dnc";
@@ -5,16 +6,15 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
-import { addTeammate, blockHandle, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
+import { blockHandle, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
 import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
 
 export default async function Settings() {
-  const me = await requireUser();
-  const db = getDb();
+  const user = await requireUser();
+  const db = (await getDb());
   const dnc = listDnc(db);
-  const users = db.prepare("SELECT name, email FROM users ORDER BY id").all() as { name: string; email: string }[];
   const cap = getSetting(db, "apify_monthly_cap_usd");
   const portfolioLink = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
   const zone = getSetting(db, "team_timezone") ?? "America/New_York";
@@ -26,7 +26,7 @@ export default async function Settings() {
         <section className="card p-5">
           <h2 className="text-base font-semibold">AI message writing</h2>
           <p className="mb-2 mt-1 text-muted">Outreach uses a separately billed Anthropic API connection. It does not use anyone’s Claude Code subscription.</p>
-          <p className="text-sm text-muted">Connection: {process.env.ANTHROPIC_API_KEY ? "API key is set on this computer" : "not connected on this computer"}. Paid message writing stays paused until billing metering is reviewed.</p>
+          <p className="text-sm text-muted">Connection: {user.hostChromeAllowed && process.env.ANTHROPIC_API_KEY ? "API key is set for this workspace" : "not connected for this workspace"}. Paid message writing stays paused until billing metering is reviewed.</p>
         </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Link in first messages</h2>
@@ -35,7 +35,7 @@ export default async function Settings() {
         </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Lead search (Apify)</h2>
-          <p className="mb-2 mt-1 text-sm text-muted">Connection details: {process.env.APIFY_TOKEN ? "set up on this computer" : "not set up on this computer"}. Checking this does not run a search.</p>
+          <p className="mb-2 mt-1 text-sm text-muted">Connection details: {user.hostChromeAllowed && process.env.APIFY_TOKEN ? "set up for this workspace" : "not set up for this workspace"}. Checking this does not run a search.</p>
           <p className="mb-3 mt-1 text-muted">{cap ? `Monthly limit: $${cap}. The app stops searching before it goes over.` : "Switched off. Set a monthly limit in dollars to turn it on. Leave the limit empty or use 0 to keep searches off."}</p>
           <ActionForm action={saveApifyCap} className="flex flex-wrap items-end gap-2">
             <div className="w-40"><label className="label" htmlFor="cap">Monthly limit (USD)</label><input id="cap" name="cap" type="number" min={0} step="0.000001" defaultValue={cap ?? ""} className="input" /></div>
@@ -73,13 +73,8 @@ export default async function Settings() {
 
         <section className="card p-5">
           <h2 className="text-base font-semibold">Team</h2>
-          <ul className="my-3 divide-y divide-line">{users.map((u) => <li key={u.email} className="break-words py-2">{u.name} <span className="text-muted">{u.email}{u.email === me.email ? " (you)" : ""}</span></li>)}</ul>
-          <ActionForm action={addTeammate} className="grid gap-3 sm:grid-cols-3">
-            <div><label className="label" htmlFor="teammateName">Name</label><input id="teammateName" name="name" required maxLength={100} className="input" autoComplete="name" /></div>
-            <div><label className="label" htmlFor="teammateEmail">Email</label><input id="teammateEmail" name="email" type="email" required className="input" autoComplete="email" /></div>
-            <div><label className="label" htmlFor="teammatePassword">Temporary password</label><input id="teammatePassword" name="password" type="password" required minLength={8} maxLength={200} className="input" autoComplete="new-password" /></div>
-            <button className="btn sm:col-span-3 w-fit">Add teammate</button>
-          </ActionForm>
+          <p className="mt-2 text-muted">Invite teammates, manage access or switch company workspaces.</p>
+          <Link className="btn mt-3" href="/workspaces">Team & workspaces</Link>
         </section>
       </div>
     </>

@@ -19,7 +19,7 @@ export default async function Pipeline({ searchParams }: PageProps<"/pipeline">)
   const rawCampaign = Array.isArray(sp.campaign) ? sp.campaign[0] : sp.campaign;
   const parsedCampaign = z.coerce.number().int().positive().safeParse(rawCampaign);
   if (rawCampaign !== undefined && rawCampaign !== "" && !parsedCampaign.success) notFound();
-  const db = getDb();
+  const db = (await getDb());
   const campaigns = listCampaigns(db);
   const campaignId = parsedCampaign.success ? parsedCampaign.data : undefined;
   const selectedCampaign = campaignId ? campaigns.find((campaign) => campaign.id === campaignId) : undefined;

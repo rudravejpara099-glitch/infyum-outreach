@@ -26,7 +26,7 @@ export async function saveCampaign(form: FormData): Promise<ActionResult> {
     if (error instanceof z.ZodError) return { error: error.issues[0].message, field: String(error.issues[0].path[0] ?? "") };
     return { error: "Check the campaign details and try again." };
   }
-  const { input, accountIds } = parsed, db = getDb(), rawId = String(form.get("id") ?? ""), id = Number(rawId);
+  const { input, accountIds } = parsed, db = (await getDb(form)), rawId = String(form.get("id") ?? ""), id = Number(rawId);
   if (rawId && (!validId(id) || !getCampaign(db, id))) return { error: "Campaign not found. Refresh the page." };
   if (accountIds.some(accountId => !getAccount(db, accountId))) return { error: "A selected account is no longer available. Refresh and choose again.", field: "accountIds" };
   if (rawId) {
@@ -40,7 +40,7 @@ export async function saveCampaign(form: FormData): Promise<ActionResult> {
 
 export async function changeCampaignStatus(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const rawId = Number(form.get("id")), parsed = z.enum(["active", "paused", "done"]).safeParse(form.get("status")), db = getDb();
+  const rawId = Number(form.get("id")), parsed = z.enum(["active", "paused", "done"]).safeParse(form.get("status")), db = (await getDb(form));
   const campaign = validId(rawId) ? getCampaign(db, rawId) : null;
   if (!campaign || !parsed.success) return { error: "Campaign or status not found. Refresh the page." };
   if (campaign.status === "done") return { error: "This campaign is finished and can’t be restarted." };
@@ -57,7 +57,7 @@ export async function changeCampaignStatus(form: FormData): Promise<ActionResult
 /** Permanently remove only an empty draft; campaigns with leads keep their history. */
 export async function deleteEmptyDraftCampaign(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const id = Number(form.get("id")), db = getDb();
+  const id = Number(form.get("id")), db = (await getDb(form));
   if (!validId(id)) return { error: "Campaign not found. Refresh the page." };
   const result = db.transaction(() => {
     const campaign = db.prepare(`SELECT name, status, (SELECT count(*) FROM leads WHERE campaign_id=campaigns.id) AS lead_count
@@ -80,7 +80,7 @@ export async function deleteEmptyDraftCampaign(form: FormData): Promise<ActionRe
 /** Paste handles. Global duplicates, invalid handles and do-not-contact entries are skipped with counts. */
 export async function addLeads(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const campaignId = Number(form.get("id")), db = getDb();
+  const campaignId = Number(form.get("id")), db = (await getDb(form));
   const campaign = validId(campaignId) ? getCampaign(db, campaignId) : null;
   if (!campaign) return { error: "Campaign not found. Refresh the page." };
   if (campaign.status === "done") return { error: "This campaign is finished. Create a new campaign to add leads." };
@@ -115,7 +115,7 @@ export async function addLeads(form: FormData): Promise<ActionResult> {
 
 export async function findLeads(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
-  const campaignId = Number(form.get("id")), db = getDb();
+  const campaignId = Number(form.get("id")), db = (await getDb(form));
   const campaign = validId(campaignId) ? getCampaign(db, campaignId) : null;
   if (!campaign) return { error: "Campaign not found. Refresh the page." };
   if (campaign.status !== "active") return { error: campaign.status === "done" ? "This campaign is finished. Lead search is off." : "Start this campaign before searching for leads." };
@@ -123,7 +123,7 @@ export async function findLeads(form: FormData): Promise<ActionResult> {
   catch (error) { return { error: publicBillingError(error) }; }
   const cap = Number(getSetting(db, "apify_monthly_cap_usd") ?? "");
   if (!Number.isFinite(cap) || cap <= 0) return { error: "Lead search is off. Save a positive monthly cap in Settings first." };
-  if (!process.env.APIFY_TOKEN) return { error: "Lead search is not connected. The owner must configure the Apify connection privately." };
+  if (!user.hostChromeAllowed || !process.env.APIFY_TOKEN) return { error: "Lead search is not connected. The owner must configure the Apify connection privately." };
   const queued = queueLeadSearch(db, campaignId);
   revalidatePath(`/campaigns/${campaignId}`);
   return { message: !queued ? "This campaign already has a lead search queued or running." : workerStatus(db, new Date()).running ? "Lead search queued. The worker will check the usage cap before searching." : "Lead search saved. It will wait until the worker starts." };

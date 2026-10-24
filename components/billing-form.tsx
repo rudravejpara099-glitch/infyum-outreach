@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useTransition, type ReactNode, type FormEvent } from "react";
+import { WorkspaceField } from "./workspace-context";
 export type BillingResult = { error?: string; message?: string; field?: string; url?: string };
 export function BillingForm({ action, children, className = "billing-form" }: { action: (form: FormData) => Promise<BillingResult>; children: ReactNode; className?: string }) {
   const [result, setResult] = useState<BillingResult>({});
@@ -18,7 +19,7 @@ export function BillingForm({ action, children, className = "billing-form" }: { 
     });
   }
   return <form ref={form} onSubmit={submit} className={className} aria-busy={pending}>
-    <fieldset disabled={pending} className="billing-fields">{children}</fieldset>
+    <fieldset disabled={pending} className="billing-fields"><WorkspaceField />{children}</fieldset>
     <p ref={status} tabIndex={-1} role={result.error ? "alert" : "status"} className={result.error ? "text-bad" : "text-muted"}>{pending ? "One moment…" : result.error ?? result.message}</p>
   </form>;
 }

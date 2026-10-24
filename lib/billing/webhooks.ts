@@ -4,6 +4,7 @@ import type { Db } from "@/lib/db/core";
 import { breakdown, getStatement } from "./statements";
 import { validateSession } from "./checkout";
 import { integer } from "./money";
+import { assertEventWorkspace, billingWorkspaceId } from "./workspace-routing";
 type Payment = { id: number; statement_id: number; payment_intent_id: string; charge_id: string | null; estimated_fee_micros: number; amount_cents: number };
 export function reconcileFee(db: Db, paymentId: number, balance: { id: string; fee: number; currency: string }, now = new Date().toISOString()): void {
   db.transaction(() => {
@@ -25,13 +26,14 @@ export function reconcileFee(db: Db, paymentId: number, balance: { id: string; f
 /** Call only after SDK signature validation; ignored events still deduplicate durably. */
 export function processWebhook(db: Db, event: Stripe.Event, now = new Date().toISOString()): void {
   if (event.livemode !== false || !event.id) throw new BillingError("Only signed test-mode events are accepted");
+  assertEventWorkspace(db, event);
   db.transaction(() => {
     if (db.prepare("SELECT event_id FROM billing_webhook_events WHERE event_id=?").get(event.id)) return;
     if (["checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.expired", "checkout.session.async_payment_failed"].includes(event.type)) {
       const session = event.data.object as Stripe.Checkout.Session;
       const row = getStatement(db, Number(session.metadata?.statement_id));
       if (!row) throw new BillingError("Unknown statement");
-      validateSession(session, row.id, row.user_id, row.total_cents);
+      validateSession(session, row.id, row.user_id, row.total_cents, billingWorkspaceId(db));
       const attempt = db.prepare("SELECT * FROM billing_checkout_attempts WHERE session_id=? AND statement_id=?").get(session.id, row.id) as { id: number } | undefined;
       // A crash after provider creation but before saving the session ID must be retried with the same idempotency key first.
       if (!attempt) throw new BillingError("Checkout session is not registered; retry after reconciliation");
@@ -63,7 +65,7 @@ export async function reconcilePendingFees(db: Db, stripe: Stripe): Promise<numb
   let count = 0;
   for (const payment of pending) {
     const intent = await stripe.paymentIntents.retrieve(payment.payment_intent_id, { expand: ["latest_charge.balance_transaction"] });
-    if (intent.livemode !== false || intent.currency !== "usd" || intent.amount_received !== payment.amount_cents || intent.status !== "succeeded") throw new BillingError("Invalid test payment reconciliation");
+    if ((intent.metadata?.workspace_id ?? "legacy") !== billingWorkspaceId(db) || intent.livemode !== false || intent.currency !== "usd" || intent.amount_received !== payment.amount_cents || intent.status !== "succeeded") throw new BillingError("Invalid test payment reconciliation");
     const charge = intent.latest_charge;
     if (charge && typeof charge !== "string" && charge.balance_transaction && typeof charge.balance_transaction !== "string") { reconcileFee(db, payment.id, charge.balance_transaction); count++; }
   }

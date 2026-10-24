@@ -19,8 +19,8 @@ import { PageHeader, Stat } from "@/components/ui";
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
-  await requireUser();
-  const db = getDb();
+  const user = await requireUser();
+  const db = (await getDb());
   const worker = workerStatus(db, new Date());
   const nextWork = worker.running ? nextQueuedWork(db) : null;
   const workerProblem = workerStartProblem(db);
@@ -28,7 +28,7 @@ export default async function Dashboard() {
   const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
   const d = dashboardData(db, dateInTimeZone(new Date(), timeZone), timeZone);
   const failedCopy = failedWorkCopy(d.failedJobTypes);
-  const writingCopy = automaticWritingCopy(Boolean(process.env.ANTHROPIC_API_KEY), d.stages.warmed ?? 0);
+  const writingCopy = automaticWritingCopy(user.hostChromeAllowed && Boolean(process.env.ANTHROPIC_API_KEY), d.stages.warmed ?? 0);
   const recent = d.recentActivity;
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));

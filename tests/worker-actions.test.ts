@@ -4,23 +4,31 @@ import { createCampaign, setCampaignStatus } from "@/lib/db/repos/campaigns";
 import { workerControl } from "@/lib/services/worker-lifecycle";
 import { startWorker, stopWorker } from "@/app/(app)/worker/actions";
 
-const state = vi.hoisted(() => ({ db: null as Db | null }));
+const state = vi.hoisted(() => ({ db: null as Db | null, hostChromeAllowed: true, workspaceId: "legacy" }));
 vi.mock("@/lib/db", () => ({ getDb: () => state.db }));
-vi.mock("@/lib/auth/dal", () => ({ requireUser: vi.fn(async () => ({ id: 1, email: "owner@example.test" })) }));
+vi.mock("@/lib/auth/dal", () => ({ requireUser: vi.fn(async () => ({ id: 1, email: "owner@example.test", workspaceId: state.workspaceId, hostChromeAllowed: state.hostChromeAllowed })) }));
+vi.mock("@/lib/workspaces/storage", () => ({ getWorkspacePaths: () => ({ dbPath: "/tmp/tenant.db", profilesDir: "/tmp/tenant-profiles", hostChromeAllowed: state.hostChromeAllowed }) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("node:child_process", () => ({ spawn: vi.fn(() => ({ pid: 999999, once: vi.fn(), unref: vi.fn() })) }));
 import { spawn } from "node:child_process";
 
 let db: Db;
 beforeEach(() => {
-  db = openDb(":memory:"); state.db = db;
+  db = openDb(":memory:"); state.db = db; state.hostChromeAllowed = true; state.workspaceId = "legacy";
   vi.clearAllMocks();
   delete process.env.VERCEL;
   delete process.env.OUTREACH_SMOKE_MODE;
 });
-afterEach(() => { db.close(); state.db = null; });
+afterEach(() => { db.close(); state.db = null; vi.unstubAllEnvs(); });
 
 describe("local background service actions", () => {
+  it("launches a private-company worker with that company's storage and no host Chrome", async () => {
+    state.hostChromeAllowed = false; state.workspaceId = "private-company";
+    for (const key of ["ANTHROPIC_API_KEY", "APIFY_TOKEN", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "BILLING_OWNER_USER_ID", "SESSION_SECRET"]) vi.stubEnv(key, "fixture-owner-secret");
+    expect((await startWorker()).message).toMatch(/starting/);
+    expect(spawn).toHaveBeenCalledWith(process.execPath, expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ DB_PATH: "/tmp/tenant.db", PROFILES_DIR: "/tmp/tenant-profiles", OUTREACH_HOST_CHROME_ALLOWED: "0", ANTHROPIC_API_KEY: "", APIFY_TOKEN: "", STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "", BILLING_OWNER_USER_ID: "", SESSION_SECRET: "" }) }));
+  });
+
   it("requires an explicit Start and launches only one child", async () => {
     expect(spawn).not.toHaveBeenCalled();
     expect((await startWorker()).message).toMatch(/starting/);

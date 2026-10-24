@@ -1,11 +1,16 @@
 import "server-only";
-import { config } from "@/lib/config";
-import { openDb, type Db } from "./core";
+import { requireUser } from "@/lib/auth/dal";
+import { getWorkspaceDb } from "@/lib/workspaces/storage";
+import { workspaceFormMatches } from "@/lib/domain/workspace-rules";
+import type { Db } from "./core";
 
 export type { Db };
 
-// One connection per process. In dev, hot reload would open a new one on every edit, so cache it.
-const g = globalThis as unknown as { __db?: Db };
-export function getDb(): Db {
-  return (g.__db ??= openDb(config.dbPath));
+/** Every interactive read/write resolves from a verified current membership. */
+export async function getDb(form?: FormData): Promise<Db> {
+  const user = await requireUser();
+  if (form && !workspaceFormMatches(user.workspaceId, form.get("__workspace"))) {
+    throw new Error("Your workspace changed. Refresh this page before saving.");
+  }
+  return getWorkspaceDb(user.workspaceId);
 }

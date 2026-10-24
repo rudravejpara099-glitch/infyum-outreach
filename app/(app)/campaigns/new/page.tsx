@@ -11,7 +11,7 @@ export default async function NewCampaign() {
   return (
     <>
       <PageHeader title="New campaign" sub="Say who you want to reach and how." />
-      <CampaignForm accounts={listAccounts(getDb())} selected={[]} />
+      <CampaignForm accounts={listAccounts((await getDb()))} selected={[]} />
     </>
   );
 }

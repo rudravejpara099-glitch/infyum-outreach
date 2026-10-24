@@ -12,7 +12,7 @@ import { BillingForm } from "@/components/billing-form";
 import { changeSpendingLimit, claimBillingResource, refreshBilling } from "./actions";
 export const dynamic = "force-dynamic";
 export default async function BillingPage() {
-  const user = await requireUser(); const db = getDb(); syncBilling(db, user.id);
+  const user = await requireUser(); const db = (await getDb()); syncBilling(db, user.id);
   const data = billingOverview(db, user.id), p = profile(db, user.id), ready = integrationReady(db);
   const apify = (db.prepare("SELECT value FROM settings WHERE key='apify_monthly_cap_usd'").get() as { value: string } | undefined)?.value;
   const resources = db.prepare("SELECT 'campaign' kind,c.id,c.name label,b.user_id payer FROM campaigns c LEFT JOIN billing_assignments b ON b.resource_kind='campaign' AND b.resource_id=c.id UNION ALL SELECT 'account',a.id,'@'||a.handle,b.user_id FROM ig_accounts a LEFT JOIN billing_assignments b ON b.resource_kind='account' AND b.resource_id=a.id").all() as { kind: "campaign" | "account"; id: number; label: string; payer: number | null }[];

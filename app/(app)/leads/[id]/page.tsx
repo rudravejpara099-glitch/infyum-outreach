@@ -24,7 +24,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   await requireUser();
   const { id } = await params;
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
-  const db = getDb();
+  const db = (await getDb());
   const lead = getLead(db, Number(id));
   if (!lead) notFound();
   const messages = listMessages(db, { leadId: lead.id }).reverse();

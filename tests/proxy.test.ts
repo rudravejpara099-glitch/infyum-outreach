@@ -7,12 +7,12 @@ function request(path: string, cookie?: string): NextRequest {
 }
 
 describe("auth proxy", () => {
-  it.each(["/login", "/setup"])("allows the public route %s", (path) => {
+  it.each(["/login", "/setup", "/register", "/join"])("allows the public route %s", (path) => {
     expect(proxy(request(path))).toBeInstanceOf(NextResponse);
     expect(proxy(request(path))?.status).toBe(200);
   });
 
-  it.each(["/login-evil", "/setupanything"])("does not treat prefixed route %s as public", (path) => {
+  it.each(["/login-evil", "/setupanything", "/register-evil", "/joinanything"])("does not treat prefixed route %s as public", (path) => {
     const response = proxy(request(path));
     expect(response?.status).toBe(307);
     expect(response?.headers.get("location")).toBe("http://localhost/login");

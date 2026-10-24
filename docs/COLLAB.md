@@ -33,9 +33,10 @@ Next I will: <the next concrete step, so the other agent does not duplicate it>
 | `HANDOFF.md` | each agent edits only its own dated section; the owner's rules at the top change only with owner approval | |
 | `tests/` | the owner of the code being tested | |
 
-Migration numbers: shipped = 1. Next free = 2. Claim it here before writing it: `migration 2: <agent> for <reason>`.
+Migration numbers: shipped = 1–5. Claimed = 6 (Codex, company workspaces). Next free = 7. Claim it here before writing it: `migration 2: <agent> for <reason>`.
 
 ## Active work (claim before starting, delete when merged)
+- Codex: `feat/self-service-workspaces` — owner-authorized private company signup (default), optional invitation teams, company separation and revocable sessions; migration 6; based on PR #13.
 - Codex: `feat/workspace-readiness` — functional audit, Settings/team time zone, actual dashboard worker heartbeat, accessible form feedback and account warning protection. No protected backend edits without ACK. Billing remains separate in PR #7.
 - Codex: `docs/codex-collab-ack` — documentation-only reply to Claude #1; no application/backend changes. Remove this claim when merged.
 - Codex: `fix/first-run-operability` — first-run experience, campaign lifecycle controls, local readiness, and the owner-authorized bounded restart-recovery fix in #103. No other protected backend area is claimed.
@@ -1415,3 +1416,21 @@ NOT verified: live likes/comments/follow, an app-sent first DM followed by a fre
 Decisions made: preserve ten-piece warm-up, follow-last, campaign approval, no-spend, daily limits/warning stops, first-reply handoff and local-only scope. Keep Chrome-only Apify search disabled; do not fabricate engagement or auto-approve a first message for a live test. Historical `chrome_read_only` storage values remain for compatibility, but the implemented driver now supports preparation and drafting.
 Needs from you: no owner input for completed code/read-only recovery. Live preparation and exact-message approval remain explicit live verification gates; provider credentials/calls remain separately authorized.
 Next I will: publish these reviewable changes to the existing PR, reload the idle worker with the final code, and leave the remaining live proof clearly unverified.
+
+
+### [2026-10-24] Codex #180: Self-service company workspaces and team joining
+Changed: claim `feat/self-service-workspaces` in an isolated worktree based on 790a481. Owner explicitly chose both private company workspaces and shared-team joining, and authorized necessary backend work and parallel agents. Claim migration 6 for workspace memberships, hashed invitations and revocable sessions. Scope: auth, tenant database resolution, guided account/team screens, worker/profile isolation, tests and handoff. No live owner DB rollout before isolated verification.
+Verified: branch starts clean from the tested PR #13 head; running owner checkout remains separate. No provider call or Instagram action.
+NOT verified: implementation is in progress; public remote Instagram onboarding and hosted deployment remain unverified.
+Decisions made: preserve current team/data; new companies get separate operational databases and browser profiles. Never share the host Chrome profile with another company. No new dependency or paid service. Existing approval, spending and first-reply boundaries remain.
+Needs from you: no ACK needed under the owner's backend takeover ruling; do not duplicate migration 6.
+Next I will: implement and test private signup, email-bound team invitations, workspace switching and data isolation.
+
+
+### [2026-10-24] Codex #181: Deliver private company signup and optional invitation teams
+Changed: `feat/self-service-workspaces` based on PR #13 head; migration 6, separate identity catalog, company databases/profiles, private signup, invitation joining, team management/switching, revocable sessions, stale-form guards, company-scoped worker credentials and test billing webhooks, complete database backup set, README and regression/browser tests. No dependency added. Owner's latest clarification: private companies are the primary path, with shared teams available by invitation. Existing outbound rules are retained.
+Verified: `npm test` 444/64 files; typecheck; lint; Webpack production build; disposable UI smoke; local billing simulator; workspace smoke covering two companies and removal/recovery; `git diff --check`. Narrow/wide light/dark new screens visually checked. Independent boundary review found pending-invite removal and last-membership recovery gaps; both fixed with regression tests. Pre-migration backup preserved; current app started at 3100. Read-only owner-data check confirms 204 leads, 23 pending drafts, 0 approved messages and matching original identity hashes. No worker started during rollout; no message, like, comment, follow, paid provider call, payment or spend.
+NOT verified: public remote customer Instagram onboarding, per-company provider configuration, public hosting, real paid services or app-sent first-contact/fresh-reply handoff. No arbitrary-company offer customization is claimed.
+Decisions made: original signed-in Chrome and host API credentials never become another company's connection. Private workspace default; optional invitation-only shared team; original billing-owner designation stays separate from workspace owner. Old stateless cookies require normal sign-in once. Next migration free is 7. All owner data/settings and approval/spending boundaries remain.
+Needs from you: review the separate workspace PR; no input blocks the completed no-spend implementation. Public/live proof remains on the completion checklist.
+Next I will: publish this branch and PR, preserve both backups, and leave the app available without starting outreach.

@@ -5,7 +5,8 @@ import { saveCeiling } from "@/lib/billing/config";
 import { claimResource } from "@/lib/billing/attribution";
 import { reserveUsage, settleUsage, billingHold } from "@/lib/billing/budget";
 import { finalizeStatement, breakdown, isPaid } from "@/lib/billing/statements";
-import { createCheckout } from "@/lib/billing/checkout";
+import { createCheckout, validateSession } from "@/lib/billing/checkout";
+import { setSetting } from "@/lib/db/repos/settings";
 import { processWebhook, reconcileFee, reconcilePendingFees } from "@/lib/billing/webhooks";
 import { testStripe, verifyWebhook, checkoutUrlAllowed, localTestApi } from "@/lib/billing/provider";
 let db: Db, statementId: number, amount: number;
@@ -69,6 +70,28 @@ describe("test-only hosted checkout", () => {
     await createCheckout(db, 1, statementId, fake as unknown as Stripe);
     expect((db.prepare("SELECT max(attempt) n FROM billing_checkout_attempts").get() as { n: number }).n).toBe(1);
   });
+  it("scopes new company checkout keys and both metadata copies to its workspace", async () => {
+    const workspaceId = "a499a284-76b5-4ee8-95ca-7edb55c28bad";
+    setSetting(db, "workspace_id", workspaceId);
+    const fake = fakeStripe();
+    fake.checkout.sessions.create.mockResolvedValue(session({ metadata: { statement_id: String(statementId), user_id: "1", billing_mode: "test", workspace_id: workspaceId } }));
+    await createCheckout(db, 1, statementId, fake as unknown as Stripe);
+    const call = fake.checkout.sessions.create.mock.calls[0] as unknown as [{ metadata: Record<string, string>; payment_intent_data: { metadata: Record<string, string> } }, { idempotencyKey: string }];
+    expect(call[0].metadata.workspace_id).toBe(workspaceId);
+    expect(call[0].payment_intent_data.metadata).toEqual(call[0].metadata);
+    expect(call[1].idempotencyKey).toBe(`billing-test-workspace-${workspaceId}-statement-${statementId}-attempt-1`);
+    expect(() => validateSession(session(), statementId, 1, amount, workspaceId)).toThrow();
+    expect(() => validateSession(session({ metadata: call[0].metadata }), statementId, 1, amount)).toThrow();
+  });
+  it("rejects another company's paid event before recording any ledger event", async () => {
+    const ownWorkspace = "a499a284-76b5-4ee8-95ca-7edb55c28bad";
+    setSetting(db, "workspace_id", ownWorkspace);
+    expect(() => processWebhook(db, evt("wrong-scope"), feb)).toThrow("different workspace");
+    const otherSession = session({ metadata: { statement_id: String(statementId), user_id: "1", billing_mode: "test", workspace_id: "2b041912-2315-430e-8980-b2ec5a50cf28" } });
+    expect(() => processWebhook(db, evt("wrong-company", "checkout.session.completed", otherSession), feb)).toThrow("different workspace");
+    expect(db.prepare("SELECT * FROM billing_webhook_events").all()).toEqual([]);
+    expect(db.prepare("SELECT * FROM billing_payments").all()).toEqual([]);
+  });
 });
 describe("signed payments, duplicate delivery and fees", () => {
   it("verifies the raw payload signature and rejects replayed timestamps, tampering and live events", () => {
@@ -116,6 +139,18 @@ describe("signed payments, duplicate delivery and fees", () => {
     await createCheckout(db, 1, statementId, fakeStripe() as unknown as Stripe); processWebhook(db, evt("paid"), feb);
     const retrieve = vi.fn(async () => ({ livemode: false, currency: "usd", amount_received: amount, status: "succeeded", latest_charge: null }));
     expect(await reconcilePendingFees(db, { paymentIntents: { retrieve } } as unknown as Stripe)).toBe(0);
+    expect((db.prepare("SELECT count(*) n FROM billing_fee_reconciliations").get() as { n: number }).n).toBe(0);
+  });
+  it("refuses fee evidence and charge events from another workspace", async () => {
+    const workspaceId = "a499a284-76b5-4ee8-95ca-7edb55c28bad";
+    setSetting(db, "workspace_id", workspaceId);
+    const metadata = { statement_id: String(statementId), user_id: "1", billing_mode: "test", workspace_id: workspaceId };
+    const fake = fakeStripe(); fake.checkout.sessions.create.mockResolvedValue(session({ metadata }));
+    await createCheckout(db, 1, statementId, fake as unknown as Stripe);
+    processWebhook(db, evt("paid-company", "checkout.session.completed", session({ metadata, payment_status: "paid", status: "complete" })), feb);
+    const retrieve = vi.fn(async () => ({ livemode: false, currency: "usd", amount_received: amount, status: "succeeded", metadata: { workspace_id: "legacy" }, latest_charge: null }));
+    await expect(reconcilePendingFees(db, { paymentIntents: { retrieve } } as unknown as Stripe)).rejects.toThrow("reconciliation");
+    expect(() => processWebhook(db, evt("wrong-charge", "charge.updated", { payment_intent: "pi_fixture", metadata: { workspace_id: "legacy" } }), feb)).toThrow("different workspace");
     expect((db.prepare("SELECT count(*) n FROM billing_fee_reconciliations").get() as { n: number }).n).toBe(0);
   });
 });
