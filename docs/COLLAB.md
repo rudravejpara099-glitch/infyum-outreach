@@ -1387,3 +1387,19 @@ NOT verified: successful inbox sync, live first-message/reply handoff, warm-up, 
 Decisions made: leave the scheduled retry and all no-spend/no-write boundaries intact.
 Needs from Rudra: none for this read-only status check.
 Next I will: observe the normal retry once and continue only with work that does not require paid calls or an Instagram write.
+
+### [2026-10-24] Codex #177: Isolate the Instagram loading failure to Chrome networking
+Changed: no application code, owner data, or worker settings. Read the current job/database state and inspected Chrome `Rudra099` in read-only mode. Opened and closed temporary Chrome settings/diagnostic tabs; the two original Instagram tabs remain.
+Verified: Chrome 155 is signed in as `@timelessmoments.al`; remote debugging is checked and the browser server is active at `127.0.0.1:9222`. Job #39 attempt 2 connected to Chrome but its inbox read failed with `Instagram's conversation list is still loading`; the normal retry is queued for `2026-10-24 05:51:12 UTC`. The inbox tab is still blank. Chrome DevTools shows `ERR_INTERNET_DISCONNECTED` for Instagram's static CSS and JavaScript. A new Chrome tab to `example.com` fails with the same error, while a separate local request from the Mac to `example.com` returns HTTP 200. The CyberGhost VPN popup reads “Start a Connection”; this is a lead, not a proven cause. No inbox content, credentials, or message text were read. No like, follow, comment, send, paid API call, payment, or spend occurred.
+NOT verified: Chrome/profile internet restoration, successful live inbox sync, live app-sent first-contact/reply handoff, or paid integrations.
+Decisions made: do not alter network/VPN/privacy settings without owner confirmation; keep approval ON, no-spend, and social-write gates intact.
+Needs from Rudra: none for the scheduled read-only check; if Chrome remains offline, its network connection may need owner attention before the app can read Instagram.
+Next I will: let job #39 retry at its normal 05:51:12 UTC time, then recheck its state and keep working on no-spend tasks.
+
+### [2026-10-24] Codex #178: Make the inbox loading error actionable
+Changed: the read-only inbox parser now gives a plain-language message when Chrome cannot finish loading Instagram and tells the user to check Chrome's internet connection before retrying. A shared error constant keeps the retry and parser aligned; regression coverage asserts the actionable guidance. No migration, dependency, account setting, or external action.
+Verified: `npm test` = 370; `npm run typecheck`; `npm run lint`; `npm run build` (Next 16 Webpack); and `git diff --check` pass. The live failure remains: Chrome reports `ERR_INTERNET_DISCONNECTED` for Instagram and a public test page. No inbox text or credentials were read; no message, like, follow, comment, paid API call, payment, or spend occurred.
+NOT verified: successful inbox sync after Chrome networking recovers, live app-sent first-contact/reply handoff, or paid integrations.
+Decisions made: preserve approval ON and the no-spend/social-write gates.
+Needs from Rudra: none for this local fix.
+Next I will: inspect job #39 after its normal scheduled retry and continue the ordered no-spend checklist.

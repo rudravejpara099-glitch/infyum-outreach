@@ -112,6 +112,7 @@ export function profileFactsFromToolResult(result: ToolResult): ProfileFacts {
 
 const THREAD_PATH = /^\/direct\/t\/[A-Za-z0-9_-]+\/?$/;
 const THREAD_WARNING = /action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i;
+export const INBOX_LOADING_ERROR = "Instagram's inbox did not finish loading in Chrome. Check Chrome's internet connection, then try again.";
 
 /** Returns only stable row indices, never inbox previews or message contents. */
 export function inboxListScript(ownerHandle: string): string {
@@ -170,10 +171,10 @@ export function inboxThreadIndicesFromToolResult(result: ToolResult): number[] {
   if (!parsed || parsed.allowed !== true) throw new Error("Chrome is not showing an allowed Instagram inbox page.");
   if (parsed.blocked === true) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
   if (parsed.loggedOut === true) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
-  if (parsed.loading === true || (parsed.ownerMatches === true && parsed.isInbox === true && parsed.listReady !== true)) throw new Error("Instagram's conversation list is still loading.");
+  if (parsed.loading === true || (parsed.ownerMatches === true && parsed.isInbox === true && parsed.listReady !== true)) throw new Error(INBOX_LOADING_ERROR);
   if (parsed.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before reading replies.");
   if (parsed.isInbox !== true) throw new Error("Instagram's conversation list is not open.");
-  if (parsed.listReady !== true) throw new Error("Instagram's conversation list is still loading.");
+  if (parsed.listReady !== true) throw new Error(INBOX_LOADING_ERROR);
   if (!Array.isArray(parsed.indices)) throw new Error("Instagram did not return a readable reply list.");
   return [...new Set(parsed.indices.filter((index): index is number => Number.isSafeInteger(index) && index >= 0 && index < 15))].slice(0, 15);
 }

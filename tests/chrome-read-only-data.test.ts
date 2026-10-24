@@ -166,7 +166,7 @@ describe("Chrome read-only data adapter", () => {
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: false, isInbox: true, indices: [0] }))).toThrow("saved Instagram account");
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, blocked: true, indices: [] }))).toThrow("warning or human check");
     expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: false, indices: [] }))).toThrow("conversation list is not open");
-    expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, listReady: false, indices: [] }))).toThrow("still loading");
+    expect(() => inboxThreadIndicesFromToolResult(mcpJson({ allowed: true, ownerMatches: true, isInbox: true, listReady: false, indices: [] }))).toThrow("Check Chrome's internet connection");
   });
 
   it("distinguishes a blank loading inbox from a different signed-in account", async () => {
