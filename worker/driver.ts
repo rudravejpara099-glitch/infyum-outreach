@@ -26,7 +26,7 @@ export interface InstagramDriver {
   readFacts(account: IgAccount, handle: string): Promise<ProfileFacts>;
   readProfileNotes(account: IgAccount, handle: string): Promise<string>;
   warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue?: () => boolean): Promise<WarmUpResult>;
-  sendMessages(account: IgAccount, handle: string, parts: string[]): Promise<void>;
+  sendMessages(account: IgAccount, handle: string, parts: string[], mayContinue?: () => boolean): Promise<void>;
   /** New messages from other people since the last read. */
   readInbox(account: IgAccount): Promise<{ handle: string; text: string }[]>;
 }

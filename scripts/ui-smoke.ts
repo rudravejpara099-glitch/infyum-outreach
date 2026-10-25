@@ -50,7 +50,7 @@ let serverOutput = "";
 const startServer = (build: IsolatedNextBuild, apifyToken = "") => {
   serverOutput = "";
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], {
-    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
+    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4000); };
@@ -536,8 +536,8 @@ try {
 
   await page.goto(`${base}/settings`);
   await page.getByRole("heading", { name: "AI message writing", exact: true }).waitFor();
-  await page.getByText("Outreach uses a separately billed Anthropic API connection.", { exact: false }).waitFor();
-  await page.getByText(/Connection: (not connected for this workspace|API key is set for this workspace)\. Paid message writing stays paused until billing metering is reviewed\./).waitFor();
+  await page.getByText("Automatic message drafts are off", { exact: true }).waitFor();
+  await page.getByText(/A personal Claude subscription is not used\./).waitFor();
   await page.getByText("Connection details: not set up for this workspace. Checking this does not run a search.", { exact: true }).waitFor();
   await page.getByRole("listitem").filter({ hasText: "@another.campaign" }).getByRole("button", { name: "Remove", exact: true }).click();
   await page.getByText("Nobody blocked.", { exact: true }).waitFor();

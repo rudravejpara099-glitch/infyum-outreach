@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { IgAccount } from "@/lib/db/types";
+import { InstagramSendUncertainError } from "@/worker/driver";
 import { ChromeInstagram } from "@/worker/chrome-read-only";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
@@ -56,7 +57,7 @@ describe("signed-in Chrome DM driver", () => {
       return { structuredContent: { message: JSON.stringify({ allowed: true, loggedIn: true, text: "Edit profile" }) } };
     });
     const fakeClient = { callTool, close: vi.fn(async () => {}) } as unknown as Client;
-    const driver = new ChromeInstagram(fakeClient);
+    const driver = new ChromeInstagram(fakeClient, async () => {});
 
     await expect(driver.openLogin(owner)).resolves.toBe(true);
 
@@ -68,7 +69,7 @@ describe("signed-in Chrome DM driver", () => {
       callTool: vi.fn(async () => { throw new Error("MCP error -32001: Request timed out"); }),
       close: vi.fn(async () => {}),
     } as unknown as Client;
-    const driver = new ChromeInstagram(fakeClient);
+    const driver = new ChromeInstagram(fakeClient, async () => {});
 
     await expect(driver.openLogin(owner)).rejects.toThrow("Allow remote debugging?");
   });
@@ -134,10 +135,12 @@ describe("signed-in Chrome DM driver", () => {
       }),
       close: vi.fn(async () => {}),
     } as unknown as Client;
-    const driver = new ChromeInstagram(fakeClient);
+    const pause = vi.fn(async (kind: string) => { void kind; });
+    const driver = new ChromeInstagram(fakeClient, pause);
 
     await driver.sendMessages(owner, "prospect", ["A reviewed message from the user"]);
 
+    expect(pause).toHaveBeenCalledWith("beforeSend");
     expect(calls.filter((call) => ["click", "fill", "press_key"].includes(call.name))).toEqual([
       { name: "click", args: { pageId: 8, uid: "msg-button" } },
       { name: "fill", args: { pageId: 8, uid: "message-box", value: "A reviewed message from the user" } },
@@ -145,9 +148,35 @@ describe("signed-in Chrome DM driver", () => {
     ]);
   });
 
+  it("stops before the next message part when device access is withdrawn", async () => {
+    let active = true, submitted = 0;
+    const calls: string[] = [];
+    const callTool = vi.fn(async ({ name, arguments: args }: { name: string; arguments: Record<string, unknown> }) => {
+      calls.push(name);
+      if (name === "list_pages") return { structuredContent: { pages: [{ id: 7, url: "https://www.instagram.com/owner/" }, { id: 8, url: "https://www.instagram.com/prospect/" }] } };
+      if (name === "evaluate_script" && String(args.function).includes("edit profile")) return result(JSON.stringify({ allowed: true, loggedIn: true }));
+      if (name === "take_snapshot") return { content: [{ type: "text", text: 'uid=msg button "Message"\nuid=box textbox "Message..."' }] };
+      if (name === "press_key") { submitted++; active = false; }
+      if (name === "evaluate_script") return result(JSON.stringify({ allowed: true, text: "The first approved message" }));
+      return { content: [{ type: "text", text: "ok" }] };
+    });
+    const pause = vi.fn(async (kind: string) => { void kind; });
+    const browser = new ChromeInstagram({ callTool, close: vi.fn() } as unknown as Client, pause);
+    await expect(browser.sendMessages(owner, "prospect", ["The first approved message", "The second approved message"], () => active)).rejects.toBeInstanceOf(InstagramSendUncertainError);
+    expect(pause.mock.calls.map(([kind]) => kind)).toEqual(["beforeSend", "betweenParts"]);
+    expect(submitted).toBe(1);
+    expect(calls.filter(name => name === "fill")).toHaveLength(1);
+  });
+  it("does not connect when a send is cancelled before it starts", async () => {
+    const callTool = vi.fn();
+    const browser = new ChromeInstagram({ callTool, close: vi.fn() } as unknown as Client, async () => {});
+    await expect(browser.sendMessages(owner, "prospect", ["An approved message"], () => false)).rejects.toThrow("stopped");
+    expect(callTool).not.toHaveBeenCalled();
+  });
+
   it("refuses empty messages before interacting with Chrome", async () => {
     const fakeClient = { callTool: vi.fn(), close: vi.fn() } as unknown as Client;
-    const driver = new ChromeInstagram(fakeClient);
+    const driver = new ChromeInstagram(fakeClient, async () => {});
     await expect(driver.sendMessages(owner, "prospect", [" "])).rejects.toThrow("approved message is empty");
     expect(fakeClient.callTool).not.toHaveBeenCalled();
   });

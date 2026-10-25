@@ -6,6 +6,11 @@ Voice: a real person. Warm, direct, specific, professional. Short sentences. No 
 Never invent results, prices, client names or guarantees. Never guess a first name. Never mention anything you did not see in the material given.
 Always answer with JSON only, no other text.`;
 
+/** Comments have their own plain-text contract; the DM JSON instruction must not override it. */
+export const COMMENT_SYSTEM = `You write one natural Instagram comment about the supplied post.
+Aim for five written words, followed by one relevant emoji. The allowed range is 3 to 8 words and 1 to 3 emojis; emojis do not count as words. Mention the actual subject of the post. Be warm, specific and truthful. Never invent facts, prices or results.
+Answer with only the comment text, without JSON, quotes, labels or an explanation.`;
+
 export type DraftContext = {
   handle: string;
   niche: string;
@@ -18,8 +23,8 @@ export type DraftContext = {
 
 export function firstDmPrompt(c: DraftContext): string {
   return `Write the first contact for @${c.handle} as THREE separate messages.
-Message 1: one specific, true detail about their page or business that proves you looked. No introduction yet.
-Message 2: who we are in one or two sentences (Rudra at Infyum, a small team in India that builds funnels and pages), one honest observation about their funnel, and this link exactly once: ${c.portfolioLink}
+Message 1: speak directly to the recipient using "you" or "your" and mention one specific, true detail about their page or business that proves you looked. No introduction yet.
+Message 2: introduce yourself by name as Rudra at Infyum, a small team based in India that builds funnels and landing pages. You MUST include all three names: Rudra, Infyum, India. Add one honest observation about their funnel and this link exactly once: ${c.portfolioLink}
 Message 3: one curious question about their funnel or business. Nothing else.
 Rules: each message under 380 characters. Different wording and shape from the recent openings below. Match their language if their audience is not English. No other links.
 

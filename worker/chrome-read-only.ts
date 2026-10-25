@@ -158,11 +158,13 @@ export class ChromeInstagram implements InstagramDriver {
     if (!uid) throw new Error(`Instagram did not show the expected ${name} control.`);
     ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "click", arguments: { pageId, uid } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, `Chrome could not select ${name}.`);
   }
-  private async sendPart(pageId: number, part: string, onSubmit: () => void): Promise<void> {
+  private async sendPart(pageId: number, part: string, onSubmit: () => void, mayContinue: () => boolean): Promise<void> {
     const snapshot = await this.snapshot(pageId);
     const uid = snapshot.match(/uid=([^\s]+)\s+textbox\s+"[^"]*(?:message|write a message)[^"]*"/i)?.[1];
     if (!uid) throw new Error("Instagram did not show a message box.");
+    if (!mayContinue()) throw new Error("Message sending was stopped.");
     ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "fill", arguments: { pageId, uid, value: part } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not enter the approved message.");
+    await this.pause("beforeSend");
     onSubmit();
     ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "press_key", arguments: { pageId, key: "Enter" } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not submit the message.");
   }
@@ -283,23 +285,29 @@ export class ChromeInstagram implements InstagramDriver {
       wait: kind => this.pause(kind),
     }, target.url, pieces, makeComment, mayContinue);
   }
-  async sendMessages(account: IgAccount, handle: string, parts: string[]): Promise<void> {
+  async sendMessages(account: IgAccount, handle: string, parts: string[], mayContinue = () => true): Promise<void> {
+    const check = () => { if (!mayContinue()) throw new Error("Message sending was stopped."); };
+    check();
     if (parts.length === 0 || parts.some((part) => !part.trim())) throw new Error("The approved message is empty.");
     await this.verifyOwner(account);
+    check();
     const target = await this.openProfile(account, handle);
+    check();
     let snapshot = await this.snapshot(target.pageId);
     await this.clickNamed(target.pageId, snapshot, "button", "Message");
     snapshot = await this.snapshot(target.pageId);
     if (!/textbox\s+"[^"]*(?:message|write a message)/i.test(snapshot)) throw new Error(`Chat with @${handle} did not open.`);
     let attempted = false;
     try {
-      for (const part of parts) {
-        await this.sendPart(target.pageId, part, () => { attempted = true; });
-        const check = await this.evaluate(target.pageId, `() => ({ allowed: location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && location.pathname.startsWith('/direct/'), text: document.body?.innerText ?? '' })`, "Chrome could not verify the sent message.");
-        const parsed = jsonFromToolResult(check) as { allowed?: unknown; text?: unknown } | null;
+      for (const [index, part] of parts.entries()) {
+        check();
+        await this.sendPart(target.pageId, part, () => { check(); attempted = true; }, mayContinue);
+        const receipt = await this.evaluate(target.pageId, `() => ({ allowed: location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && location.pathname.startsWith('/direct/'), text: document.body?.innerText ?? '' })`, "Chrome could not verify the sent message.");
+        const parsed = jsonFromToolResult(receipt) as { allowed?: unknown; text?: unknown } | null;
         if (parsed?.allowed !== true || typeof parsed.text !== "string") throw new Error("Instagram chat identity could not be verified after sending.");
         if (looksBlocked(parsed.text, `https://www.instagram.com/direct/inbox/`)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
         if (!parsed.text.includes(part.slice(0, Math.min(30, part.length)))) throw new Error(`The message to @${handle} did not appear in the conversation.`);
+        if (index < parts.length - 1) await this.pause("betweenParts");
       }
     } catch (error) {
       if (attempted) throw new InstagramSendUncertainError(error instanceof InstagramBlockedError);

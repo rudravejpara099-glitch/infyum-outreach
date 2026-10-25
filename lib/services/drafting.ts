@@ -27,7 +27,7 @@ async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: 
       db, userId: payer, operationId: `ai:${jobId ?? `lead-${leadId}`}:${kind}:${attempt}`,
       source: { campaignId, accountId: lead.accountId, leadId, ...(jobId ? { jobId } : {}) }, maxOutputTokens: 1200,
     } : undefined;
-    const raw = await engine.complete({ system: SYSTEM, prompt: prompt + feedback, metering });
+    const raw = await engine.complete({ system: SYSTEM, prompt: prompt + feedback, format: kind, metering });
     let problem: string | null = null;
     let parts: string[] = [];
     try {

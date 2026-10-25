@@ -4,6 +4,7 @@ import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
+import { getAccountDevice } from "@/lib/connectors/commands";
 import { requireUser } from "@/lib/auth/dal";
 import { getWorkspacePaths } from "@/lib/workspaces/storage";
 import { createAccount, getAccount, setAccountBrowserMode, setAccountCap, setAccountStatus } from "@/lib/db/repos/accounts";
@@ -67,6 +68,7 @@ function requestLogin(db: Awaited<ReturnType<typeof getDb>>, accountId: number, 
 }
 export async function connectAccount(form: FormData): Promise<ActionResult> {
   const user = await requireUser();
+  if (!user.hostChromeAllowed) return { url: "/accounts/connect", error: "Connect your own Chrome from the device setup page." };
   const parsed = connectSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message, field: String(parsed.error.issues[0].path[0]) };
   if (parsed.data.browserMode === "chrome_read_only" && !user.hostChromeAllowed) return { error: "Use your company's separate Instagram sign-in window.", field: "browserMode" };
@@ -123,6 +125,7 @@ export async function useSeparateSignIn(form: FormData): Promise<ActionResult> {
   const parsed = accountIdSchema.safeParse(form.get("id"));
   const account = parsed.success ? getAccount((await getDb(form)), parsed.data) : null;
   if (!account) return { error: "Account not found. Refresh this page." };
+  if (getAccountDevice((await getDb(form)), account.id)) return { error: "This account uses your connected computer. Manage its connection in Accounts." };
   setAccountBrowserMode((await getDb(form)), account.id, "isolated", user.email);
   revalidatePath("/accounts");
   return { message: "This account will use its separate sign-in window again." };

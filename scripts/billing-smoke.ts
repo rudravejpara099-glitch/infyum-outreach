@@ -42,7 +42,7 @@ async function main() {
   const startServer = (isolatedBuild: IsolatedNextBuild) => {
     serverOutput = "";
     const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3191"], {
-      env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", OUTREACH_SMOKE_DIST_DIR: isolatedBuild.distDir, OUTREACH_SMOKE_TSCONFIG: isolatedBuild.tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, BILLING_OWNER_USER_ID: "1", STRIPE_SECRET_KEY: "sk_test_fixture", STRIPE_WEBHOOK_SECRET: secret, BILLING_TEST_API_BASE: provider.origin, APP_URL: base, APIFY_TOKEN: "fixture-only" }, stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: isolatedBuild.distDir, OUTREACH_SMOKE_TSCONFIG: isolatedBuild.tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, BILLING_OWNER_USER_ID: "1", STRIPE_SECRET_KEY: "sk_test_fixture", STRIPE_WEBHOOK_SECRET: secret, BILLING_TEST_API_BASE: provider.origin, APP_URL: base, APIFY_TOKEN: "fixture-only" }, stdio: ["ignore", "pipe", "pipe"],
     });
     const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4000); };
     child.stdout?.on("data", capture); child.stderr?.on("data", capture);

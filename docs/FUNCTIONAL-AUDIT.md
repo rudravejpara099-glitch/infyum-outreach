@@ -1,3 +1,9 @@
+# Customer connection update — 2026-10-25
+
+Implemented private customer-device pairing, durable remote browser commands, guided Accounts onboarding, packaged Apple silicon Mac helper, and free server-side local writing. Verified with 585 tests, typecheck/lint/build, isolated website/device browser flow, UI and simulated billing checks, packaged-app startup, and real local synthetic inference. The actual local draft remained pending approval; zero sends and zero paid calls.
+
+**Still unverified:** an independent customer's installation (package unsigned/not notarized), real new-device Instagram connection, and app-sent first-contact followed by fresh reply/handoff. The current app requires the owner's normal sign-in for live checks. Hosting and paid services remain off/deferred. See the latest HANDOFF.md section; older status entries below are historical and superseded where stated. Do not claim public-release readiness from simulated Instagram checks.
+
 # Self-service update — 2026-10-24
 
 Private company workspaces are now the default signup path. Invitation-only teams, workspace switching, membership removal, revocable sessions, database/browser separation and company-scoped test billing are implemented. Existing owner data is preserved. Verification: 444 tests, typecheck, lint, Webpack production build, disposable UI flow, fake billing flow and two-company browser flow pass. See the latest `HANDOFF.md` section for exact evidence and remaining live proof.

@@ -1,3 +1,6 @@
+import type { Db } from "@/lib/db/core";
+import { getAccountDevice } from "@/lib/connectors/commands";
+import { RemoteInstagramDriver } from "./remote-instagram";
 import type { IgAccount } from "@/lib/db/types";
 import type { InstagramDriver, ProfileFacts, WarmUpResult } from "./driver";
 import { ChromeInstagram } from "./chrome-read-only";
@@ -5,9 +8,12 @@ import { PlaywrightInstagram } from "./instagram";
 
 /** Selects the explicitly chosen browser connection per account. */
 export class AccountInstagramDriver implements InstagramDriver {
+  constructor(private db?: Db) {}
   private readonly isolated = new PlaywrightInstagram();
   private readonly chrome = new Map<number, ChromeInstagram>();
   private for(account: IgAccount): InstagramDriver {
+    const deviceId = this.db ? getAccountDevice(this.db, account.id) : null;
+    if (deviceId && this.db) return new RemoteInstagramDriver(this.db, deviceId);
     if (account.browserMode !== "chrome_read_only") return this.isolated;
     if (process.env.OUTREACH_HOST_CHROME_ALLOWED === "0") throw new Error("The host's Chrome profile is unavailable to this workspace. Connect a separate Instagram sign-in.");
     let driver = this.chrome.get(account.id);
@@ -17,8 +23,8 @@ export class AccountInstagramDriver implements InstagramDriver {
   openLogin(account: IgAccount) { return this.for(account).openLogin(account); }
   readFacts(account: IgAccount, handle: string): Promise<ProfileFacts> { return this.for(account).readFacts(account, handle); }
   readProfileNotes(account: IgAccount, handle: string) { return this.for(account).readProfileNotes(account, handle); }
-  warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>): Promise<WarmUpResult> { return this.for(account).warmUp(account, handle, pieces, makeComment); }
-  sendMessages(account: IgAccount, handle: string, parts: string[]) { return this.for(account).sendMessages(account, handle, parts); }
+  warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue = () => true): Promise<WarmUpResult> { return this.for(account).warmUp(account, handle, pieces, makeComment, mayContinue); }
+  sendMessages(account: IgAccount, handle: string, parts: string[], mayContinue = () => true) { return this.for(account).sendMessages(account, handle, parts, mayContinue); }
   readInbox(account: IgAccount) { return this.for(account).readInbox(account); }
   async close() {
     await Promise.allSettled([

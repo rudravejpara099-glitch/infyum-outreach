@@ -3,7 +3,7 @@ import type { AiEngine, MeteredAiCall } from "@/lib/engine/types";
 import { AiUsageUncertainError } from "@/lib/engine/anthropic";
 import type { InstagramDriver } from "./driver";
 import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError } from "./driver";
-import { commentPrompt, SYSTEM } from "@/lib/engine/prompts";
+import { draftWarmupComment } from "@/lib/services/comment-writing";
 import { qualify } from "@/lib/domain/qualify";
 import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
@@ -25,7 +25,6 @@ import { browserModeAllowsJob, browserModeAllowsLeadSearch } from "@/lib/domain/
 import { canSendAtStage } from "@/lib/domain/stages";
 import { accountNeedsSignIn, canResumeAfterVerifiedSignIn } from "@/lib/domain/account-recovery";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
-import { warmupCommentError } from "@/lib/domain/warmup-comment";
 import { warmupComplete } from "@/lib/domain/warmup";
 import type { ApifySearchClient } from "@/lib/leads/apify";
 import type { Job } from "@/lib/db/types";
@@ -235,7 +234,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
         source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
       } : undefined;
       // Never like/follow a post before discovering writing/billing is disconnected.
-      engine.assertReady?.(meteringFor(1));
+      await engine.assertReady?.(meteringFor(1));
       const mayContinue = () => {
         const freshLead = getLead(db, lead.id), freshAccount = getAccount(db, account.id);
         const freshCampaign = campaign ? getCampaign(db, campaign.id) : null;
@@ -247,11 +246,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
       const result = await driver.warmUp(account, lead.handle, WARMUP_PIECES, async (context) => {
         commentCall += 1;
         const metering = meteringFor(commentCall);
-        const raw = await engine.complete({ system: SYSTEM, prompt: commentPrompt(context), metering });
-        const comment = raw.replace(/[—–]/g, ",").replace(/^["']|["']$/g, "").trim();
-        const error = warmupCommentError(comment);
-        if (error) throw new Error(error);
-        return comment;
+        return draftWarmupComment(engine, context, metering);
       }, mayContinue);
       if (!mayContinue() || !warmupComplete(result, WARMUP_PIECES)) throw new InstagramWarmupUncertainError();
       try {

@@ -1,6 +1,6 @@
 import { chromium, type BrowserContext, type Page } from "playwright";
 import type { IgAccount } from "@/lib/db/types";
-import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
+import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { humanDelayMs } from "@/lib/domain/pacing";
 import * as human from "./human";
 import { followersFromText, hasInstagramSession, looksBlocked, looksLoggedOut, skipComment } from "./parse";
@@ -118,53 +118,69 @@ export class PlaywrightInstagram implements InstagramDriver {
     return [`Profile header:\n${header}`, alts.length ? `Recent posts (image descriptions):\n- ${alts.join("\n- ")}` : ""].filter(Boolean).join("\n\n");
   }
 
-  async warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>): Promise<WarmUpResult> {
-    const page = await this.go(account, `https://www.instagram.com/${handle}/`);
-    const links = await page.locator('a[href*="/p/"], a[href*="/reel/"]').evaluateAll((els) => [...new Set(els.map((e) => (e as HTMLAnchorElement).href))]);
-    const result: WarmUpResult = { likes: 0, comments: 0, followed: false };
-    for (const url of links.slice(0, pieces)) {
-      await page.goto(url, { waitUntil: "domcontentloaded" });
-      await human.look(page);
-      await this.guard(page);
-      const caption = (await page.locator("main h1, article h1").first().innerText().catch(() => "")) || (await page.title());
-      const like = page.locator('svg[aria-label="Like"]').first();
-      if (await like.count()) { await human.click(page, like); result.likes++; await human.wait("afterLike"); }
-      if (!skipComment(caption)) {
-        const box = page.locator('textarea[aria-label*="comment" i], textarea[placeholder*="comment" i]').first();
-        if (await box.count()) {
-          const text = await makeComment(`@${handle}: ${caption.slice(0, 400)}`);
-          await human.wait("beforeComment");
-          await human.click(page, box); await human.type(page, text);
-          await human.wait("beforeSend"); await page.keyboard.press("Enter");
-          await human.wait("read");
-          if (await page.getByText(text.slice(0, 20)).count()) result.comments++;
-          else throw new InstagramBlockedError("Comment did not post. Instagram may be limiting this account.");
+  async warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue = () => true): Promise<WarmUpResult> {
+    const check = () => { if (!mayContinue()) throw new Error("Campaign preparation was stopped."); };
+    check();
+    let attempted = false;
+    try {
+      const page = await this.go(account, `https://www.instagram.com/${handle}/`);
+      const links = await page.locator('a[href*="/p/"], a[href*="/reel/"]').evaluateAll((els) => [...new Set(els.map((e) => (e as HTMLAnchorElement).href))]);
+      const result: WarmUpResult = { likes: 0, comments: 0, followed: false };
+      for (const url of links.slice(0, pieces)) {
+        check();
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+        await human.look(page);
+        await this.guard(page);
+        const caption = (await page.locator("main h1, article h1").first().innerText().catch(() => "")) || (await page.title());
+        const like = page.locator('svg[aria-label="Like"]').first();
+        if (await like.count()) { check(); attempted = true; await human.click(page, like); result.likes++; await human.wait("afterLike"); }
+        if (!skipComment(caption)) {
+          const box = page.locator('textarea[aria-label*="comment" i], textarea[placeholder*="comment" i]').first();
+          if (await box.count()) {
+            const text = await makeComment(`@${handle}: ${caption.slice(0, 400)}`);
+            await human.wait("beforeComment");
+            check();
+            await human.click(page, box); check(); await human.type(page, text);
+            await human.wait("beforeSend"); check(); attempted = true; await page.keyboard.press("Enter");
+            await human.wait("read");
+            if (await page.getByText(text.slice(0, 20)).count()) result.comments++;
+            else throw new InstagramBlockedError("Comment did not post. Instagram may be limiting this account.");
+          }
         }
+        await human.wait("betweenPieces");
       }
-      await human.wait("betweenPieces");
+      // Follow is always last.
+      check();
+      await page.goto(`https://www.instagram.com/${handle}/`, { waitUntil: "domcontentloaded" });
+      await human.wait("read");
+      const follow = page.getByRole("button", { name: "Follow", exact: true }).first();
+      if (await follow.count()) { check(); attempted = true; await human.click(page, follow); await human.wait("read"); }
+      result.followed = (await page.getByRole("button", { name: /^(Following|Requested)$/ }).count()) > 0;
+      return result;
+    } catch (error) {
+      if (attempted) throw new InstagramWarmupUncertainError(error instanceof InstagramBlockedError);
+      throw error;
     }
-    // Follow is always last.
-    await page.goto(`https://www.instagram.com/${handle}/`, { waitUntil: "domcontentloaded" });
-    await human.wait("read");
-    const follow = page.getByRole("button", { name: "Follow", exact: true }).first();
-    if (await follow.count()) { await human.click(page, follow); await human.wait("read"); }
-    result.followed = (await page.getByRole("button", { name: /^(Following|Requested)$/ }).count()) > 0;
-    return result;
   }
 
-  async sendMessages(account: IgAccount, handle: string, parts: string[]): Promise<void> {
+  async sendMessages(account: IgAccount, handle: string, parts: string[], mayContinue = () => true): Promise<void> {
+    const check = () => { if (!mayContinue()) throw new Error("Message sending was stopped."); };
+    check();
     const page = await this.go(account, `https://www.instagram.com/${handle}/`);
     const open = page.getByRole("button", { name: "Message", exact: true }).first();
     if (!(await open.count())) throw new Error(`@${handle} has no Message button`);
+    check();
     await human.click(page, open);
     const box = page.locator('[role="textbox"][aria-label^="Message"], div[contenteditable="true"][aria-label^="Message"]').first();
     await box.waitFor({ timeout: 20_000 }).catch(() => { throw new Error(`Chat with @${handle} did not open`); });
     let sendAttempted = false;
     try {
       for (const part of parts) {
+        check();
         await human.click(page, box);
         await human.type(page, part);
         await sleep(Math.max(1000, humanDelayMs("beforeSend", Math.random)));   // never under 1 second, or two messages can merge into one
+        check();
         sendAttempted = true;
         await page.keyboard.press("Enter");
         await human.wait("betweenParts");

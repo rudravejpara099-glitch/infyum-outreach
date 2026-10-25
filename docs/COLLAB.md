@@ -1434,3 +1434,38 @@ NOT verified: public remote customer Instagram onboarding, per-company provider 
 Decisions made: original signed-in Chrome and host API credentials never become another company's connection. Private workspace default; optional invitation-only shared team; original billing-owner designation stays separate from workspace owner. Old stateless cookies require normal sign-in once. Next migration free is 7. All owner data/settings and approval/spending boundaries remain.
 Needs from you: review the separate workspace PR; no input blocks the completed no-spend implementation. Public/live proof remains on the completion checklist.
 Next I will: publish this branch and PR, preserve both backups, and leave the app available without starting outreach.
+
+
+### [2026-10-24] Codex #182: Connect the customer's own browser
+Changed: claim `feat/customer-connection` from PR #14 head 893ca88. Owner instructs us to make the product usable by an ordinary external customer. Claim migration 7 for workspace-scoped device pairing and durable remote browser commands. First fix: AccountInstagramDriver currently drops the runner's mayContinue callback; forward and regression-test it. Build customer-side outbound-only connector using existing TypeScript/Chrome driver, with no cookie/password transfer or exposed Chrome debugging port.
+Verified: branch clean, git pull current; host-local launch and Meta API's inability to start cold DMs checked from code and Meta's documentation. No outreach deployment exists in connected Vercel account (only separate infyum-site; untouched).
+NOT verified: connector implementation, customer-device distribution, public deployment or live sends.
+Decisions made: retain approvals, no-spend, limits/warning stops, first-reply handoff and company isolation; paired devices never inherit host credentials. Existing Mac remains unchanged while code is verified separately. No new paid service or provider call.
+Needs from you: none for implementation under owner's explicit backend takeover/delegation. Public exposure/install permissions will remain normal product authorization steps.
+Next I will: implement scoped pairing, command transport, customer connector and honest connection status; verify with disposable data.
+
+### [2026-10-24] Codex #183: No-spend automatic-writing option
+Changed: bounded extension of customer-connection work: optional loopback-only Ollama model adapter using the existing AI contract. Paid Anthropic behavior stays intact. A local writing service is necessary so automatic drafting can work without paid API calls or anyone's personal Claude subscription. No model/provider call will run on real leads during verification. Customer connector packaging uses the already-installed esbuild build dependency; package metadata will declare it directly for reproducible builds.
+Verified: customer connector package builds offline without owner data/credentials; generated app is unsigned pilot distribution. Code/API tests are in progress.
+NOT verified: local model availability/quality or independent customer installation.
+Decisions made: local inference has zero external API spend and no paid fallback; no fabricated usage bill, no relaxation of content/approval/daily-limit rules.
+Needs from you: none for no-spend implementation. Any necessary model download remains a free local installation, not a paid service or personal subscription.
+Next I will: check hardware, validate local model with synthetic inputs, then verify the complete no-spend code flow before rollout.
+
+
+### [2026-10-25] Codex #184: Finish customer connection and real local writing verification
+Changed: continuing existing uncommitted `feat/customer-connection` work; no rewrite. Backend, companion packaging and onboarding agents complete scoped work in parallel. Fixing a discovered prompt conflict: warm-up comments currently use a system instruction demanding JSON and forbidding emojis, conflicting with their required plain-text/emoji format. Use a separate comment system instruction while preserving all business/comment rules.
+Verified: baseline 542 tests and typecheck pass before these final fixes; branch base refreshed explicitly from origin/feat/self-service-workspaces (new local branch has no upstream yet). Installed the official Ollama runtime in ignored local app data; loopback only, cloud explicitly disabled. Downloading an official local model for synthetic tests only. No paid API or Instagram write.
+NOT verified: real local draft generation, complete new connector browser flow and independent customer installation. This Mac has zero Developer ID signing identities, so signed/notarized public distribution cannot be claimed.
+Decisions made: preserve no-spend, approvals, tenant/profile isolation and first-reply scope; no paid fallback or personal Claude subscription.
+Needs from you: none for implementation/test completion.
+Next I will: finish these bounded fixes, test synthetic real model generation and website/device round trip, then publish accurate evidence and remaining external release requirements.
+
+
+### [2026-10-25] Codex #185: Deliver customer connection and verified free local drafts
+Changed: finished `feat/customer-connection` on PR #14 base. Migration 7; scoped device pairing/commands/callbacks, remote driver and cancellation forwarding, recoverable account rebinding, three-step Accounts onboarding, packaged customer helper, local-only AI adapter, bounded comment repair and explicit sender prompt, regression/browser tests and current HANDOFF/audit. Declared existing esbuild directly for reproducible offline packaging. Enabled verified `qwen2.5:7b` locally, no paid fallback.
+Verified: 585 tests / 75 files, typecheck, lint, production Webpack build, UI smoke, fake billing smoke, company/device HTTP browser proof, actual packaged executable startup/permission/cancel/quit checks, and real synthetic local generation (10 seconds: comment, pending three-part draft, follow-up; zero paid usage/sends). All live data/configuration preserved with pre-update complete backup. No worker or social write started.
+NOT verified: independent customer install (unsigned/not notarized Apple silicon pilot; no Developer ID identity), actual new-device Instagram connection, real first-contact/fresh-reply handoff, public deployment or paid services. Owner app sign-in pending for live browser proof. Earlier small models failed; no false success claim or validation relaxation.
+Decisions made: no personal Claude subscription, no money spent, no paid fallback, no owner cookies/profile sharing, approval and first-reply scope retained. Next migration free is 8. Signed public distribution is an external release requirement; no macOS security bypass.
+Needs from you: no implementation ACK required under the owner's takeover authorization. Live app sign-in and eventual exact in-app approval are normal product/user steps; signed distribution requires an authorized signing identity.
+Next I will: publish this reviewable branch/PR and leave the app available with outreach stopped; complete actual live proof when the required sign-in and approval exist.

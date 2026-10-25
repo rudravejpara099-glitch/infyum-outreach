@@ -14,6 +14,7 @@ import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { stageCopy } from "@/lib/ui/copy";
 import { activityLabel } from "@/lib/ui/copy";
 import { automaticWritingCopy, failedWorkCopy, runningWorkerCopy } from "@/lib/ui/worker-status-copy";
+import { getWritingReadiness } from "@/lib/services/writing-readiness";
 import { PageHeader, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,8 @@ export default async function Dashboard() {
   const timeZone = getSetting(db, "team_timezone") ?? "America/New_York";
   const d = dashboardData(db, dateInTimeZone(new Date(), timeZone), timeZone);
   const failedCopy = failedWorkCopy(d.failedJobTypes);
-  const writingCopy = automaticWritingCopy(user.hostChromeAllowed && Boolean(process.env.ANTHROPIC_API_KEY), d.stages.warmed ?? 0);
+  const writing = await getWritingReadiness(user.hostChromeAllowed);
+  const writingCopy = writing.provider !== "anthropic" ? writing.detail : automaticWritingCopy(writing.available, d.stages.warmed ?? 0);
   const recent = d.recentActivity;
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
@@ -61,7 +63,7 @@ export default async function Dashboard() {
         </ol>
       </section>
       {writingCopy && <section className="card mb-4 p-4" aria-labelledby="automatic-writing-title">
-        <h2 id="automatic-writing-title" className="font-semibold">Automatic message drafts are off</h2>
+        <h2 id="automatic-writing-title" className="font-semibold">{writing.title}</h2>
         <p className="mt-1 text-sm text-muted">{writingCopy}</p>
         <Link href="/settings" className="mt-2 inline-block text-sm text-accent underline">See AI setup in Settings</Link>
       </section>}

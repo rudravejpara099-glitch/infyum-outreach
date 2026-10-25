@@ -1,0 +1,63 @@
+import { afterEach, beforeEach, expect, it } from "vitest";
+import { openDb, type Db } from "@/lib/db/core";
+import { createUser } from "@/lib/db/repos/users";
+import { createWorkspace, createInvite, acceptInvite, removeMember } from "@/lib/workspaces/catalog";
+import { createPairing, exchangePairing, authenticateDevice, listDevices, revokeDevice, touchDevice } from "@/lib/connectors/catalog";
+let db: Db;
+let owner: number;
+let member: number;
+let other: number;
+let workspace: string;
+beforeEach(() => {
+  db = openDb(":memory:");
+  owner = createUser(db, "owner@example.com", "Owner", "hash").id;
+  member = createUser(db, "member@example.com", "Member", "hash").id;
+  other = createUser(db, "other@example.com", "Other", "hash").id;
+  workspace = createWorkspace(db, owner, "Private").id;
+  acceptInvite(db, member, createInvite(db, owner, workspace, "member@example.com"));
+});
+afterEach(() => db.close());
+it("exchanges a one-use expiring code for a hashed revocable workspace credential", () => {
+  const code = createPairing(db, owner, workspace, 1000);
+  const { device, token } = exchangePairing(db, code, "My Mac", 2000);
+  expect(authenticateDevice(db, token)).toEqual(device);
+  expect(() => exchangePairing(db, code, "Other")).toThrow();
+  expect(authenticateDevice(db, code)).toBeNull();
+  const tokens = db.prepare("SELECT token_hash FROM paired_devices").get() as { token_hash: string };
+  expect(tokens.token_hash).not.toBe(token);
+  expect(tokens.token_hash).toMatch(/^[a-f0-9]{64}$/);
+  touchDevice(db, device.id, 3000);
+  expect(listDevices(db, workspace)[0].lastSeen).toBe(3000);
+  expect(Object.keys(listDevices(db, workspace)[0]).sort()).toEqual(["id", "label", "lastSeen", "userId", "workspaceId"]);
+  revokeDevice(db, owner, workspace, device.id);
+  expect(authenticateDevice(db, token)).toBeNull();
+});
+it("rejects expired codes, malformed credentials, outsider pairing and invalid labels", () => {
+  const code = createPairing(db, owner, workspace, 0);
+  expect(() => exchangePairing(db, code, "Mac", 300_000)).toThrow();
+  expect(() => exchangePairing(db, "bad", "Mac")).toThrow();
+  expect(() => createPairing(db, other, workspace)).toThrow();
+  const current = createPairing(db, owner, workspace);
+  expect(() => exchangePairing(db, current, "\nsecret")).toThrow();
+  expect(authenticateDevice(db, "bad")).toBeNull();
+});
+it("keeps companies separate and permits only device owner or workspace owner revocation", () => {
+  const second = createWorkspace(db, other, "Other company").id;
+  const mine = exchangePairing(db, createPairing(db, owner, workspace), "Owner's Mac");
+  expect(listDevices(db, second)).toEqual([]);
+  expect(() => revokeDevice(db, other, second, mine.device.id)).toThrow();
+  expect(() => revokeDevice(db, member, workspace, mine.device.id)).toThrow();
+  const own = exchangePairing(db, createPairing(db, member, workspace), "Member's Mac");
+  revokeDevice(db, member, workspace, own.device.id);
+  expect(authenticateDevice(db, own.token)).toBeNull();
+  expect(authenticateDevice(db, mine.token)).not.toBeNull();
+});
+it("permanently revokes removed members and invalidates their outstanding codes on rejoin", () => {
+  const pending = createPairing(db, member, workspace);
+  const paired = exchangePairing(db, createPairing(db, member, workspace), "Mac");
+  removeMember(db, owner, workspace, member);
+  expect(authenticateDevice(db, paired.token)).toBeNull();
+  acceptInvite(db, member, createInvite(db, owner, workspace, "member@example.com"));
+  expect(authenticateDevice(db, paired.token)).toBeNull();
+  expect(() => exchangePairing(db, pending, "Mac")).toThrow();
+});
