@@ -1,3 +1,7 @@
+# Pilot follow-up — 2026-10-25
+
+591 tests, typecheck/lint, production build, UI smoke and workspace/device browser smoke pass. Chrome first-permission allowance and automatic Accounts feedback are fixed; campaign guidance correctly recognizes verified free local writing. Owner authorized preparation for exactly three existing pilot prospects with DM approval ON and no paid calls. Campaign and worker started through the real app after fresh no-send checks. Preparation jobs #49–51 are scheduled for 26 October 09:42 IST. The persistent worker’s current Chrome access is denied (#52); owner setup is pending because browser security policy blocks automating that internal Chrome page. No preparation/send or paid call has run. Keep public-release/live first-contact claims unverified. See newest HANDOFF entry for exact state.
+
 # Customer connection update — 2026-10-25
 
 Implemented private customer-device pairing, durable remote browser commands, guided Accounts onboarding, packaged Apple silicon Mac helper, and free server-side local writing. Verified with 585 tests, typecheck/lint/build, isolated website/device browser flow, UI and simulated billing checks, packaged-app startup, and real local synthetic inference. The actual local draft remained pending approval; zero sends and zero paid calls.

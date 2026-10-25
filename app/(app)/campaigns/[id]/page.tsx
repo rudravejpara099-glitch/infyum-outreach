@@ -16,12 +16,14 @@ import { campaignHistory } from "@/lib/queries/campaign-history";
 import { validTimeZone } from "../../settings/validation";
 import { messageKindLabel } from "@/lib/ui/copy";
 import { CAMPAIGN_STATUS_LABEL } from "@/components/campaign-status";
+import { campaignWritingGuidance } from "@/lib/domain/campaign-writing-guidance";
+import { getWritingReadiness } from "@/lib/services/writing-readiness";
 import { campaignSendBlockers, chromeWarmupNotice } from "@/lib/ui/campaign-send-readiness";
 
 export const dynamic = "force-dynamic";
 
 export default async function CampaignPage({ params }: PageProps<"/campaigns/[id]">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
   const db = (await getDb());
@@ -33,6 +35,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   const selected = campaignAccountIds(db, campaign.id);
   const senderBlockers = campaignSendBlockers(accounts, selected);
   const warmupNotice = chromeWarmupNotice(accounts, selected, overview.stages.qualified ?? 0);
+  const writingGuidance = warmupNotice ? campaignWritingGuidance(await getWritingReadiness(user.hostChromeAllowed)) : "";
   const next = campaign.status === "active" ? { to: "paused", label: "Pause campaign" } : { to: "active", label: campaign.status === "draft" ? "Start campaign" : "Resume campaign" };
   const cap = getSetting(db, "apify_monthly_cap_usd");
   const savedZone = getSetting(db, "team_timezone") ?? "America/New_York";
@@ -68,8 +71,8 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     </div>}
     {warmupNotice && <div className="card mb-4 border-warn bg-warn/5 p-4 text-sm" role="status">
       <p className="font-medium">Matched leads need preparation</p>
-      <p className="mt-1">{warmupNotice.matchedLeadCount === 1 ? "This matched lead needs" : `These ${warmupNotice.matchedLeadCount} matched leads need`} Instagram activity before Outreach can prepare a first message. Signed-in Chrome supports this step. Automatic comments and drafts require a connected writing service and an approved spending limit.</p>
-      <p className="mt-2 text-muted">To work without paid AI, complete the engagement on Instagram, open the lead and mark it Engaged, then write its three-part message. It will wait for your approval.</p>
+      <p className="mt-1">{warmupNotice.matchedLeadCount === 1 ? "This matched lead needs" : `These ${warmupNotice.matchedLeadCount} matched leads need`} Instagram activity before Outreach can prepare a first message. Signed-in Chrome supports this step.</p>
+      <p className="mt-2 text-muted">{writingGuidance}</p>
       <Link href="/settings" className="mt-2 inline-flex underline">Review writing setup</Link>
     </div>}
     <section className="audience-summary" aria-labelledby="audience-title">

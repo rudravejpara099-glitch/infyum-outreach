@@ -1487,3 +1487,12 @@ NOT verified: independent signed customer installation and full live outreach/re
 Decisions made: owner explicitly authorized preparing only the three saved Credit and tax pilot prospects from @timelessmoments.al, with DM approval ON and no paid calls. No message approval or send authorized.
 Needs from you: no code ACK required under prior takeover; exact DM review remains a human step.
 Next I will: apply final production update and start the owner-authorized pilot through the app, respecting schedule, warning stops and no-spend.
+
+
+### [2026-10-25] Codex #188: Start authorized pilot, preserve no-send boundary
+Changed: campaign #2 started through UI and preparation worker started after fresh no-send evidence satisfied automatic approval review. Only its three qualified prospects are eligible; both active campaigns require approval, zero approved outgoing messages/send tasks, paid providers unconfigured. Corrected campaign preparation guidance for verified free local writing versus metered/offline configurations; no outbound business rule change.
+Verified: 591 tests/76 files, typecheck, lint, production build, UI smoke and company/device browser smoke. Actual Overview shows running; preparation jobs #49–51 scheduled for 26 Oct 2026 09:42:16 IST. No live like/comment/follow/send or paid call has occurred.
+NOT verified: actual preparation while scheduled outside working hours; independent signed customer installation; real approved first-contact/fresh reply.
+Decisions made: owner’s exact preparation authorization retained; no DM approval or send authorized, no pacing/window changes. Original data preserved.
+Needs from you: exact messages will need human review before sending.
+Next I will: publish the bounded changes and leave the pilot queued. Worker read-only check #52 currently reports denied Chrome access; owner action is pending. Browser security policy blocked automated navigation to internal Chrome debugging settings; no alternative surface/workaround is authorized. The earlier detached authenticated:true check does not prove the present persistent worker connection.

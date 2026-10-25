@@ -221,7 +221,8 @@ try {
   await page.getByRole("status").filter({ hasText: "Matched leads need preparation" }).waitFor();
   await page.getByText(/This matched lead needs Instagram activity before Outreach can prepare a first message/).waitFor();
   await page.getByText(/Signed-in Chrome supports this step/).waitFor();
-  await page.getByText(/To work without paid AI, complete the engagement on Instagram/).waitFor();
+  await page.getByText(/Ask your workspace administrator to connect free writing or metered AI/).waitFor();
+  await page.getByText(/After real engagement, you can also mark the lead Engaged/).waitFor();
   await page.getByRole("link", { name: "Review writing setup", exact: true }).waitFor();
   for (const mode of ["light", "dark"]) {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
