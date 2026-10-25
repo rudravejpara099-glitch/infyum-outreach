@@ -25,6 +25,10 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
+## Connection reliability follow-up — 2026-10-25
+
+First Chrome permission connection now allows three minutes; subsequent browser requests retain their one-minute deadline. A failed first permission attempt is not automatically retried, and an explicit retry still gets the permission allowance. Browser response timeouts now have a safe, specific next step without exposing local paths. Accounts automatically refreshes only while its latest saved-account sign-in is queued/running, pauses while hidden, and stops refreshing after completion. Verified: 587 tests, typecheck/lint, isolated production build, real browser UI smoke proving Connected appears without manual reload and polling stops, and rebuilt packaged-helper verification. No migration or dependency added. The owner approved preparation ONLY for Credit and tax pilot’s three saved prospects (@amigonotarytax, @chieftaxstrategist, @dream_team_consulting_llc) from @timelessmoments.al; DMs must remain awaiting review, no paid calls. Live preparation outcome will be recorded separately.
+
 ## Customer connection and free writing — 2026-10-25
 
 - Branch `feat/customer-connection`, based on PR #14 (`893ca88`). Extends the existing workspace implementation; does not rewrite the app. Append-only migration **7** adds device pairing and durable browser commands; next free migration is **8**. New companies connect their own Chrome through Accounts → Connect my Chrome, without receiving the operator's profile, cookies, passwords or paid credentials.

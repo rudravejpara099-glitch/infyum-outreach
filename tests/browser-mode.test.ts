@@ -22,6 +22,9 @@ describe("signed-in Chrome mode", () => {
   it("gives a safe next step for Chrome connection failures without showing local paths", () => {
     expect(loginCheckFailure("Could not connect to Chrome (403) at /Users/private/Chrome")).toContain("permission prompt");
     expect(loginCheckFailure("Instagram showed a human check")).toContain("Instagram needs you to review");
+    expect(loginCheckFailure("MCP error -32001: Request timed out at /Users/private/Chrome")).toBe("Instagram took too long to respond. Check that Instagram loads in Chrome, then try again from Accounts.");
+    expect(loginCheckFailure("remote debugging request timed out")).toContain("permission prompt");
+    expect(loginCheckFailure("human check timed out")).toContain("Instagram needs you to review");
     expect(loginCheckFailure("unexpected page error")).toBe("The sign-in check could not finish. Try again from Accounts.");
   });
 

@@ -4,6 +4,7 @@ import { getIdentityDb } from "@/lib/workspaces/storage";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth/dal";
 import { ActionForm } from "@/components/action-form";
+import { AccountSignInRefresh } from "@/components/account-sign-in-refresh";
 import { workerStatus } from "@/lib/queries/worker-status";
 import { config } from "@/lib/config";
 import { listAccounts } from "@/lib/db/repos/accounts";
@@ -32,6 +33,10 @@ export default async function AccountsPage() {
   const devices = listDevices(getIdentityDb(), user.workspaceId);
   const loginJobs = db.prepare("SELECT id,account_id,status,last_error,payload FROM jobs j WHERE type='open_login' AND account_id IS NOT NULL AND id=(SELECT MAX(j2.id) FROM jobs j2 WHERE j2.type='open_login' AND j2.account_id=j.account_id)").all() as { id: number; account_id: number; status: Job["status"]; last_error: string; payload: string }[];
   const loginJobByAccount = new Map(loginJobs.map((job) => [job.account_id, { id: job.id, status: job.status, lastError: job.last_error, payload: JSON.parse(job.payload) as Record<string, unknown> }]));
+  const pendingSignIn = accounts.some(account => {
+    const status = loginJobByAccount.get(account.id)?.status;
+    return status === "queued" || status === "running";
+  });
   const inboxEvidence = db.prepare(`SELECT account_id,
     MAX(CASE WHEN status='done' AND last_error='' THEN id ELSE 0 END) latest_success,
     MAX(CASE WHEN status='failed' THEN id ELSE 0 END) latest_failure
@@ -39,6 +44,7 @@ export default async function AccountsPage() {
   const inboxEvidenceByAccount = new Map(inboxEvidence.map((row) => [row.account_id, row]));
   return (
     <>
+      {pendingSignIn && <AccountSignInRefresh />}
       <PageHeader title="Instagram accounts" sub="Sign in yourself in your existing Chrome or a separate sign-in window. Outreach never sees your password." />
       {!user.hostChromeAllowed && <section className="card mb-6 p-5"><h2 className="font-semibold">Connect Instagram on your computer</h2><p className="my-2 text-sm text-muted">Use your own signed-in Chrome. The sign-in stays on your device.</p><Link className="btn btn-primary" href="/accounts/connect">Connect my Chrome</Link></section>}
       {user.hostChromeAllowed && <ActionForm action={connectAccount} className="card mb-6 flex flex-wrap items-end gap-3 p-4">

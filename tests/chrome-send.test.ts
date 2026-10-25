@@ -61,7 +61,36 @@ describe("signed-in Chrome DM driver", () => {
 
     await expect(driver.openLogin(owner)).resolves.toBe(true);
 
-    expect(callTool.mock.calls.map(([, , options]) => options?.timeout)).toEqual([60_000, 60_000]);
+    expect(callTool.mock.calls.map(([, , options]) => options?.timeout)).toEqual([180_000, 60_000]);
+  });
+
+  it("keeps normal request deadlines after the first browser permission connection", async () => {
+    const callTool = vi.fn(async ({ name }: { name: string }, _extra?: unknown, options?: { timeout?: number }) => {
+      void options;
+      if (name === "list_pages") return { structuredContent: { pages: [{ id: 7, url: "https://www.instagram.com/owner/" }] } };
+      return result(JSON.stringify({ allowed: true, loggedIn: true }));
+    });
+    const driver = new ChromeInstagram({ callTool, close: vi.fn() } as unknown as Client);
+    await expect(driver.openLogin(owner)).resolves.toBe(true);
+    await expect(driver.openLogin(owner)).resolves.toBe(true);
+    expect(callTool.mock.calls.map(([, , options]) => options?.timeout)).toEqual([180_000, 60_000, 60_000, 60_000]);
+  });
+
+  it("still allows permission time after a failed first connection without automatically retrying it", async () => {
+    let attempts = 0;
+    const callTool = vi.fn(async ({ name }: { name: string }, _extra?: unknown, options?: { timeout?: number }) => {
+      void options;
+      if (name === "list_pages") {
+        if (++attempts === 1) throw new Error("MCP error -32001: Request timed out");
+        return { structuredContent: { pages: [{ id: 7, url: "https://www.instagram.com/owner/" }] } };
+      }
+      return result(JSON.stringify({ allowed: true, loggedIn: true }));
+    });
+    const driver = new ChromeInstagram({ callTool, close: vi.fn() } as unknown as Client);
+    await expect(driver.openLogin(owner)).rejects.toThrow("Allow remote debugging?");
+    expect(callTool).toHaveBeenCalledTimes(1);
+    await expect(driver.openLogin(owner)).resolves.toBe(true);
+    expect(callTool.mock.calls.map(([, , options]) => options?.timeout)).toEqual([180_000, 180_000, 60_000]);
   });
 
   it("turns a pending Chrome approval timeout into a clear next step", async () => {

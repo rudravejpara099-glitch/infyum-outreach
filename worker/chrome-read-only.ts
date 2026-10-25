@@ -13,6 +13,7 @@ import { INBOX_LOADING_ERROR, inboxIdentityUrl, inboxItemFromToolResult, inboxLi
 type Page = { id: number; url: string };
 type ToolTextResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
 const CHROME_REQUEST_TIMEOUT_MS = 60_000;
+const CHROME_PERMISSION_TIMEOUT_MS = 180_000;
 export function ensureChromeToolSucceeded<T extends ToolTextResult>(result: T, fallback: string): T {
   if (!result.isError) return result;
   const details = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
@@ -72,6 +73,7 @@ export function instagramLoginCheckScript(handle: string): string {
 export class ChromeInstagram implements InstagramDriver {
   private client?: Client;
   private transport?: StdioClientTransport;
+  private browserConnected = false;
   constructor(testClient?: Client, private readonly pause: (kind: DelayKind) => Promise<void> = async kind => {
     await new Promise(resolve => setTimeout(resolve, humanDelayMs(kind, Math.random)));
   }) { this.client = testClient; }
@@ -99,7 +101,7 @@ export class ChromeInstagram implements InstagramDriver {
   private async pages(): Promise<Page[]> {
     let response: ToolTextResult & { structuredContent?: { pages?: Page[]; message?: string } };
     try {
-      response = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as typeof response;
+      response = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }, undefined, { timeout: this.browserConnected ? CHROME_REQUEST_TIMEOUT_MS : CHROME_PERMISSION_TIMEOUT_MS }) as typeof response;
     } catch (error) {
       if (error instanceof Error && /MCP error -32001|request timed out/i.test(error.message)) {
         throw new Error("Chrome did not finish connecting. Check the signed-in Chrome window for an “Allow remote debugging?” prompt, approve it, then retry.");
@@ -107,6 +109,7 @@ export class ChromeInstagram implements InstagramDriver {
       throw error;
     }
     const result = ensureChromeToolSucceeded(response, "Chrome could not list its open pages.");
+    this.browserConnected = true;
     if (result.structuredContent?.pages?.length) return result.structuredContent.pages.map((page) => ({ id: Number(page.id), url: page.url })).filter((page) => Number.isSafeInteger(page.id));
     const text = result.content?.filter((part) => part.type === "text").map((part) => part.text).join("\n") ?? "";
     return [...text.matchAll(/(?:^|\n)\s*(\d+):\s*(.*?)\s+\((https?:\/\/[^)]+)\)/g)].map((m) => ({ id: Number(m[1]), url: m[3].trim() }));
@@ -314,5 +317,5 @@ export class ChromeInstagram implements InstagramDriver {
       throw error;
     }
   }
-  async close(): Promise<void> { await this.client?.close(); await this.transport?.close(); this.client = undefined; this.transport = undefined; }
+  async close(): Promise<void> { await this.client?.close(); await this.transport?.close(); this.client = undefined; this.transport = undefined; this.browserConnected = false; }
 }

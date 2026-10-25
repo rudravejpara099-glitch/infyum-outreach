@@ -1469,3 +1469,21 @@ NOT verified: independent customer install (unsigned/not notarized Apple silicon
 Decisions made: no personal Claude subscription, no money spent, no paid fallback, no owner cookies/profile sharing, approval and first-reply scope retained. Next migration free is 8. Signed public distribution is an external release requirement; no macOS security bypass.
 Needs from you: no implementation ACK required under the owner's takeover authorization. Live app sign-in and eventual exact in-app approval are normal product/user steps; signed distribution requires an authorized signing identity.
 Next I will: publish this reviewable branch/PR and leave the app available with outreach stopped; complete actual live proof when the required sign-in and approval exist.
+
+
+### [2026-10-25] Codex #186: Resume bounded connection reliability fixes
+Changed: claiming the observed first-connection permission timeout and stale Accounts status after detached sign-in. Root owns Chrome timeout/error mapping; onboarding agent owns pending-only Accounts refresh and tests. No shipped migration or business/outbound rule changes.
+Verified: feature branch clean and git pull current; app responds HTTP 200; last actual sign-in #48 authenticated:true. No prepared leads or approved outgoing messages exist. This Mac still has no Developer ID signing identity.
+NOT verified: independent customer installation or approved live outreach/reply flow.
+Decisions made: preserve no-spend, approval ON, existing Chrome profile, first-reply handoff and warning stops. No live action authorized by the word resume; prepare a reviewable test before asking for specific social-action approval.
+Needs from you: no ACK under owner-authorized takeover; eventual live warm-up/send still requires exact owner approval.
+Next I will: fix these two observed failures, verify with disposable data, and update this branch and handoff.
+
+
+### [2026-10-25] Codex #187: Finish permission-wait and Accounts feedback fixes
+Changed: first browser permission request allows 180 seconds; normal requests stay 60 seconds. Failed permission is not replayed automatically; timeout mapping preserves warnings/permission priority and hides paths. Latest pending sign-in mounts a visibility-aware Accounts refresh which unmounts on completion. No migration/dependency.
+Verified: 587 tests, typecheck, lint, isolated production build, UI browser smoke proving automatic Connected status and stopped polling, responsive visual review, rebuilt packaged helper startup checks.
+NOT verified: independent signed customer installation and full live outreach/reply flow.
+Decisions made: owner explicitly authorized preparing only the three saved Credit and tax pilot prospects from @timelessmoments.al, with DM approval ON and no paid calls. No message approval or send authorized.
+Needs from you: no code ACK required under prior takeover; exact DM review remains a human step.
+Next I will: apply final production update and start the owner-authorized pilot through the app, respecting schedule, warning stops and no-spend.
