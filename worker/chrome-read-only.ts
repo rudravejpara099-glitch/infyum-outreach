@@ -117,7 +117,15 @@ export class ChromeInstagram implements InstagramDriver {
   private async openProfile(account: IgAccount, handle = account.handle): Promise<{ pageId: number; url: string }> {
     const client = await this.connect();
     const url = instagramProfileUrl(handle);
-    let page = bindInstagramPage(await this.pages(), handle);
+    const pages = await this.pages();
+    let page = bindInstagramPage(pages, handle);
+    // A new tab opens in whichever Chrome profile window was used last, which may not be the signed-in one.
+    // Reuse the tab already showing the signed-in account's own profile and visit the lead from there.
+    const ownerTab = !page && handle.replace(/^@/, "").toLowerCase() !== account.handle.toLowerCase() ? bindInstagramPage(pages, account.handle) : null;
+    if (ownerTab) {
+      ensureChromeToolSucceeded(await client.callTool({ name: "navigate_page", arguments: { pageId: ownerTab.id, type: "url", url } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
+      return { pageId: ownerTab.id, url };
+    }
     if (!page) {
       // Open in front: Chrome throttles hidden tabs and Instagram barely renders them.
       ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url, background: false } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
@@ -275,9 +283,19 @@ export class ChromeInstagram implements InstagramDriver {
     }
     throw identityError ?? new Error("The saved Instagram account could not be confirmed before reading replies.");
   }
+  /** Leave the shared tab on the signed-in account's profile so the next check finds it there. */
+  private async returnToOwner(account: IgAccount, pageId: number): Promise<void> {
+    try {
+      await (await this.connect()).callTool({ name: "navigate_page", arguments: { pageId, type: "url", url: instagramProfileUrl(account.handle) } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS });
+    } catch { /* The next run opens or finds the profile again. */ }
+  }
   async warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue = () => true): Promise<WarmUpResult> {
     await this.verifyOwner(account);
     const target = await this.openProfile(account, handle);
+    try { return await this.warmUpOn(account, target, pieces, makeComment, mayContinue); }
+    finally { await this.returnToOwner(account, target.pageId); }
+  }
+  private async warmUpOn(account: IgAccount, target: { pageId: number; url: string }, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue: () => boolean): Promise<WarmUpResult> {
     const call = async (name: string, args: Record<string, unknown>, error: string) =>
       ensureChromeToolSucceeded(await (await this.connect()).callTool({ name, arguments: { pageId: target.pageId, ...args } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, error);
     return runChromeWarmup({
@@ -310,6 +328,10 @@ export class ChromeInstagram implements InstagramDriver {
     await this.verifyOwner(account);
     check();
     const target = await this.openProfile(account, handle);
+    try { await this.sendOn(handle, parts, mayContinue, check, target); }
+    finally { await this.returnToOwner(account, target.pageId); }
+  }
+  private async sendOn(handle: string, parts: string[], mayContinue: () => boolean, check: () => void, target: { pageId: number; url: string }): Promise<void> {
     check();
     let snapshot = await this.snapshot(target.pageId);
     await this.clickNamed(target.pageId, snapshot, "button", "Message");
