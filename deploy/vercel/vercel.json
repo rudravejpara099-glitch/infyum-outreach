@@ -4,6 +4,6 @@
   "buildCommand": "",
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/(.*)", "destination": "https://separately-homework-feat-precisely.trycloudflare.com/$1" }
+    { "source": "/(.*)", "destination": "https://olympus-foam-guam-helmet.trycloudflare.com/$1" }
   ]
 }
