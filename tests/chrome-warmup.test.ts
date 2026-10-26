@@ -61,6 +61,12 @@ describe("Chrome campaign preparation", () => {
     expect(write).toHaveBeenCalledTimes(1);
     expect(actions.filter((a) => a.startsWith("comment:"))).toHaveLength(1);
   });
+  it("accepts the comment box as proof of sign-in when a narrow window hides the profile link", async () => {
+    const { browser } = fixture();
+    const read = browser.read;
+    browser.read = vi.fn(async (url: string, comment?: string) => ({ ...(await read(url, comment)), ownerMatches: url === profileUrl, canComment: url !== profileUrl }));
+    await expect(runChromeWarmup(browser, profileUrl, 2, async () => validComment)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
+  });
   it("prepares the profile's posts, confirms each action, and follows last", async () => {
     const { browser, actions } = fixture();
     const write = vi.fn(async () => validComment);

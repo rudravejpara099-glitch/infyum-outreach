@@ -7,6 +7,8 @@ export type WarmupPage = {
   at?: string;
   /** Diagnostics: links to the signed-in account's profile found on the page. */
   ownerLinks?: number;
+  /** Instagram shows the comment box only to a signed-in visitor. */
+  canComment?: boolean;
 };
 
 /**
@@ -91,6 +93,6 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
     const ownerCommented = Array.from(root?.querySelectorAll('a[href]') ?? []).some(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath);
     // Diagnostics only (no personal data): how many links point at the signed-in account anywhere on the page.
     const ownerLinks = Array.from(document.querySelectorAll('a[href]')).filter(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath).length;
-    return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible, ownerCommented, at: location.hostname + location.pathname, ownerLinks };
+    return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible, ownerCommented, at: location.hostname + location.pathname, ownerLinks, canComment: Boolean(input) };
   }`;
 }
