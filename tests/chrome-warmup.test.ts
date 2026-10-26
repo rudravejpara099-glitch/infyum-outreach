@@ -147,7 +147,7 @@ describe("Chrome campaign preparation", () => {
     };
     const state = await runInNewContext(`(${warmupPageScript(profileUrl, "owner")})()`, {
       URL, setTimeout, location: new URL(profileUrl),
-      document: { body: { innerText: "profile" }, querySelector: () => root, querySelectorAll: () => [] },
+      document: { body: { innerText: "profile" }, querySelector: () => root, querySelectorAll: (selector: string) => selector === "a[href]" ? [{ getAttribute: (name: string) => name === "href" ? "/owner/" : "Profile", querySelectorAll: () => [] }] : [] },
     });
     expect(state.postUrls).toEqual(["https://www.instagram.com/p/AbC_123/"]);
   });

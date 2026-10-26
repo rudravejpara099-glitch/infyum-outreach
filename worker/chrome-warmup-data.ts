@@ -58,9 +58,13 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
     const text = document.body?.innerText ?? '';
     const root = document.querySelector('article') ?? document.querySelector('main');
     const ownerPath = ${JSON.stringify(`/${ownerHandle.toLowerCase()}/`)};
-    const ownerMatches = Array.from(document.querySelectorAll('a[href]')).some(a =>
-      a.getAttribute('href')?.toLowerCase() === ownerPath &&
-      (/profile/i.test(a.getAttribute('aria-label') || '') || Array.from(a.querySelectorAll('img')).some(img => /profile picture/i.test(img.alt))));
+    // The signed-in account's own profile link (Instagram's navigation) can render after the page; wait for it.
+    const ownerLinkShown = () => Array.from(document.querySelectorAll('a[href]')).some(a =>
+      a.getAttribute?.('href')?.toLowerCase() === ownerPath &&
+      (/profile/i.test(a.getAttribute?.('aria-label') || '') || Array.from(a.querySelectorAll?.('img') ?? []).some(img => /profile picture/i.test(img.alt))));
+    const ownerBy = Date.now() + 6000;
+    while (!ownerLinkShown() && Date.now() < ownerBy) await new Promise(r => setTimeout(r, 250));
+    const ownerMatches = ownerLinkShown();
     const caption = (root?.querySelector('h1')?.innerText ?? '').trim() ||
       Array.from(root?.querySelectorAll('img[alt]') ?? []).map(img => img.alt).find(alt => alt.length > 20 && !/profile picture/i.test(alt)) || '';
     const postUrls = [...new Set(Array.from(root?.querySelectorAll('a[href]') ?? []).map(a => {
