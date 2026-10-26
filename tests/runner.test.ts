@@ -5,7 +5,7 @@ import { createCampaign, setCampaignAccounts, setCampaignStatus } from "@/lib/db
 import { addLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { approveMessage, approvedQueue, createOutgoing, getMessage, listMessages, markSent } from "@/lib/db/repos/messages";
 import { enqueue, requeueStuck } from "@/lib/db/repos/jobs";
-import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError, type InstagramDriver } from "@/worker/driver";
+import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 import { handleIncoming } from "@/lib/services/outreach";
 
@@ -21,6 +21,7 @@ class FakeDriver implements InstagramDriver {
   blockOnSend = false;
   uncertainOnSend = false;
   errorOnSend = false;
+  alreadyContacted = false;
   async openLogin() { return this.authenticated; }
   async readFacts(account?: unknown) { void account; this.factsRead++; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
@@ -28,6 +29,7 @@ class FakeDriver implements InstagramDriver {
   async sendMessages(_a: unknown, handle: string, parts: string[]) {
     if (this.blockOnSend) throw new InstagramBlockedError("Action blocked");
     if (this.errorOnSend) throw new Error("Chat did not open");
+    if (this.alreadyContacted) throw new AlreadyContactedError(handle);
     this.sent.push({ handle, parts });
     if (this.uncertainOnSend) throw new InstagramSendUncertainError();
   }
@@ -323,6 +325,24 @@ describe("worker pipeline", () => {
     expect(driver.sent).toHaveLength(1);
     expect(listMessages(db, { status: "failed" })[0]).toMatchObject({ status: "failed", kind: "dm" });
     expect((db.prepare("SELECT status,last_error FROM jobs WHERE type='send'").get() as { status: string; last_error: string })).toMatchObject({ status: "failed", last_error: expect.stringContaining("Check the Instagram conversation") });
+  });
+
+  it("never sends a first message into a conversation that already holds our outreach", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "messaged-by-hand", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["A reviewed message"], campaign: { approvalRequired: true } }, "t");
+    approveMessage(db, message.id, "t");
+    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
+    driver.alreadyContacted = true;
+
+    await runOne(deps);
+    planWork(deps);
+
+    expect(driver.sent).toHaveLength(0);
+    expect(getMessage(db, message.id)?.status).toBe("failed");
+    expect(getLead(db, lead.id)?.stage).toBe("dm_sent");
+    expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='send' AND status='queued'").get()).toEqual({ n: 0 });
   });
 
   it("stops fresh send jobs after known pre-send retries are exhausted", async () => {
