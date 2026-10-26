@@ -21,8 +21,10 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
     const state = await browser.read(url, comment);
     if (!state.allowed) throw new Error(`Chrome left the expected Instagram page${state.at ? ` (it was on ${String(state.at).slice(0, 80)})` : ""}.`);
     if (looksBlocked(state.text, url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
-    if (!state.ownerMatches || looksLoggedOut(url, state.text)) {
-      const why = !state.ownerMatches ? `no signed-in profile link (${state.ownerLinks ?? "?"} plain links)` : "a login prompt was shown";
+    // Narrow windows can hide the profile link; the comment box also proves the visitor is signed in.
+    const signedIn = state.ownerMatches || state.canComment === true;
+    if (!signedIn || looksLoggedOut(url, state.text)) {
+      const why = !signedIn ? `no signed-in profile link or comment box (${state.ownerLinks ?? "?"} plain links)` : "a login prompt was shown";
       throw new InstagramBlockedError(`The saved Instagram account is no longer signed in in Chrome (on ${String(state.at ?? url).slice(0, 80)}: ${why}).`);
     }
     return state;
