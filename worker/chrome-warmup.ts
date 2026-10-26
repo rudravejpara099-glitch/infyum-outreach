@@ -10,15 +10,25 @@ export type WarmupBrowser = {
   click(name: string): Promise<void>;
   comment(text: string): Promise<void>;
   wait(kind: DelayKind): Promise<void>;
+  /** Fresh reload of the current page (used once when Instagram stays on its splash). */
+  reload?(): Promise<void>;
 };
 
 /** Uses fresh controls and receipt checks; a partial warm-up is never replayed automatically. */
 export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string, pieces: number,
   makeComment: (context: string) => Promise<string>, mayContinue = () => true): Promise<WarmUpResult> {
   if (!Number.isSafeInteger(pieces) || pieces < 1 || pieces > 10) throw new Error("Warm-up needs 1 to 10 posts.");
+  const reloaded = new Set<string>();
   const check = async (url: string, comment?: string) => {
     if (!mayContinue()) throw new Error("Campaign preparation was stopped.");
-    const state = await browser.read(url, comment);
+    let state = await browser.read(url, comment);
+    // A tab can get stuck on Instagram's splash; one fresh reload usually brings the page.
+    const notLoaded = (page: typeof state) => page.allowed && !page.ownerMatches && page.canComment !== true && page.ownerLinks === 0 && !looksLoggedOut(url, page.text);
+    if (notLoaded(state) && browser.reload && !reloaded.has(url)) {
+      reloaded.add(url);
+      await browser.reload();
+      state = await browser.read(url, comment);
+    }
     if (!state.allowed) throw new Error(`Chrome left the expected Instagram page${state.at ? ` (it was on ${String(state.at).slice(0, 80)})` : ""}.`);
     if (looksBlocked(state.text, url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
     // Narrow windows can hide the profile link; the comment box also proves the visitor is signed in.
