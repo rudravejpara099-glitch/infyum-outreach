@@ -105,12 +105,20 @@ describe("Chrome campaign preparation", () => {
     expect(browser.click).not.toHaveBeenCalledWith("Like");
   });
 
-  it("refuses incomplete post lists and invalid comments before any social action", async () => {
+  it("refuses incomplete post lists before any social action", async () => {
     const { browser } = fixture();
     await expect(runChromeWarmup(browser, profileUrl, 10, async () => validComment)).rejects.toThrow("10 available posts");
-    await expect(runChromeWarmup(browser, profileUrl, 1, async () => "Nice 🙌")).rejects.toThrow("3 to 8 words");
     expect(browser.click).not.toHaveBeenCalled();
     expect(browser.comment).not.toHaveBeenCalled();
+  });
+
+  it("never posts a comment that breaks the rules; that post only gets a like", async () => {
+    const { browser } = fixture();
+    await expect(runChromeWarmup(browser, profileUrl, 1, async () => "Nice 🙌")).resolves.toEqual({ likes: 1, comments: 0, followed: true });
+    expect(browser.comment).not.toHaveBeenCalled();
+    const { browser: other } = fixture();
+    await expect(runChromeWarmup(other, profileUrl, 1, async () => { throw new Error("Comment writing did not return valid text after 3 attempts. Comments need 3 to 8 words."); })).resolves.toEqual({ likes: 1, comments: 0, followed: true });
+    expect(other.comment).not.toHaveBeenCalled();
   });
 
   it("rechecks campaign permission after generating a comment", async () => {
