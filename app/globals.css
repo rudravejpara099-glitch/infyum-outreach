@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./workspace.css";
 @import "./campaign.css";
+@import "./billing.css";
 
 /* Semantic tokens. Company identity is deliberately absent from the interface. */
 :root {

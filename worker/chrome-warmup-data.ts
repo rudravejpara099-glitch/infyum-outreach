@@ -1,0 +1,51 @@
+export type WarmupPage = {
+  allowed: boolean; ownerMatches: boolean; text: string; caption: string;
+  postUrls: string[]; liked: boolean; following: boolean; commentVisible: boolean;
+};
+
+/** Instagram's profile grid includes /handle/p/id links; opening them resolves to /p/id. */
+export function instagramPostUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !["instagram.com", "www.instagram.com"].includes(url.hostname)) return null;
+    const match = url.pathname.match(/^\/(?:[A-Za-z0-9._]+\/)?(p|reel)\/([A-Za-z0-9_-]+)\/?$/);
+    return match ? `https://www.instagram.com/${match[1]}/${match[2]}/` : null;
+  } catch { return null; }
+}
+
+/** Reads only the exact profile/post selected by the driver. Never performs an action. */
+export function warmupPageScript(expectedUrl: string, ownerHandle: string, comment = ""): string {
+  const url = new URL(expectedUrl);
+  if (url.protocol !== "https:" || !["instagram.com", "www.instagram.com"].includes(url.hostname)
+    || !/^\/(?:[a-zA-Z0-9._]+|(?:p|reel)\/[a-zA-Z0-9_-]+)\/$/.test(url.pathname)
+    || !/^[a-zA-Z0-9._]{1,30}$/.test(ownerHandle)) throw new Error("Invalid Instagram warm-up target.");
+  return `async () => {
+    const allowed = location.protocol === 'https:' &&
+      (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
+      location.pathname === ${JSON.stringify(url.pathname)};
+    if (!allowed) return { allowed: false };
+    const until = Date.now() + 6000;
+    while (!document.querySelector('main,article') && Date.now() < until) await new Promise(r => setTimeout(r, 200));
+    const text = document.body?.innerText ?? '';
+    const root = document.querySelector('article') ?? document.querySelector('main');
+    const ownerPath = ${JSON.stringify(`/${ownerHandle.toLowerCase()}/`)};
+    const ownerMatches = Array.from(document.querySelectorAll('a[href]')).some(a =>
+      a.getAttribute('href')?.toLowerCase() === ownerPath &&
+      (/profile/i.test(a.getAttribute('aria-label') || '') || Array.from(a.querySelectorAll('img')).some(img => /profile picture/i.test(img.alt))));
+    const caption = (root?.querySelector('h1')?.innerText ?? '').trim() ||
+      Array.from(root?.querySelectorAll('img[alt]') ?? []).map(img => img.alt).find(alt => alt.length > 20 && !/profile picture/i.test(alt)) || '';
+    const postUrls = [...new Set(Array.from(root?.querySelectorAll('a[href]') ?? []).map(a => {
+      try { const u = new URL(a.href); const post = u.pathname.match(/^\\/(?:[A-Za-z0-9._]+\\/)?(p|reel)\\/([A-Za-z0-9_-]+)\\/?$/); return u.protocol === 'https:' &&
+        (u.hostname === 'www.instagram.com' || u.hostname === 'instagram.com') && post ? 'https://www.instagram.com/' + post[1] + '/' + post[2] + '/' : ''; }
+      catch { return ''; }
+    }).filter(Boolean))];
+    const labels = Array.from(root?.querySelectorAll('[aria-label]') ?? []).map(e => e.getAttribute('aria-label'));
+    const following = Array.from(root?.querySelectorAll('button,[role=button]') ?? []).some(e => /^(Following|Requested)$/.test((e.innerText || '').trim()));
+    const comment = ${JSON.stringify(comment)};
+    const input = root?.querySelector('textarea[aria-label*="comment" i],textarea[placeholder*="comment" i]');
+    const commentVisible = Boolean(comment && input && !input.value && Array.from(root?.querySelectorAll('li,[role=listitem],div[role=button]') ?? []).some(row =>
+      Array.from(row.querySelectorAll('a[href]')).some(a => a.getAttribute('href')?.toLowerCase() === ownerPath) &&
+      Array.from(row.querySelectorAll('span')).some(span => span.textContent?.trim() === comment)));
+    return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible };
+  }`;
+}

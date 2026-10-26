@@ -33,8 +33,11 @@
 .status-row h3 { font-family:var(--font-inter),sans-serif; font-size:13px; font-weight:500; letter-spacing:0; }
 .status-row p { color:var(--muted); font-size:11px; margin-top:4px; }
 .status-row > .text-link { flex-shrink:0; }
-.connection-note { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; color:var(--muted); padding-top:16px; }
-.connection-note a { color:var(--accent); }
+.connection-note { display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted); padding:16px 0 0; }
+.connection-note .connection-copy { min-width:180px; flex:1; }
+.connection-note .connection-copy strong { display:block; color:var(--ink); font-size:13px; font-weight:600; }
+.connection-note .connection-copy p { margin-top:3px; }
+.connection-note .connection-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .campaign-disclosures { display:flex; flex-direction:column; gap:10px; }
 .disclosure { border:1px solid var(--line); border-radius:13px; background:var(--surface); overflow:clip; }
 .disclosure summary { display:flex; align-items:center; gap:14px; padding:15px 18px; list-style:none; }
@@ -80,3 +83,20 @@
   .disclosure summary { padding:13px; gap:10px; }
   .disclosure-content { padding:16px; }
 }
+
+.campaign-history { margin-top:24px; padding-top:20px; border-top:1px solid var(--line); }
+.campaign-history h3 { font-size:14px; font-weight:600; }
+.history-legend, .history-legend span { display:flex; align-items:center; gap:8px; }
+.history-legend { flex-wrap:wrap; gap:18px; font-size:11px; color:var(--muted); margin-bottom:16px; }
+.history-legend i { width:10px; height:10px; border-radius:2px; }
+.history-sent { background:var(--accent); }
+.history-replies { background:var(--ok); }
+.history-bars { display:grid; grid-template-columns:repeat(14,minmax(0,1fr)); gap:5px; padding-top:8px; }
+.history-day { min-width:0; }
+.history-pair { height:120px; display:flex; align-items:end; justify-content:center; gap:2px; border-bottom:1px solid var(--line); }
+.history-pair i { display:block; width:38%; max-width:18px; border-radius:3px 3px 0 0; }
+.history-day small { display:block; height:30px; padding-top:6px; font-size:9px; color:var(--muted); white-space:nowrap; }
+.history-day:last-child small { text-align:right; }
+.campaign-history details summary { padding:8px 0; font-size:12px; }
+.campaign-history th, .campaign-history td { padding:9px 6px; text-align:left; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.campaign-history th { font-weight:500; }

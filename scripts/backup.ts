@@ -1,10 +1,10 @@
-// Run with: npm run backup. Makes a safe copy of the database (works while the app and worker run).
-import { mkdirSync } from "node:fs";
+// Run with npm run backup. The source stays read-only, including before new migrations.
 import { join } from "node:path";
 import { config } from "@/lib/config";
-import { openDb } from "@/lib/db/core";
-
-const dir = join(process.cwd(), "data", "backups");
-mkdirSync(dir, { recursive: true });
-const file = join(dir, `outreach-${new Date().toISOString().replace(/[:.]/g, "-")}.db`);
-openDb(config.dbPath).backup(file).then(() => console.log(`Backup saved: ${file}`));
+import { backupDatabase } from "@/lib/backup";
+import { backupWorkspaceSet } from "@/lib/workspaces/backup";
+import { existsSync } from "node:fs";
+const directory = join(process.cwd(), "data", "backups");
+void (existsSync(`${config.dbPath}.identity.db`) ? backupWorkspaceSet(config.dbPath, directory) : backupDatabase(config.dbPath, directory))
+  .then(file => console.log(`Backup saved: ${file}`))
+  .catch(() => { console.error("Backup could not complete. Check the saved database location and try again."); process.exitCode = 1; });

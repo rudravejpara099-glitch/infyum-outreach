@@ -2,15 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./icon";
+import { navigationCopy } from "@/lib/ui/copy";
 
 const ITEMS = [
-  { href: "/", label: "Dashboard", icon: "dashboard" },
+  { href: "/", label: navigationCopy["/"], icon: "dashboard" },
   { href: "/campaigns", label: "Campaigns", icon: "campaign" },
-  { href: "/pipeline", label: "Pipeline", icon: "pipeline" },
-  { href: "/approvals", label: "Approvals", icon: "approval" },
-  { href: "/inbox", label: "Replies", icon: "inbox" },
+  { href: "/pipeline", label: navigationCopy["/pipeline"], icon: "pipeline" },
+  { href: "/approvals", label: navigationCopy["/approvals"], icon: "approval" },
+  { href: "/inbox", label: navigationCopy["/inbox"], icon: "inbox" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
-  { href: "/activity", label: "Activity", icon: "activity" },
+  { href: "/activity", label: navigationCopy["/activity"], icon: "activity" },
+  { href: "/billing", label: "Usage and billing", icon: "billing" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 

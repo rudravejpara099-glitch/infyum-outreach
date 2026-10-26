@@ -1,0 +1,211 @@
+# Self-service update — 2026-10-24
+
+Private company workspaces are now the default signup path. Invitation-only teams, workspace switching, membership removal, revocable sessions, database/browser separation and company-scoped test billing are implemented. Existing owner data is preserved. Verification: 444 tests, typecheck, lint, Webpack production build, disposable UI flow, fake billing flow and two-company browser flow pass. See the latest `HANDOFF.md` section for exact evidence and remaining live proof.
+
+Public remote Instagram onboarding, per-company provider setup, public deployment and live outbound first-reply verification remain unfinished. The historical local-only/tenancy-deferred checklist below is superseded for the implemented workspace foundation, not for those outstanding integrations.
+
+# Full functionality audit — 2026-10-22
+
+## Current project status and completion checklist — 2026-10-24
+
+**Status:** The local app builds and its automated/browser checks pass. Chrome networking and app-level inbox sync now work. The live outbound sequence is still unproven; do not describe the whole outreach product as verified.
+
+**Latest evidence (06:09 UTC):** A normal restart of the existing signed-in Chrome profile restored Instagram loading without changing VPN/network/privacy settings. Selected `@timelessmoments.al` again from Instagram's existing account switcher. App job #40 completed its read-only inbox check on attempt 1 at 06:02 UTC and cleared two previous inbox errors; zero new handoffs. The worker is running. The new Chrome preparation adapter has fake-browser coverage for likes/comments/follow-last, sender/page checks, sensitive-post handling, incomplete preparation and partial-action holds. A read-only public profile/post inspection revealed Instagram's username-prefixed grid links and modal article structure; the adapter and regression fixture now handle them. No real warm-up or send ran.
+
+**Local verification:** `npm test` 386 passed; `npm run typecheck`, `npm run lint`, `npm run build` (Next 16 Webpack), isolated `npm run smoke:ui`, and `git diff --check` pass. Updated campaign guidance was visually checked at 390/1440 px in light/dark mode. The earlier local billing simulator passes but no real Stripe/provider call is claimed. Bare Turbopack build remains environment-limited; the configured Webpack build passes.
+
+### Remaining tasks, in order
+
+1. **Verify preparation on one eligible prospect.** Chrome preparation is implemented and tested with fake controls, but no real like/comment/follow is verified. Automatic comments require the separately metered AI setup, currently OFF under no-spend. Alternatively, complete real engagement manually and record it through the existing lead controls. Preserve the ten-piece rule; do not mark unperformed engagement complete.
+2. **Prove a live first-contact handoff.** Create/review an exact three-part message for the prepared lead, obtain human approval in the app, perform one approved send, then verify a fresh real reply creates one durable handoff and ends follow-ups. There are currently no warmed leads or approved outgoing messages. Campaign #4's three leads are all skipped; do not activate/reassign another campaign merely to manufacture a send target.
+3. **Leave paid integrations off unless separately authorized.** Anthropic/Apify/Stripe TEST remain unconfigured and unverified live. Real calls need the private credentials, confirmed prices/caps and explicit authorization. Never bill through the owner's personal Claude subscription. This is deferred under no-spend.
+4. **Leave hosting/multi-company accounts deferred.** The decided current scope is local internal use. Tenant isolation and revocable sessions are still required before a public SaaS launch.
+
+### Completion checklist
+
+- [x] Confirm account #2 `@timelessmoments.al` in the existing signed-in Chrome profile.
+- [x] Restore Chrome page loading and verify a successful app-owned inbox job (#40).
+- [x] Implement Chrome preparation, writing preflight, comment rules, complete-result checks, and no-replay holds; verify with fake browser/provider tests.
+- [ ] Verify real preparation actions without bypassing action approval or spending restrictions.
+- [ ] Prove one fresh app-sent first message and first-reply handoff.
+- Deferred: real paid providers/Stripe and public hosting/tenancy.
+
+Campaign stop/start/delete controls already exist on campaign detail pages. The campaign list now also offers Pause/Stop for active campaigns and Resume for paused campaigns; starting a draft and deleting an empty draft remain on the detail page. UI smoke verifies the list actions and all six theme/width layouts.
+
+**Completed in this refresh:** the dependency audit reports 0 vulnerabilities. The local suite (362 tests), typecheck, lint, production build, disposable UI flow, and disposable at-cost billing flow all pass. PR #13 remains intentionally open/draft; the remote reports no CI checks.
+
+**Remaining live-test gates:** Chrome preparation code is implemented, but its real social actions have not been run. The current campaign has no warmed lead or approved first message. Full live proof needs real preparation, human approval of the exact first DM, one approved send and a fresh prospect reply. Automatic AI/search and Stripe remain off under no-spend.
+
+The owner requests the whole app working, without intermediate questions. Completion remains unproven. This is an audit of the existing decided product, not permission to send messages, spend money, remove limits, change ownership, or add reply/booking automation. This is a current evidence index; older dated observations below are historical and are superseded by newer entries in `HANDOFF.md`. No live send or paid call is authorized by this audit.
+
+## Current evidence
+
+### Prevent duplicate sign-in processes while a worker may still own an account
+
+`workerStatus().running` is false for a live worker with a stale heartbeat. Account connection actions previously interpreted that as permission to launch a separate sign-in process, which could race the live process. They now use the worker phase: only a confirmed `stopped` state launches a separate process; starting/running/stopping/unresponsive/legacy states retain the request in the queue and show a plain status message. Regression tests cover all three account actions in both unresponsive and stopping states, including the no-second-process check. Full unit tests, typecheck, lint, production build and isolated Playwright smoke pass. No database migration or dependency change.
+
+### Verify the first-contact/reply handoff as one simulated worker flow
+
+An integrated regression test creates a warmed Chrome-mode lead, checks that the outgoing DM first enters `pending_approval`, approves it, runs the send job through a fake Instagram driver, then simulates one incoming reply and runs the inbox job. It verifies exactly one outbound dispatch, one durable handoff, the lead stopping at `replied`, and no scheduled follow-up after handoff. This covers the pieces together without a real Instagram write, paid call, or spend. It does not replace the live first-contact proof in checklist item 4.
+
+### 2026-10-23: Correct stale inbox failures on Overview
+
+The authenticated Overview now omits an older `check_inbox` failure when a later successful inbox check exists for the same account. The Activity/History page remains unchanged and retains the complete event record. This prevents a recovered read-only connection from appearing to be the current state.
+
+Regression tests cover both cases: the same account's later success hides the old error on Overview, while another account's success does not. Validation on the final code: 327 unit tests, typecheck, lint, Webpack production build, isolated Playwright UI smoke, and `git diff --check` passed. UI smoke used disposable data and sent no messages; no Instagram write or paid call occurred.
+
+### 2026-10-23: Explain the no-Claude manual path
+
+The Overview now plainly tells users that Claude does not need to be installed. Automatic message drafts require a separate billed AI connection; while it is off, users can still check replies and write a message themselves for a warmed lead. The card links to Settings and appears only when `ANTHROPIC_API_KEY` is absent. Unit and browser-smoke assertions cover the copy and link.
+
+### 2026-10-23: Clarify manual writing readiness
+
+The Overview setup card now checks the prepared-lead count. With no prepared leads, it says manual writing is not available yet and explains when it becomes available; with a prepared lead, it states that the first message still waits for approval. Tests cover both states, and isolated UI smoke checks the empty state. This is a copy/clarity change only. `npm test` (362), typecheck, lint, Webpack build, and UI smoke pass. No Instagram action, paid call, or spend occurred.
+
+### 2026-10-23: Clear resolved sign-in warnings and tighten public route matching
+
+The Overview no longer counts an older failed sign-in attempt after that same account later passes the app's authenticated sign-in check or completes a successful inbox read. Unrelated failures and failures newer than the recovery still remain visible. A live Overview reload confirmed the obsolete five-attempt warning disappeared while the two later inbox errors remained in recent activity. Also changed the optimistic auth proxy to allow only the exact `/login` and `/setup` paths; `/login-evil` and `/setupanything` now require a session. Tests cover account-specific recovery, later failure, successful inbox recovery, and the public/protected paths. `npm test` (370), typecheck, lint, Webpack build, isolated UI smoke, and fake billing smoke pass. No Instagram write, paid call, or spend.
+
+### 2026-10-23: Add campaign controls to the campaign list
+
+Active campaigns now show Pause and Stop controls beside their summary; Stop requires confirmation. Paused campaigns show Resume. Starting a draft remains a detail-page action so its configuration can be checked first. The row stacks its controls at phone width and uses compact inline controls on wider screens. The shared action form only renders feedback while work is pending or after a result, which avoids empty status elements distorting the row layout. UI smoke exercises pause/resume against SQLite and checks the campaign list at 1440, 1024 and 390 px in light and dark themes. `npm test` (370), typecheck, lint, Webpack build, UI smoke, and fake billing smoke pass. No messages sent, provider calls, or charges.
+
+Validation on the final code: 328 unit tests, typecheck, lint, Webpack production build, isolated Playwright UI smoke, and `git diff --check` passed. No provider credentials, provider calls, Instagram writes, or spend. The current browser tab is at login after the web-server restart; the worker and saved app database were left running/untouched.
+
+| Requirement | Evidence | State |
+|---|---|---|
+| Setup, login/error retention, protected routes | Expanded browser suite, blank-name rejection, teammate sign-in, cooldown and recovery; independent setup processes share a transaction | Verified locally |
+| Protected route/action entry checks | Static Vitest guard checks every protected page/loading screen, non-public server action and protected route handler begins by calling `requireUser()`; logout now checks the session before destroying it | Verified by automated regression test and disposable login/logout flow; public login/setup remain public |
+| Production session secret | Pure phase tests plus actual next start refuses blank/default keys; generated key serves temporary setup page; build does not require the production key | Verified |
+| Login throttling | Five attempts per normalized email in a 15-minute window, hashed/bounded temporary state, success reset and expiry tested through actual browser and SQLite | Verified locally; no passwords/IPs/tokens stored in the limiter |
+| Safe backup | Native read-only SQLite backup tested under active WAL write, no source migrations, private/unique completed output and actual CLI fixture run | Verified on disposable data; no real-data backup/migration run |
+| Campaign create/edit/start/pause, pasted handles and validation | Browser retains invalid form input, saves audience/sender, refuses start without sender, persists active/paused state and reports duplicate/invalid handles | Verified at UI boundary; worker must still recheck paused state before external actions |
+| Lead-search queue and Apify metering | Disconnected key refuses enqueue; fake-key queue checks campaign dedupe. `findLeadsForCampaign` reserves a bounded run cost, checks the current Apify monthly aggregate, stores the run ID, and settles exact terminal run usage; fake-client tests cover stale/misaligned totals and concurrent local settlements | Metering/cap logic verified with fakes; no real Apify request or paid usage authorized, and the reviewed integration marker is absent |
+| Approvals and final dispatch | Browser rejects edited disallowed link, approval after reply and forged retired-reply approval; runner rechecks message approval, lead stage/first-reply state, campaign, account, DNC, and daily cap before dispatch and again after pacing | Verified by action/browser tests and runner regressions; no live send |
+| Team time zone | New authenticated save action validates supported IANA zones/UTC and aliases; browser persists Asia/Kolkata and rejects invalid zone | Verified locally; worker already reads setting for pacing |
+| Lead notes/stages/stop | Browser persists notes, refuses forged illegal transition, accepts legal transition, invokes DNC and returns 404 for malformed ID | Verified locally |
+| Settings write atomicity | Team, DNC, Apify cap and time-zone writes now include their history event in one transaction; injected history failures leave no partial data | Disposable browser test proves rollback and user-visible retry feedback for DNC, cap, time zone and teammate creation |
+| Shared standalone configuration | Official @next/env loaded in shared lib/config before config values; isolated processes prove .env loading/override precedence/test isolation; real standalone import reports configured DB/profile match | Verified without starting worker |
+| Daily counters and timestamp persistence | `afterSent` passes the worker's injected UTC time through to `markSent`. Worker limit checks, account/dashboard counters and the seven-day dashboard total use the saved team IANA time zone with half-open UTC day ranges. Unit and repository tests cover UTC midnight, Asia/Kolkata, and 23/25-hour New York daylight-saving days. | Verified in pure-rule, repository and dashboard tests; full browser smoke passes. Live sends remain unverified. |
+| Dashboard worker status | Real workerStatus query, manual check and visible-page refresh; active queued work is shown by name and in team-local time; historical sign-in-window failures are separated from other failed tasks | Verified with unit and disposable browser tests, plus the authenticated owner dashboard. Does not alter work windows or automatically retry failed work |
+| Worker idle startup | Isolated empty database, blank Apify token; worker wrote a fresh heartbeat, queued no jobs and exited cleanly on SIGINT | Verified startup only; job execution and live integrations remain unverified |
+| Account controls | Browser creates saved account/profile path in temp directory, deduplicates account/login requests, saves cap, pauses/resumes; forged blocked resume rejected server-side | Verified locally; account save is not verified Instagram auth |
+| Do not contact | Settings now invokes existing markDoNotContact for known leads; browser verifies skipped stage and DNC row, then removal | Verified locally; running external job race requires worker review |
+| Activity CSV | Unit quote/formula tests and authenticated browser download/no-store/sign-out rejection | Verified locally |
+| First real reply stops all work | `handleIncoming` records the first real reply once, marks `replied`, clears follow-ups and logs one handoff. Send planning and dispatch refuse after handoff; a real Chrome inbox reply was processed through `runOne` using disposable data | Verified by repository/runner tests and one live read-only inbox extraction with disposable database sync; durable sync in the owner database and a long-running worker remain unverified |
+| Worker restart and failed qualification recovery | Interrupted sends are held as uncertain. Current change recovers only idempotent read-only jobs, holds interrupted Instagram-writing/paid jobs, prevents failed qualification loops, and offers an explicit read-only retry | Verified by unit tests and disposable UI smoke; no worker was restarted against owner data |
+| Daily limits, warnings, retries, restarts | Team-time-zone counters and final dispatch checks have regression coverage; restart now holds interrupted external writes/paid tasks, and warning handling stops the account | 301 tests pass; real long-running worker behavior and live cap enforcement remain unverified |
+| Instagram readProfileNotes | Actual read-only driver against Instagram’s public profile from saved account 3 | Returned public profile notes; does NOT prove authenticated session |
+| Instagram readFacts / country / connection checks | The current signed-in Chrome adapter verified the saved account and extracted public profile facts for an unrestricted public profile, including country | Read-only profile facts verified; this is not qualification of a campaign lead or proof of a campaign send |
+| Signed-in Chrome | The app's read-only sign-in check returned authenticated for `@timelessmoments.al`; Chrome profile is `Rudra099` | Connection check verified; approved campaign DM driver is covered by fake-driver tests, not a live send |
+| Claude CLI and paid AI | The latest local status reports the Claude CLI logged out; no paid AI endpoint was called under the no-spend instruction | Not live verified; personal CLI is not a substitute for independently metered paid AI |
+| Apify | Private config presence-only check: no token. Per-run reservation/final-usage and global usage-cap hooks are implemented and fake-client tested; worker source schedules consented billing sync every 15 minutes | No real run authorized or verified; integration review marker remains absent |
+| Billing and payments | Cost-only ledger, UI, statements, exports, per-user ceilings, fixed resource allocation, paid AI/Apify metering hooks, and periodic worker sync are implemented and covered by unit/fake-provider/browser simulator tests; billed starts and assignments fail closed until independent review | Local cost-only behavior verified; running worker has not yet reloaded periodic sync; real Anthropic/Apify and Stripe TEST behavior remain unverified; no live calls/charges |
+| Design | Operational screens inspected in both themes at narrow/wide; full browser loop checks overflow/reduced motion/focus | Verified for changed UI; not proof of live integrations |
+| Dashboard onboarding | Three-step setup checklist reflects saved account count, worker heartbeat and leads; explicitly says that saving an account does not confirm Instagram sign-in | Browser smoke verified empty-workspace copy and navigation; live account sign-in remains unverified |
+| History empty state | No-activity page explains what appears here and links to campaign creation; uses a semantic heading | Browser smoke verified at 1440/1024/390 in light and dark; history with data remains covered by the existing populated table flow |
+| Pipeline empty and invalid-filter states | Workspace and campaign empty views provide next actions; empty stages/skipped list are explicit; malformed or unknown campaign filters return 404 | Disposable browser flow verifies empty workspace and campaign, zero skipped, malformed query, and light/dark 1440/1024/390 layouts |
+| Production compilation | `npx next build --webpack` passes with local font files; standard `npx next build` no longer tries to reach Google Fonts but Turbopack panics while binding an internal port in this sandbox | Webpack production build verified; the standard Turbopack path is still blocked by this environment's process/port restriction |
+| Smoke isolation | UI and billing smoke each use temporary build output, database, profile path and a throwaway TypeScript config; source `tsconfig.json` stays unchanged | Latest `npm run smoke:ui` passes. It opens no owner database, starts no worker, sends no messages, and makes no external calls |
+| Production app build | Next 16 production Webpack build and TypeScript checks | Passed on 2026-10-22; default Turbopack is not used because this environment has an internal-port restriction |
+| Current live preview and worker | Authenticated Chrome opened the owner app at `127.0.0.1:3100`. On 2026-10-22 the owner workspace service was started from the dashboard and reports `running`. Campaign #4 has approval required ON, its selected sender connected through signed-in Chrome, two leads `skipped`, and one untouched credit-repair lead moved into it for a read-only qualification check. That check is queued for 13:42 UTC in the account's permitted work window; country and fit are not yet verified. The owner app showed 23 pending approvals and 0 DMs sent today. No queued warm-up, approved send, or paid task. | Local worker startup, live status and lead move verified against owner data. No outbound Instagram action or paid call was made. This does not prove completed qualification, a live campaign send, durable reply sync, paid-provider use, or hosted operation. |
+
+## Backend requests already posted
+
+The older requests below are historical. Current source, runner tests, and the Oct 22 `HANDOFF.md` entries confirm team-time-zone daily boundaries and final first-reply/send guards. One restart-recovery gap was fixed under the owner's authorization in the current branch: crashes no longer automatically replay Instagram writes or paid work, and failed read-only qualification is not silently re-created forever. Metered paid provider calls, real Apify use, and Stripe TEST remain unverified because no spend is authorized.
+
+## Verification commands
+
+- Latest isolated integration pass on this branch: `npm test` = 301 passed; `npm run typecheck`; `npm run lint`; `npx next build --webpack`; and `npm run smoke:ui` pass. UI smoke uses disposable data and zero outgoing messages/provider calls. `git diff --check` passes.
+
+No saved application data was modified by the current isolated browser/production checks. No secret/password/card data was printed or copied. The signed-in Chrome profile was confirmed as `@timelessmoments.al`; this does not verify a live campaign send. The current local lead page is authenticated and responsive, but a fresh owner-database count snapshot was not taken. The worker remains stopped. No outbound Instagram action ran. The full goal stays active; this table is not a claim that the whole app is finished.
+
+## Daily-limit timestamp correction
+
+`markSent` previously stamped SQLite wall-clock time while the worker enforced limits using its injected clock. After the local date rolled over, a send simulated for Oct 20 could be persisted as Oct 21 and escape the intended cap. `afterSent` now passes the same `now` value to persistence. The runner regression asserts exactly two sends on its injected Oct 20 date, verifies both persisted timestamps, and then confirms the queued third send resumes on Oct 21. The related repository test queries the injected date explicitly. Runner and repository test databases close after each case.
+
+Verified after the correction: `npm test` = 128 passed; `npm run typecheck`; `npx next build --webpack`; `node --import tsx scripts/ui-smoke.ts` passed using disposable data and no outgoing messages; `git diff --check` passed. This historical note predates the team-time-zone daily counter implementation; see the current evidence table above.
+
+## Remaining explicit requirements from the original build brief
+
+Re-read the original MASTER PROMPT and README on Oct 21. The broad goal includes these unfinished items; successful form checks alone are not completion:
+
+- Production secret guard, login throttle and safe read-only backup are implemented and verified. Read-only qualification can be retried explicitly. Uncertain sends, warm-ups, paid provider tasks and interrupted login windows are never blindly replayed; crash recovery holds them for review.
+- Team time zone governs pacing, daily limits and dashboard/account counters. Follow-up timing remains based on the actual send timestamp and the existing configured follow-up interval.
+- Original task E's model control is now wired: the owner selects only a model with a confirmed price in Billing administration, and new metered drafts use that selection for both the provider request and reservation/settlement rate. Unit and fake-provider tests plus the disposable browser smoke verify this without a paid call. Settings shows the single locked approved portfolio link. CSV upload, a guarded re-run control for eligible skipped leads, safe bulk approval, and daily sent/first-reply campaign charts are implemented and locally verified on this branch. Never restore booked/call stages or reply drafting: the later first-reply ruling supersedes those older brief lines. The outbound portfolio link remains the single locked approved URL; changing it is not silently authorized by a Settings field. Actual Anthropic output remains unverified because no API key or paid test is authorized.
+- The worker checks campaign state and sender assignment both when a job starts and again immediately before Instagram dispatch. Runner tests now cover a campaign being paused and its sender being removed during the final send wait; neither case sends. This is a local regression check, not live campaign execution.
+- Read-only Instagram authentication, profile facts and inbox extraction have succeeded; a new eligible campaign lead, warm-up and a new live first-message handoff remain unverified. Paid Anthropic/Apify metering hooks exist and have fake-provider coverage, but the private credentials are absent and the integration-review marker remains unset. Real provider calls remain unauthorized. Actual Stripe TEST end-to-end is outstanding; no live payment is authorized.
+- Every changed screen must keep the HIG/token direction and be checked at 1440/1024/390 in both themes. Required tests/typecheck/build and a PR are completion gates; the existing failing baseline blocks a ready PR. No protected backend area can be edited until board ACK/owner ruling.
+
+Campaign changes passed production build and the expanded browser suite. Search queue happy/duplicate/different-campaign behavior uses a fake configured key in a restarted temporary server and no worker; it is not an Apify provider test. New queue helper tests persist real SQLite rows. Generic form navigation now uses Next router and avoids unnecessary same-route reloads; all custom forms explicitly use POST so password forms cannot fall back to GET.
+
+## Security/reliability verification update
+
+Tests were added red before implementing the secret/throttle/bootstrap/backup helpers. Production startup refuses unset/blank/short/public-placeholder secrets through the production-server config phase; dev/build remain usable without production credentials. The actual security smoke ran two refused production starts and one successful temporary start, not just a helper mock. Login consumes the counter transactionally before password verification, clears after success and bounds active records to 1,000. Unknown and known emails share the same error and normalized identity policy; hashes/counts only are persisted. Atomic first-user setup is tested from two separate Node processes, with only one created user. No automatic billing-owner inference is introduced.
+
+Backup opens the source read-only/file-must-exist rather than openDb (which migrates), uses SQLite’s backup API for committed WAL data, writes private .partial output and publishes a unique completed file. Tests check no new app tables/source migrations, uncommitted data exclusion, mode 0600, concurrent unique files, missing-file refusal and the actual CLI against fixture data.
+
+The extended browser suite passes setup validation, five failed logins, sixth-attempt cooldown, expiry recovery and successful normal login, plus prior full app controls. Cooldown screenshots were inspected in both themes at 1440/1024/390. A review run exposed an unbounded harness wait on Response.finished() after a server-action streaming response had already updated the form. Live fixture-process inspection proved the page had responded and password was empty while stream EOF remained pending; the diagnosed page was closed for cleanup, the harness now checks response arrival and bounded UI state, and the complete suite was rerun cleanly. No real passwords, bodies or headers were inspected/logged; the temporary debugger and test servers closed with the test process.
+
+Commands: npm test currently 103 pass / unchanged one baseline clock failure (104 total); npm run typecheck, npx next build, node --import tsx scripts/security-smoke.ts, npm run smoke:ui and targeted lint pass. No protected backend source, shipped migration, real data, worker, real paid API, Apify or live payment changed.
+
+Next: original task E CSV upload, safe bulk approval, daily sent/first-reply chart, re-run checks and genuinely wired model/approved-link settings. Before bulk approval, also tighten the individual approval boundary to its existing pipeline stage (first DM after warmed, follow-up after dm_sent) and adjust old synthetic UI fixtures to simulate warmed leads; current terminal-stage protection is necessary but not sufficient. Do not remove this requirement just because the older fixture shortcuts were green.
+
+## CSV upload verification update
+
+Original E spreadsheet import is implemented: paste and/or native CSV chooser, <=500 KB, named handle/profile URL column or a headerless single column, strict CSV quotes/columns and no partial import on parse failure. Existing global dedupe and DNC apply. No file persists. Five parser tests plus complete disposable browser flow pass, including malformed/header-only/oversize input, valid URL import and repeated/DNC counts. Full suite currently 113 pass / unchanged baseline clock failure (includes five prepared chart tests); typecheck/build/targeted lint pass. Both themes/1440/1024/390 captured; phone dark/tablet light inspected and stretched search controls corrected. No worker or provider/sent messages. CSV is no longer outstanding; chart UI, safe bulk approval, re-run control, properly wired model settings and protected/live requirements remain.
+
+
+## Campaign history, bulk review and re-run update
+
+- Campaign progress now includes a 14-local-day history chart for sent first contacts/follow-ups and first real replies, plus exact accessible daily counts. Uses actual sent message and lead.handoff activity rows, campaign scope, team timezone, and only the earliest real handoff for each lead. DST, UTC-midnight, positive-offset zones, other campaigns, automatic/repeated replies and empty data have tests. UI smoke seeds temporary chart rows and removes them before its final zero-outgoing assertion. Chart was inspected at phone/dark and tablet/light sizes; all six theme/width variants rendered without horizontal overflow.
+- Individual first-contact approval requires warmed stage; follow-up approval requires dm_sent, follow-ups enabled and below the existing two-send maximum. Bulk approval is capped at 100 selected rows; it re-reads state, checks every edited draft and both stored/new sensitive or similar-text flags, and commits none if any selection fails. Browser coverage proves stale-stage no-write and final success/feedback; unit tests prove atomically rejects stale, sensitive, similar and malformed selections. No sends occur from approval.
+- Skipped leads can return to found through “Re-run checks” if not DNC or previously contacted and still assigned to a campaign; the UI explains that a running worker and active campaign are needed. Tests cover legal recheck and refusal of DNC, contacted or unassigned leads. This uses the existing skipped→found stage rule; no transition rules or protected domain source changed.
+- Latest verification after these updates: full disposable `npm run smoke:ui` passed, with zero outgoing sent messages and no browser console/page errors; `npm run typecheck`, `npx next build --webpack`, changed-file ESLint and `git diff --check` passed. The default Turbopack build could not bind a local port in the sandbox; Webpack production compilation and route generation both passed. `npm test` = 125 passed / 1 unchanged main-baseline daily-limit clock failure (126 total). The failure still blocks a merge-ready PR; its two-file fix remains unapplied pending Claude ACK.
+- A follow-up protected-boundary test scans every `app/(app)` page/loading screen, every non-public server action and protected route handler and verifies `requireUser()` is the first statement. Logout now verifies the session before clearing it; login and first-user setup remain intentionally public. Both boundary tests pass. The disposable browser smoke passed setup/login/logout and app workflows with zero messages. Full unit suite is 127 passed / the same one unchanged-main clock failure (128 total); typecheck, Webpack production build, changed-file ESLint and diff check pass. The failure still blocks a merge-ready PR; its proposed protected clock fix remains unapplied pending Claude ACK. A read-only cookie-presence check still finds no Instagram session on any of the three saved profiles.
+
+## Plain-language labels verification (2026-10-21)
+
+The latest UI pass changes only visible copy and labels: everyday names for navigation, stages, message kinds/statuses, history events and campaign audience fields. Added tests cover the mapping and fallback text. The full disposable browser smoke confirms renamed navigation and campaign form controls. Latest results: 131 unit tests pass, typecheck and Webpack production build pass, browser smoke passes with zero outgoing messages, and changed-file ESLint/diff checks pass. Remaining integration and safety gates above still prevent calling the whole service verified or ready for live outreach.
+
+## Readiness and billing branch integration (2026-10-21)
+
+The combined `feat/platform-integration` branch joins the previously separate readiness and at-cost billing features. Campaign validation, CSV import, plain-language labels, billing UI, immutable ledger and signed webhook are present together. The campaign actions require the explicit payer/worker-review guard before starting billed campaigns or queuing paid lead search; the isolated browser test removes the review marker and verifies both actions make no database changes, then restores the fixture marker for payment-simulator checks.
+
+Latest combined verification: 178 unit tests pass, typecheck passes, and `npx next build --webpack` passes. Default `npx next build` still fails in the sandbox because Turbopack cannot bind its internal port. `scripts/ui-smoke.ts` and `scripts/billing-smoke.ts` both pass using disposable databases and local simulators; no message, live Stripe, AI, or Apify call occurred. Historical failure counts above describe earlier snapshots and are superseded by this result. This still does not verify the actual worker metering hooks, live Instagram session, real Stripe TEST endpoint, or personal CLI generation.
+
+## Dashboard and lead empty states (2026-10-21)
+
+Dashboard recent activity and lead conversation/history now explain what will appear when empty. The UI smoke verifies both states in light and dark at desktop/tablet/phone widths, using isolated data. Full unit suite (178), typecheck, Webpack production build and browser smoke pass. No messages or provider calls occurred.
+
+## Authenticated production smoke (2026-10-21)
+
+The production smoke now uses a disposable database and Playwright against `next start`: create the first user, load every primary app route, sign out, verify that a protected Settings request returns to login, and sign back in. The pass reported no browser page errors and launched no worker/provider/payment/outreach action. Default Turbopack build still fails in this environment with a local-port permission panic; clean Webpack production build passes. This adds production app-route evidence beyond the development-server browser suite.
+
+## Plain-language failed-task details (2026-10-21)
+
+Activity now translates known task codes into everyday labels and rewrites the confirmed `open_login`/Chrome-replacement error into a clear explanation. Unknown task types receive a neutral fallback. Focused copy tests pass; latest full suite is 189 tests, typecheck and an isolated production Webpack build pass. The authenticated preview's accessibility tree confirms the new text. The disposable browser smoke remains unable to start because the sandbox denied its localhost listener. This does not address the underlying login-window lifecycle or establish that Instagram is signed in.
+
+## Latest CLI auth check (2026-10-21)
+
+The latest local, read-only `claude auth status --json` returned `loggedIn=false`. Older historical notes about a signed-in CLI and synthetic draft are not evidence of current authentication. No prompt or generation was run. Real internal CLI drafting remains unverified until the owner signs in; paid API, Apify and payment calls remain off.
+
+## Inbox loading-row fix and live sync check (2026-10-23 16:27 UTC)
+
+Changed: the Chrome inbox adapter excludes Instagram's transient loading row when listing and opening conversations. If a listed row disappears or is still loading before it opens, the reader skips it without clicking or treating it as a failed conversation. Added tests for loading detection, stable index selection, and the disappearing-row case. No schema or dependency change.
+
+Verified: 341 tests, typecheck, lint, Next 16 Webpack production build, and diff check pass. The signed-in Chrome inbox read 7 real rows, returned 1 incoming message matching a known lead, and the existing handoff logic recorded 0 new handoffs. This verifies inbox reading and local sync without duplicating a handoff. No Instagram message was sent; no like, follow, comment, paid call, payment, or spend occurred.
+
+NOT verified: a fresh prospect reply becoming a new handoff, first-contact delivery, warm-up, paid Anthropic/Apify/Stripe TEST, or hosted operation. Keep approvals ON and paid/live outbound work off until the existing gates are met.
+
+
+## Owner-authorized account sign-in check (2026-10-23 17:21 UTC)
+
+The existing Accounts-page check completed as job #37 with `authenticated:true`; the page now visibly shows `@timelessmoments.al` as Connected, matching the account shown in the signed-in Chrome profile `Rudra099`. The separate `@akash_infyum` account remains Sign-in needed in Outreach. Safari was on its Start Page, so its Instagram session was not verified. This was a connection check only: no messages or other Instagram actions, paid requests, or spend. The next inbox job #36 remains scheduled for `2026-10-24 04:12:59 UTC`; do not accelerate it.
+
+
+## Explain the Chrome warm-up blocker in campaign readiness (2026-10-23 17:32 UTC)
+
+Added a stage-aware campaign notice for campaigns whose active selected senders all use signed-in Chrome and that have qualified leads. It says matched leads need preparation before first-contact and explains that Chrome can check profiles, sync replies, and send approved messages, but cannot like, comment on, or follow posts for the warm-up step; it links to Accounts. A live read-only view of campaign #2 (draft, 3 qualified leads) confirmed the wording does not imply the draft campaign is currently queuing work. The notice does not change worker behavior, approval gates, account state, or Instagram access.
+
+Coverage: pure helper tests cover Chrome-only qualified leads, zero/invalid counts, mixed active senders, and inactive senders. `npm run smoke:ui` passed on isolated data and verified the notice plus mobile/desktop width; `npm test` passed 362 tests; typecheck, lint, and Webpack production build passed. No live Instagram action, paid call, payment, or spend occurred. The live first-message/reply cycle remains unverified.

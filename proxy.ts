@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Quick, optimistic redirect only. The real check is requireUser() in lib/auth/dal.ts.
-const PUBLIC = ["/login", "/setup"];
+const PUBLIC = new Set(["/login", "/setup", "/register", "/join"]);
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (PUBLIC.some((p) => pathname.startsWith(p))) return NextResponse.next();
+  // Stripe authenticates its raw-body webhook by signature, not a user cookie.
+  if (pathname === "/api/billing/webhook") return NextResponse.next();
+  if (PUBLIC.has(pathname)) return NextResponse.next();
   if (!req.cookies.get("session")) return NextResponse.redirect(new URL("/login", req.url));
   return NextResponse.next();
 }

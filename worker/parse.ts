@@ -24,8 +24,23 @@ export function looksBlocked(pageText: string, url: string): boolean {
   return /\/(challenge|accounts\/suspended)\//.test(url) || BLOCK_SIGNS.some((r) => r.test(pageText));
 }
 
-export function looksLoggedOut(url: string): boolean {
-  return /\/accounts\/login/.test(url);
+const LOGIN_PROMPTS = [
+  /log in to (?:see|view) (?:photos|posts|this profile|content)/i,
+  /sign up to (?:see|view) (?:photos|posts|this profile|content)/i,
+  /see photos, videos and more from[\s\S]{0,200}sign up and never miss a post/i,
+  /log in to continue/i,
+  /you need to log in to continue/i,
+];
+
+/** Detects the login modal Instagram can show over an otherwise public profile. */
+export function looksLoggedOut(url: string, pageText = ""): boolean {
+  return /\/accounts\/login/i.test(url) || LOGIN_PROMPTS.some((pattern) => pattern.test(pageText));
+}
+
+/** Session confirmation uses cookie presence only; callers must never retain or log cookie values. */
+export function hasInstagramSession(cookies: { name: string; value: string }[], url: string): boolean {
+  if (/\/challenge\//i.test(url) || /\/accounts\/login/i.test(url)) return false;
+  return cookies.some((cookie) => cookie.name === "sessionid" && cookie.value.length > 0);
 }
 
 /** First number that sits next to the word "followers" in header text. */

@@ -1,9 +1,9 @@
 import { chromium, type BrowserContext, type Page } from "playwright";
 import type { IgAccount } from "@/lib/db/types";
-import { InstagramBlockedError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
+import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { humanDelayMs } from "@/lib/domain/pacing";
 import * as human from "./human";
-import { followersFromText, looksBlocked, looksLoggedOut, skipComment } from "./parse";
+import { followersFromText, hasInstagramSession, looksBlocked, looksLoggedOut, skipComment } from "./parse";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -11,10 +11,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class PlaywrightInstagram implements InstagramDriver {
   private contexts = new Map<number, BrowserContext>();
 
+  async close(): Promise<void> {
+    const contexts = [...this.contexts.values()];
+    this.contexts.clear();
+    await Promise.all(contexts.map(async (context) => { await context.close().catch(() => {}); }));
+  }
+
   private async context(account: IgAccount): Promise<BrowserContext> {
     const existing = this.contexts.get(account.id);
     if (existing) return existing;
-    const ctx = await chromium.launchPersistentContext(account.profileDir, { channel: "chrome", headless: false, ignoreDefaultArgs: ["--enable-automation"], chromiumSandbox: true, viewport: { width: 1280, height: 900 }, locale: "en-US" });
+    // Use Playwright's bundled Chromium, not the owner's already-running Chrome app. A
+    // Chrome channel launch can be routed into the owner's single-instance session.
+    const ctx = await chromium.launchPersistentContext(account.profileDir, { headless: false, ignoreDefaultArgs: ["--enable-automation"], chromiumSandbox: true, viewport: { width: 1280, height: 900 }, locale: "en-US" });
     ctx.on("close", () => this.contexts.delete(account.id));
     this.contexts.set(account.id, ctx);
     return ctx;
@@ -35,19 +43,32 @@ export class PlaywrightInstagram implements InstagramDriver {
   }
 
   private async guard(page: Page): Promise<void> {
-    if (looksLoggedOut(page.url())) throw new InstagramBlockedError("Not logged in. Use Open login window on the Accounts page.");
     const text = await page.locator("body").innerText().catch(() => "");
+    if (looksLoggedOut(page.url(), text)) throw new InstagramBlockedError("Not logged in. Use Open login window on the Accounts page.");
     if (looksBlocked(text, page.url())) throw new InstagramBlockedError("Instagram showed a warning or a human check. Review the account by hand.");
   }
 
-  async openLogin(account: IgAccount): Promise<void> {
+  async openLogin(account: IgAccount): Promise<boolean> {
     const ctx = await this.context(account);
     const page = ctx.pages()[0] ?? (await ctx.newPage());
     await page.goto("https://www.instagram.com/", { waitUntil: "domcontentloaded" });
     await page.bringToFront();
-    // The team signs in, then closes the window. Give them up to 15 minutes.
-    await Promise.race([new Promise<void>((r) => ctx.once("close", () => r())), sleep(15 * 60_000)]);
+    // Confirm only that Instagram has a session cookie; never persist or log its value.
+    const authenticated = await new Promise<boolean>((resolve) => {
+      let finished = false;
+      const timers: { poll?: ReturnType<typeof setInterval>; timeout?: ReturnType<typeof setTimeout> } = {};
+      const finish = (value: boolean) => { if (finished) return; finished = true; clearInterval(timers.poll); clearTimeout(timers.timeout); resolve(value); };
+      timers.poll = setInterval(async () => {
+        try {
+          const cookies = await ctx.cookies("https://www.instagram.com");
+          if (hasInstagramSession(cookies, page.url())) finish(true);
+        } catch { /* The window may be closing. */ }
+      }, 2_000);
+      timers.timeout = setTimeout(() => finish(false), 15 * 60_000);
+      ctx.once("close", () => finish(false));
+    });
     await ctx.close().catch(() => {});
+    return authenticated;
   }
 
   async readFacts(account: IgAccount, handle: string): Promise<ProfileFacts> {
@@ -138,14 +159,21 @@ export class PlaywrightInstagram implements InstagramDriver {
     await human.click(page, open);
     const box = page.locator('[role="textbox"][aria-label^="Message"], div[contenteditable="true"][aria-label^="Message"]').first();
     await box.waitFor({ timeout: 20_000 }).catch(() => { throw new Error(`Chat with @${handle} did not open`); });
-    for (const part of parts) {
-      await human.click(page, box);
-      await human.type(page, part);
-      await sleep(Math.max(1000, humanDelayMs("beforeSend", Math.random)));   // never under 1 second, or two messages can merge into one
-      await page.keyboard.press("Enter");
-      await human.wait("betweenParts");
-      await this.guard(page);
-      if (!(await page.getByText(part.slice(0, 30), { exact: false }).count())) throw new Error(`Message to @${handle} did not appear in the thread`);
+    let sendAttempted = false;
+    try {
+      for (const part of parts) {
+        await human.click(page, box);
+        await human.type(page, part);
+        await sleep(Math.max(1000, humanDelayMs("beforeSend", Math.random)));   // never under 1 second, or two messages can merge into one
+        sendAttempted = true;
+        await page.keyboard.press("Enter");
+        await human.wait("betweenParts");
+        await this.guard(page);
+        if (!(await page.getByText(part.slice(0, 30), { exact: false }).count())) throw new Error(`Message to @${handle} did not appear in the thread`);
+      }
+    } catch (error) {
+      if (!sendAttempted) throw error;
+      throw new InstagramSendUncertainError(error instanceof InstagramBlockedError);
     }
   }
 
