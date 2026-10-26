@@ -52,6 +52,15 @@ describe("Chrome campaign preparation", () => {
     await expect(driver.warmUp(account, "prospect", 1, async () => validComment)).resolves.toEqual({ likes: 1, comments: 1, followed: true });
     expect(calls.filter(name => ["click", "fill", "press_key"].includes(name))).toEqual(["click", "fill", "press_key", "click"]);
   });
+  it("never comments twice on a post our account already commented on (an interrupted earlier warm-up)", async () => {
+    const { browser, actions } = fixture();
+    const read = browser.read;
+    browser.read = vi.fn(async (url: string, comment?: string) => ({ ...(await read(url, comment)), ownerCommented: url === posts[0] }));
+    const write = vi.fn(async () => validComment);
+    await expect(runChromeWarmup(browser, profileUrl, 2, write)).resolves.toEqual({ likes: 2, comments: 1, followed: true });
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(actions.filter((a) => a.startsWith("comment:"))).toHaveLength(1);
+  });
   it("prepares the profile's posts, confirms each action, and follows last", async () => {
     const { browser, actions } = fixture();
     const write = vi.fn(async () => validComment);
