@@ -125,8 +125,11 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
       logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
     } else if (job.type === "warmup" && !(e instanceof InstagramBlockedError) && isChromeUnreachable(msg)) {
       // Chrome was not reachable, so nothing happened on Instagram: wait and retry instead of giving up.
-      deferJob(deps.db, job, 10);
-      logActivity(deps.db, "worker", "job.waiting_for_chrome", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
+      // Retry every minute: Chrome's "Allow remote debugging?" prompt lasts about a minute, so one is
+      // almost always waiting for whoever passes by. Note it in history at most every 30 minutes.
+      deferJob(deps.db, job, 1);
+      const noted = deps.db.prepare("SELECT 1 FROM activity WHERE action='job.waiting_for_chrome' AND account_id IS ? AND ts > datetime('now','-30 minutes') LIMIT 1").get(job.accountId);
+      if (!noted) logActivity(deps.db, "worker", "job.waiting_for_chrome", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg} Allow the prompt in Chrome to continue.` });
     } else if (job.type === "warmup") {
       // Both browser adapters can have partially engaged before a later error.
       // A generic failure is not proof that it is safe to repeat comments.
