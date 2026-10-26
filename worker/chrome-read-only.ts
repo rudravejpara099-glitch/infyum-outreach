@@ -420,7 +420,16 @@ export class ChromeInstagram implements InstagramDriver {
       for (const [index, part] of parts.entries()) {
         check();
         await this.sendPart(target.pageId, part, () => { check(); attempted = true; }, mayContinue);
-        const receipt = await this.evaluate(target.pageId, `() => ({ allowed: location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && location.pathname.startsWith('/direct/'), text: document.body?.innerText ?? '' })`, "Chrome could not verify the sent message.");
+        // Instagram opens chats either on /direct/ pages or as a pop-up over the profile; accept both,
+        // and give the sent text a few seconds to appear before deciding.
+        const expected = JSON.stringify(part.slice(0, Math.min(30, part.length)));
+        const receipt = await this.evaluate(target.pageId, `async () => {
+          const onInstagram = location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com');
+          const chatOpen = () => location.pathname.startsWith('/direct/') || Boolean(document.querySelector('[contenteditable="true"][role="textbox"]'));
+          const until = Date.now() + 8000;
+          while (onInstagram && chatOpen() && !(document.body?.innerText ?? '').includes(${expected}) && Date.now() < until) await new Promise((resolve) => setTimeout(resolve, 400));
+          return { allowed: onInstagram && chatOpen(), text: document.body?.innerText ?? '' };
+        }`, "Chrome could not verify the sent message.");
         const parsed = jsonFromToolResult(receipt) as { allowed?: unknown; text?: unknown } | null;
         if (parsed?.allowed !== true || typeof parsed.text !== "string") throw new Error("Instagram chat identity could not be verified after sending.");
         if (looksBlocked(parsed.text, `https://www.instagram.com/direct/inbox/`)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
