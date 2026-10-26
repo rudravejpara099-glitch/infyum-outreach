@@ -5,11 +5,12 @@ import { enqueue } from "@/lib/db/repos/jobs";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { connectAccount, reopenLogin, useSeparateSignIn, useSignedInChrome } from "@/app/(app)/accounts/actions";
 
-const state = vi.hoisted(() => ({ db: null as Db | null, hostChromeAllowed: true, workspaceId: "legacy" }));
+const state = vi.hoisted(() => ({ db: null as Db | null, hostChromeAllowed: true, workspaceId: "legacy", local: true as boolean }));
 vi.mock("@/lib/db", () => ({ getDb: () => state.db }));
 vi.mock("@/lib/auth/dal", () => ({ requireUser: vi.fn(async () => ({ id: 1, email: "test@example.test", workspaceId: state.workspaceId, hostChromeAllowed: state.hostChromeAllowed })) }));
 vi.mock("@/lib/workspaces/storage", () => ({ getWorkspacePaths: () => ({ dbPath: "/tmp/tenant.db", profilesDir: "/tmp/tenant-profiles", hostChromeAllowed: state.hostChromeAllowed }) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/request-origin", () => ({ requestIsFromThisComputer: vi.fn(async () => state.local ?? true) }));
 vi.mock("node:child_process", () => ({ spawn: vi.fn(() => ({ pid: 42, once: () => {}, unref: () => {} })) }));
 import { spawn } from "node:child_process";
 
