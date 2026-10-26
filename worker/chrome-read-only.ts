@@ -112,7 +112,8 @@ export class ChromeInstagram implements InstagramDriver {
     }
     const result = ensureChromeToolSucceeded(response, "Chrome could not list its open pages.");
     this.browserConnected = true;
-    return chromePages(result);
+    this.lastPages = chromePages(result);
+    return this.lastPages;
   }
   private async openProfile(account: IgAccount, handle = account.handle): Promise<{ pageId: number; url: string }> {
     const client = await this.connect();
@@ -121,7 +122,10 @@ export class ChromeInstagram implements InstagramDriver {
     let page = bindInstagramPage(pages, handle);
     // A new tab opens in whichever Chrome profile window was used last, which may not be the signed-in one.
     // Reuse the tab already showing the signed-in account's own profile and visit the lead from there.
-    const ownerTab = !page && handle.replace(/^@/, "").toLowerCase() !== account.handle.toLowerCase() ? bindInstagramPage(pages, account.handle) : null;
+    const isLead = handle.replace(/^@/, "").toLowerCase() !== account.handle.toLowerCase();
+    const verified = this.signedInPageId !== undefined ? pages.find((item) => item.id === this.signedInPageId) ?? null : null;
+    if (isLead && verified) page = null; // Never use a lead tab that may belong to another Chrome profile.
+    const ownerTab = !page && isLead ? verified ?? bindInstagramPage(pages, account.handle) : null;
     if (ownerTab) {
       ensureChromeToolSucceeded(await client.callTool({ name: "navigate_page", arguments: { pageId: ownerTab.id, type: "url", url } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
       return { pageId: ownerTab.id, url };
@@ -136,7 +140,15 @@ export class ChromeInstagram implements InstagramDriver {
   }
   private async inboxPages(): Promise<Page[]> {
     const client = await this.connect();
-    let pages = (await this.pages()).filter((item) => isInstagramInboxUrl(item.url));
+    const all = await this.pages();
+    let pages = all.filter((item) => isInstagramInboxUrl(item.url));
+    // Open tabs are checked for the account marker before use. A new tab could land in another Chrome
+    // profile's window, so open the inbox in the tab already confirmed as signed in instead.
+    if (pages.length === 0 && this.signedInPageId !== undefined && all.some((item) => item.id === this.signedInPageId)) {
+      ensureChromeToolSucceeded(await client.callTool({ name: "navigate_page", arguments: { pageId: this.signedInPageId, type: "url", url: inboxIdentityUrl() } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open Instagram replies.");
+      this.inboxBorrowed = true;
+      return [{ id: this.signedInPageId, url: inboxIdentityUrl() } as Page];
+    }
     if (pages.length === 0) {
       ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url: inboxIdentityUrl(), background: false } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open Instagram replies.");
       pages = (await this.pages()).filter((item) => isInstagramInboxUrl(item.url));
@@ -203,7 +215,16 @@ export class ChromeInstagram implements InstagramDriver {
     if (looksLoggedOut(page.url, text) || !/edit profile/i.test(`${text} ${controls}`)) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
     return { ...page, text, controls };
   }
+  /**
+   * The tab where this account is confirmed signed in. Several Chrome profiles can be open at once and a
+   * new tab lands in whichever window was used last, so all Instagram work happens in this tab.
+   */
+  private signedInPageId?: number;
+  private lastPages: Page[] = [];
+  /** The signed-in tab was moved to the inbox and must go back to the profile afterwards. */
+  private inboxBorrowed = false;
   async openLogin(account: IgAccount): Promise<boolean> {
+    this.signedInPageId = undefined;
     const p = await this.openProfile(account);
     const read = async () => {
       const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
@@ -220,7 +241,21 @@ export class ChromeInstagram implements InstagramDriver {
       state = await read();
       if (chromeProfileNeedsReload(state)) throw new Error("Instagram is still loading in Chrome. Wait for its profile page to finish loading, then retry the check.");
     }
-    if (state.loggedIn) return true;
+    if (state.loggedIn) { this.signedInPageId = p.pageId; return true; }
+    // Another Chrome profile's window can also show this profile while signed out; try the other such tabs.
+    const ownerPath = new URL(instagramProfileUrl(account.handle)).pathname.toLowerCase();
+    for (const other of this.lastPages.filter((item) => item.id !== p.pageId && isAllowedInstagramUrl(item.url) && new URL(item.url).pathname.toLowerCase() === ownerPath)) {
+      try {
+        const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
+          pageId: other.id, waitForStableDom: false, function: instagramLoginCheckScript(account.handle),
+        } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
+        const otherState = loginStateFromToolResult(result);
+        if (looksBlocked(otherState.text, other.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
+        if (otherState.loggedIn) { this.signedInPageId = other.id; return true; }
+      } catch (error) {
+        if (error instanceof InstagramBlockedError) throw error;
+      }
+    }
 
     // Instagram may omit its owner-only profile control while the signed-in
     // inbox still clearly identifies the same account.
@@ -256,6 +291,13 @@ export class ChromeInstagram implements InstagramDriver {
   }
   async readInbox(account: IgAccount): Promise<{ handle: string; text: string }[]> {
     await this.verifyOwner(account);
+    try { return await this.readInboxOn(account); }
+    finally {
+      if (this.inboxBorrowed && this.signedInPageId !== undefined) await this.returnToOwner(account, this.signedInPageId);
+      this.inboxBorrowed = false;
+    }
+  }
+  private async readInboxOn(account: IgAccount): Promise<{ handle: string; text: string }[]> {
     let identityError: Error | null = null;
     for (const page of await this.inboxPages()) {
       let indices: number[];
