@@ -1,3 +1,7 @@
+# Current pilot status — 2026-10-26
+
+Chrome connection recovered through a normal browser restart and owner-approved fresh session. Read-only sign-in jobs #56 and #57 authenticated:true; the latter uses the persistent running worker. Pilot #2 resumed with approval ON, zero approved DMs/send tasks, and exactly three authorized qualified prospects. Its existing rest ends 10:23:43 IST; no live pace state was edited. Actual preparation remains pending that rest. 610 tests/79 files, typecheck/lint pass, including bounded splash recovery/tab parsing and prior-local-day session rollover. Earlier missing-file/paused snapshots below are superseded for this observed session; full outbound/reply and public signed distribution remain unverified.
+
 # Current Chrome blocker — 2026-10-26
 
 Pilot #2 is PAUSED and worker stopped after enabled Chrome still rejected fresh connection checks. Fixed the misleading blanket permission-denied message; actual normal product check #53 now identifies a missing debugging connection file. 598 tests/77 files, typecheck/lint pass. No live preparation, DM or paid call occurred. Earlier 09:42 scheduled-run statements below are superseded by the pause. Current connection/live outreach remains unverified; do not keep retrying or bypass Chrome/security restrictions. See newest HANDOFF section.

@@ -25,6 +25,12 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
+## Persistent worker connected and pilot resumed — 2026-10-26
+
+Detached read-only sign-in #56 and persistent-worker read-only sign-in **#57 both completed authenticated:true** for @timelessmoments.al. The owner approved the fresh Chrome session. Resumed campaign #2 through the actual UI and started the worker only after fresh zero-approved-DM/zero-send-job checks; all active campaigns still require approval and only the three authorized prospects are eligible. Preparation is queued behind a persisted rest ending **26 Oct 10:23:43 IST**. No live preparation result or send is claimed yet.
+
+Fixed a separate pure pacing bug: an expired sessionEnd from an earlier LOCAL day no longer starts a new rest as if it had just ended today. Genuine same-day sessions/rests, hours, offsets, lunch and durations are preserved; no live pacing state was corrected or cleared. The running worker retains its existing already-scheduled break, which is being waited out. Four regression cases cover local/UTC date boundaries and preserved current breaks. Validation: **610 tests/79 files**, typecheck/lint; see board for final build evidence. No migration/dependency or paid request. The worker process uses the existing in-memory module until its next normal restart; its current rest must not be bypassed.
+
 ## Connection recovered — 2026-10-26
 
 Normal Chrome restart (no flags/new profile/security changes), selecting existing Rudra099 and restoring the saved Outreach group recovered the missing debugging discovery file and reached the real permission prompt. Owner explicitly approved the fresh session. Instagram itself then stalled at its splash; one hard resource reload restored the signed-in @timelessmoments.al profile. Updated normal Accounts check **#56 completed authenticated:true**. This supersedes the prior missing-file blocker for the observed session; persistent worker/preparation results must still be recorded separately.

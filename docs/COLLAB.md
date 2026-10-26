@@ -1532,3 +1532,21 @@ NOT verified: independent signed customer installation and full live outbound/re
 Decisions made: existing approval, no-spend, sender binding and first-reply boundaries unchanged. Owner’s three-prospect preparation permission remains; zero approved DMs/send tasks required before restarting worker.
 Needs from you: exact DM approval remains human. No repeated setup needed for the recovered session.
 Next I will: publish this bounded fix, apply production build and resume only the three authorized preparation prospects.
+
+
+### [2026-10-26] Codex #193: Resume authorized pilot and repair prior-day session rollover
+Changed: normal Accounts job #56 authenticated:true after supported Chrome restart/owner-approved fresh permission and Instagram resource recovery. Resumed campaign #2 through UI and started worker after freshly verifying zero approved outgoing messages/send jobs, approval ON on both active campaigns, exactly the three authorized eligible prospects and no paid credentials. Worker deferred preparation to an existing 10:23 IST rest; no pacing state was edited. Agent pacing_day_recovery claims only pure pacing/test files to fix an expired prior-local-day session being treated as a same-day session ending now. Preserve genuine same-day rests, hours, jitter, limits and all durations.
+Verified: actual sign-in and running worker; no DM approval/send authorization. Root is preparing persistent worker sign-in during the existing break.
+NOT verified: actual preparation result and full live first-contact/reply.
+Decisions made: wait the already-persisted break rather than bypass it; do not alter live pace state. No dependency/migration or extra prospect.
+Needs from you: exact messages remain human approval.
+Next I will: verify persistent connection and let only the authorized preparation jobs run at their saved times, while testing the date rollover repair.
+
+
+### [2026-10-26] Codex #194: Verify persistent connection; fix stale prior-day pacing session
+Changed: worker sign-in #57 authenticated:true, following #56 detached success. Pilot #2 active and worker running via normal UI with approval ON/zero approved DMs/send jobs. Pure pacing repair discards only an expired prior-local-day sessionEnd while retaining genuine running rests and all existing hours/durations. Agent touched pacing source/test only; root reviewed. No live state correction.
+Verified: 610 tests/79 files, typecheck/lint and production Webpack build; four new pacing regressions cover prior-day resume, genuine rest and both timezone-boundary directions. Existing persisted rest ends 10:23:43 IST; it was NOT cleared. No paid call/send, no migration/dependency.
+NOT verified: preparation result and full first-contact/reply path; independent signed customer installation.
+Decisions made: keep same three authorized prospects and human DM review; let the current saved break finish naturally. New pacing code applies on next normal worker start.
+Needs from you: no setup step for the now-confirmed worker connection; exact drafted messages require human approval.
+Next I will: publish the small repair and observe actual preparation when the existing rest ends.

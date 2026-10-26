@@ -68,6 +68,11 @@ export function gate(now: Date, accountId: number, state: PaceState, cfg: Pacing
     return { ok: false, until: new Date(t + minutes(wait)), state: st, reason: "off_hours" };
   }
 
+  // A session from an earlier local day did not just end now. Start today's
+  // session normally, while retaining any independently running rest below.
+  const savedSessionEnd = st.sessionEnd ? Date.parse(st.sessionEnd) : NaN;
+  if (savedSessionEnd <= t && localClock(new Date(savedSessionEnd), cfg.tz).dateIso < dateIso) st.sessionEnd = null;
+
   // 2. A break that is already running.
   if (st.restUntil && Date.parse(st.restUntil) > t) return { ok: false, until: new Date(st.restUntil), state: st, reason: "resting" };
 
