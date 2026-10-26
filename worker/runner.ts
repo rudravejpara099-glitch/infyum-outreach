@@ -9,6 +9,7 @@ import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
 import { isDnc } from "@/lib/db/repos/dnc";
+import { isChromeUnreachable } from "@/lib/domain/chrome-connection-failure";
 import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, resolveSupersededInboxJobs, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
@@ -122,6 +123,10 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
       failJobPermanently(deps.db, job.id, msg);
       if (e.blockedByInstagram && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
       logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
+    } else if (job.type === "warmup" && !(e instanceof InstagramBlockedError) && isChromeUnreachable(msg)) {
+      // Chrome was not reachable, so nothing happened on Instagram: wait and retry instead of giving up.
+      deferJob(deps.db, job, 10);
+      logActivity(deps.db, "worker", "job.waiting_for_chrome", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
     } else if (job.type === "warmup") {
       // Both browser adapters can have partially engaged before a later error.
       // A generic failure is not proof that it is safe to repeat comments.

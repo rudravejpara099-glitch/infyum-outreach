@@ -18,3 +18,12 @@ export function chromeConnectionFailure(details: string): string | null {
   if (/remote debugging|DevToolsActivePort|could not connect to Chrome/i.test(details)) return messages.unavailable;
   return null;
 }
+
+/**
+ * True for errors that mean Chrome could not be reached at all. They happen before any page action,
+ * so the work can wait and run again once Chrome is reachable.
+ */
+export function isChromeUnreachable(message: string): boolean {
+  return (Object.values(messages) as string[]).includes(message) || message === "Chrome could not list its open pages."
+    || /^Chrome did not finish connecting\b/.test(message);
+}

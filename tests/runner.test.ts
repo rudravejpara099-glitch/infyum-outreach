@@ -132,6 +132,17 @@ describe("worker pipeline", () => {
     expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").all(lead.id)).toEqual([{ status: "failed" }]);
   });
 
+  it("waits and retries a warm-up when Chrome cannot be reached, because nothing happened on Instagram", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "chrome-offline", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    driver.warmUp = async () => { throw new Error("Chrome’s debugging connection file is missing. Enable remote debugging in your signed-in Chrome profile, then retry."); };
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    await runOne(deps);
+    expect(db.prepare("SELECT status, attempts FROM jobs WHERE type='warmup' AND lead_id=?").all(lead.id)).toEqual([{ status: "queued", attempts: 0 }]);
+    expect(getAccount(db, acct.id)?.status).toBe("active");
+  });
+
   it("allows Chrome mode inbox reads for matching accounts only", async () => {
     const { acct } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
