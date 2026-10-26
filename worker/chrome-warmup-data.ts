@@ -26,6 +26,22 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
     if (!allowed) return { allowed: false };
     const until = Date.now() + 6000;
     while (!document.querySelector('main,article') && Date.now() < until) await new Promise(r => setTimeout(r, 200));
+    // A profile's post grid renders about a second after <main>; reading at once finds no posts.
+    // Wait until ten posts show, or until the count has stopped growing for about a second.
+    if (/^\\/[A-Za-z0-9._]+\\/$/.test(location.pathname)) {
+      const gridUntil = Date.now() + 8000;
+      const gridPosts = () => Array.from((document.querySelector('article') ?? document.querySelector('main'))?.querySelectorAll('a[href]') ?? [])
+        .filter(a => /\\/(p|reel)\\//.test(String(a.href || ''))).length;
+      let last = -1, steady = 0;
+      while (Date.now() < gridUntil) {
+        const count = gridPosts();
+        if (count >= 10) break;
+        steady = count > 0 && count === last ? steady + 1 : 0;
+        if (steady >= 4) break;
+        last = count;
+        await new Promise(r => setTimeout(r, 250));
+      }
+    }
     const text = document.body?.innerText ?? '';
     const root = document.querySelector('article') ?? document.querySelector('main');
     const ownerPath = ${JSON.stringify(`/${ownerHandle.toLowerCase()}/`)};

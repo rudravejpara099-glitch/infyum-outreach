@@ -160,6 +160,16 @@ export function inboxListScript(ownerHandle: string): string {
       list = document.querySelector('[aria-label="Thread list"]');
     }
     if (!list) return { allowed: true, ownerMatches: true, isInbox: true, listReady: false, blocked: false, loggedOut: false, indices: [] };
+    // Conversations render a second or two after the empty list; reading at once would report no replies.
+    const rowsDeadline = Date.now() + 8000;
+    let seen = -1, settled = 0;
+    while (Date.now() < rowsDeadline) {
+      const count = list.querySelectorAll('div[role="button"]').length;
+      settled = count > 0 && count === seen ? settled + 1 : 0;
+      if (settled >= 3) break;
+      seen = count;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
     ${threadRowsScript}
     return { allowed: true, ownerMatches: true, isInbox: true, listReady: true, blocked: false, loggedOut: false, indices: rows.slice(0, 15).map((_, index) => index) };
   }`;
