@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   distDir: nextDistDir(),
   typescript: { tsconfigPath: nextTsconfigPath() },
   turbopack: { root: path.resolve(process.cwd()) },
+  // The public address (Vercel front door) reaches this app through a tunnel; allow its form posts.
+  experimental: { serverActions: { allowedOrigins: ["infyum-outreach.vercel.app", "*.trycloudflare.com"] } },
 };
 
 export default function configuration(phase: string): NextConfig {
