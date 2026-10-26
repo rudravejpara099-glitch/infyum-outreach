@@ -61,11 +61,15 @@ export function instagramProfileUrl(handle: string): string {
 }
 export function instagramLoginCheckScript(handle: string): string {
   const expectedPath = new URL(instagramProfileUrl(handle)).pathname.toLowerCase();
-  return `() => {
+  return `async () => {
     const allowed = location.protocol === 'https:' &&
       (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
       location.pathname.toLowerCase() === ${JSON.stringify(expectedPath)};
     if (!allowed) return { allowed: false, loggedIn: false };
+    // Instagram shows a blank splash before the profile renders; wait for the answer instead of reading the splash.
+    const decided = () => /edit profile|log in|sign up/i.test(document.body?.innerText ?? '');
+    const until = Date.now() + 15000;
+    while (!decided() && Date.now() < until) await new Promise((resolve) => setTimeout(resolve, 300));
     const text = document.body?.innerText ?? '';
     return { allowed: true, text, loggedIn: /edit profile/i.test(text) };
   }`;
