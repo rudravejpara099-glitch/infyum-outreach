@@ -141,6 +141,11 @@ export class ChromeInstagram implements InstagramDriver {
     try {
       return inboxThreadIndicesFromToolResult(await read());
     } catch (error) {
+      // A read can fail while Instagram is still swapping the page; one calm retry, never more.
+      if (error instanceof Error && error.message === "Chrome could not read Instagram replies.") {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        return inboxThreadIndicesFromToolResult(await read());
+      }
       if (!(error instanceof Error) || error.message !== INBOX_LOADING_ERROR) throw error;
       ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "navigate_page", arguments: { pageId, type: "reload" } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not refresh the loading Instagram inbox.");
       return inboxThreadIndicesFromToolResult(await read());
