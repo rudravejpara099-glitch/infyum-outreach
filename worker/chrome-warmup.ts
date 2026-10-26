@@ -58,9 +58,14 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
       let comment: string | null = null;
       // Never comment twice on one post: an interrupted warm-up may already have commented here.
       if (!skipComment(post.caption) && !post.ownerCommented) {
-        comment = (await makeComment(post.caption.slice(0, 400))).trim();
-        const error = warmupCommentError(comment);
-        if (error) throw new Error(error);
+        try {
+          comment = (await makeComment(post.caption.slice(0, 400))).trim();
+          if (warmupCommentError(comment)) comment = null;
+        } catch (error) {
+          // If the writer cannot produce a comment that follows the rules, this post just gets a like.
+          if (!(error instanceof Error) || !/^Comment writing did not return valid text/.test(error.message)) throw error;
+          comment = null;
+        }
         post = await check(url); // The account/page may change while writing takes time.
       }
       if (!post.liked) {

@@ -382,8 +382,14 @@ export class ChromeInstagram implements InstagramDriver {
     check();
     let snapshot = await this.snapshot(target.pageId);
     await this.clickNamed(target.pageId, snapshot, "button", "Message");
+    // The chat opens a moment after the click; look for its message box for up to about 15 seconds.
+    const chatOpen = (text: string) => /textbox\s+"[^"]*(?:message|write a message)/i.test(text);
     snapshot = await this.snapshot(target.pageId);
-    if (!/textbox\s+"[^"]*(?:message|write a message)/i.test(snapshot)) throw new Error(`Chat with @${handle} did not open.`);
+    for (let look = 0; !chatOpen(snapshot) && look < 10; look++) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      snapshot = await this.snapshot(target.pageId);
+    }
+    if (!chatOpen(snapshot)) throw new Error(`Chat with @${handle} did not open.`);
     let attempted = false;
     try {
       for (const [index, part] of parts.entries()) {
