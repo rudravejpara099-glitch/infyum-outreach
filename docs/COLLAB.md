@@ -1496,3 +1496,21 @@ NOT verified: actual preparation while scheduled outside working hours; independ
 Decisions made: owner’s exact preparation authorization retained; no DM approval or send authorized, no pacing/window changes. Original data preserved.
 Needs from you: exact messages will need human review before sending.
 Next I will: publish the bounded changes and leave the pilot queued. Worker read-only check #52 currently reports denied Chrome access; owner action is pending. Browser security policy blocked automated navigation to internal Chrome debugging settings; no alternative surface/workaround is authorized. The earlier detached authenticated:true check does not prove the present persistent worker connection.
+
+
+### [2026-10-26] Codex #189: Diagnose persistent Chrome connection rejection
+Changed: owner confirmed enabling/allowing Chrome. Read-only check #53 still failed after a clean worker restart. Paused pilot #2 and stopped worker through normal UI; no repeated social work. Claim narrow error-classification fix: the current generic Chrome matcher incorrectly labels any connection failure as denied permission and hides socket/missing-file/macOS causes.
+Verified: fresh zero approved DMs/send tasks; exact three authorized prospects remain qualified. No Instagram write or paid call.
+NOT verified: current worker/browser connection and live preparation.
+Decisions made: no settings/security bypass or new browser transport. Browser policy’s internal-page restriction remains respected; use only normal product read-only sign-in flow.
+Needs from you: no repeated setup request until the app exposes a specific cause.
+Next I will: add fixed-message, path/token-safe diagnostic classification with tests, then run one read-only product check.
+
+
+### [2026-10-26] Codex #190: Expose specific Chrome failure and pause retry loop
+Changed: pure Chrome connection failure classifier shared by bridge and login errors. Specific underlying causes now precede the generic wrapper; fixed messages avoid paths, tokens and raw provider errors. Paused pilot #2 and stopped worker through UI after owner-enabled Chrome plus one clean worker restart still failed. No migration/dependency/transport change.
+Verified: 598 tests/77 files, typecheck, lint, production Webpack build and rebuilt packaged-helper startup/permission/cancel/quit smoke. Actual normal Accounts read-only job #53 reports missing debugging connection file; no social action, approved DM, send task or paid call. Three pilot leads remain qualified.
+NOT verified: current Chrome connection, preparation, live first-contact/handoff, independent signed installation. Prior detached authenticated:true evidence does not prove today’s session.
+Decisions made: do not keep retrying or ask owner to repeat the same setting blindly. Keep pilot paused; previous 09:42 schedule is superseded until connection is proven. Browser internal-page security restriction remains binding.
+Needs from you: showing the exact Chrome page enabled may be necessary to identify the mismatch; no credential or password is needed.
+Next I will: publish tests/build/package evidence and resume only normal, authorized product connection after resolving that mismatch.

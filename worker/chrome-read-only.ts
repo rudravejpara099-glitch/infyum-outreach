@@ -7,6 +7,7 @@ import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDrive
 import { looksBlocked, looksLoggedOut } from "./parse";
 import { runChromeWarmup } from "./chrome-warmup";
 import { warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
+import { chromeConnectionFailure } from "@/lib/domain/chrome-connection-failure";
 import { humanDelayMs, type DelayKind } from "@/lib/domain/pacing";
 import { INBOX_LOADING_ERROR, inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadIsLoadingFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
 
@@ -17,8 +18,8 @@ const CHROME_PERMISSION_TIMEOUT_MS = 180_000;
 export function ensureChromeToolSucceeded<T extends ToolTextResult>(result: T, fallback: string): T {
   if (!result.isError) return result;
   const details = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
-  if (/EPERM|operation not permitted/i.test(details)) throw new Error("macOS blocked access to Chrome's local debugging file. Reopen the signed-in Chrome profile and retry the connection.");
-  if (/403|remote debugging|DevToolsActivePort|could not connect to Chrome/i.test(details)) throw new Error("Chrome remote debugging permission was denied.");
+  const connectionFailure = chromeConnectionFailure(details);
+  if (connectionFailure) throw new Error(connectionFailure);
   throw new Error(fallback);
 }
 export function loginStateFromToolResult(result: ToolTextResult): { text: string; loggedIn: boolean } {
