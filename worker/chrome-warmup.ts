@@ -19,7 +19,7 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
   const check = async (url: string, comment?: string) => {
     if (!mayContinue()) throw new Error("Campaign preparation was stopped.");
     const state = await browser.read(url, comment);
-    if (!state.allowed) throw new Error("Chrome left the expected Instagram page.");
+    if (!state.allowed) throw new Error(`Chrome left the expected Instagram page${state.at ? ` (it was on ${String(state.at).slice(0, 80)})` : ""}.`);
     if (looksBlocked(state.text, url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
     if (!state.ownerMatches || looksLoggedOut(url, state.text)) throw new InstagramBlockedError("The saved Instagram account is no longer signed in in Chrome.");
     return state;
