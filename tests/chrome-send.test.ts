@@ -125,8 +125,11 @@ describe("signed-in Chrome DM driver", () => {
 
     await expect(driver.readInbox(owner)).resolves.toEqual([]);
 
+    // The inbox opens in the tab verified as signed in (not an old inbox tab), reloads once, then returns.
     expect(calls.filter(call => call.name === "navigate_page")).toEqual([
-      { name: "navigate_page", args: { pageId: 8, type: "reload" } },
+      { name: "navigate_page", args: { pageId: 7, type: "url", url: "https://www.instagram.com/direct/inbox/" } },
+      { name: "navigate_page", args: { pageId: 7, type: "reload" } },
+      { name: "navigate_page", args: { pageId: 7, type: "url", url: "https://www.instagram.com/owner/" } },
     ]);
     expect(inboxReads).toBe(2);
   });
@@ -145,7 +148,7 @@ describe("signed-in Chrome DM driver", () => {
     const driver = new ChromeInstagram({ callTool, close: vi.fn(async () => {}) } as unknown as Client);
 
     await expect(driver.readInbox(owner)).rejects.toThrow("saved Instagram account");
-    expect(calls.some(call => call.name === "navigate_page")).toBe(false);
+    expect(calls.some(call => call.name === "navigate_page" && call.args.type === "reload")).toBe(false);
   });
 
   it("uses the verified owner page, fresh controls, and the approved message text", async () => {

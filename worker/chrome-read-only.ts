@@ -146,9 +146,9 @@ export class ChromeInstagram implements InstagramDriver {
     const client = await this.connect();
     const all = await this.pages();
     let pages = all.filter((item) => isInstagramInboxUrl(item.url));
-    // Open tabs are checked for the account marker before use. A new tab could land in another Chrome
-    // profile's window, so open the inbox in the tab already confirmed as signed in instead.
-    if (pages.length === 0 && this.signedInPageId !== undefined && all.some((item) => item.id === this.signedInPageId)) {
+    // Prefer the tab already confirmed as signed in: an old inbox tab can be stuck on Instagram's splash,
+    // and a new tab could land in another Chrome profile's window.
+    if (this.signedInPageId !== undefined && all.some((item) => item.id === this.signedInPageId)) {
       ensureChromeToolSucceeded(await client.callTool({ name: "navigate_page", arguments: { pageId: this.signedInPageId, type: "url", url: inboxIdentityUrl() } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open Instagram replies.");
       this.inboxBorrowed = true;
       return [{ id: this.signedInPageId, url: inboxIdentityUrl() } as Page];
