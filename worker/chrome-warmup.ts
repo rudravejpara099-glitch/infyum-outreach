@@ -59,7 +59,13 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
         attempted = true;
         await browser.comment(comment);
         await browser.wait("read");
-        if (!(await check(url, comment)).commentVisible) throw new Error("Instagram did not confirm the comment.");
+        // Instagram can take a few seconds to show a new comment; look again before calling it unconfirmed.
+        let confirmed = (await check(url, comment)).commentVisible;
+        for (let look = 0; !confirmed && look < 4; look++) {
+          await browser.wait("afterLike");
+          confirmed = (await check(url, comment)).commentVisible;
+        }
+        if (!confirmed) throw new Error("Instagram did not confirm the comment.");
         result.comments++;
       }
       await browser.wait("betweenPieces");
@@ -76,7 +82,7 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
     if (!result.followed) throw new Error("Instagram did not confirm following this profile.");
     return result;
   } catch (error) {
-    if (attempted) throw new InstagramWarmupUncertainError(error instanceof InstagramBlockedError);
+    if (attempted) throw new InstagramWarmupUncertainError(error instanceof InstagramBlockedError, error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
