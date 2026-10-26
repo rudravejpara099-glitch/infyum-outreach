@@ -380,7 +380,13 @@ export class ChromeInstagram implements InstagramDriver {
   }
   private async sendOn(handle: string, parts: string[], mayContinue: () => boolean, check: () => void, target: { pageId: number; url: string }): Promise<void> {
     check();
+    // The profile can still be on Instagram's splash; wait for its Message button (up to ~15s).
+    const hasMessageButton = (text: string) => /uid=[^\s]+\s+button\s+"Message"/i.test(text);
     let snapshot = await this.snapshot(target.pageId);
+    for (let look = 0; !hasMessageButton(snapshot) && look < 10; look++) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      snapshot = await this.snapshot(target.pageId);
+    }
     await this.clickNamed(target.pageId, snapshot, "button", "Message");
     // The chat opens a moment after the click; look for its message box for up to about 15 seconds.
     const chatOpen = (text: string) => /textbox\s+"[^"]*(?:message|write a message)/i.test(text);
