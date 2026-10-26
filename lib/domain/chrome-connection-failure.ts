@@ -25,5 +25,5 @@ export function chromeConnectionFailure(details: string): string | null {
  */
 export function isChromeUnreachable(message: string): boolean {
   return (Object.values(messages) as string[]).includes(message) || message === "Chrome could not list its open pages."
-    || /^Chrome did not finish connecting\b/.test(message);
+    || /^Chrome did not finish connecting\b/.test(message) || /^Instagram did not finish loading\b/.test(message);
 }

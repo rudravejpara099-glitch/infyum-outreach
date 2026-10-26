@@ -66,8 +66,11 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
     const ownerLinkShown = () => Array.from(document.querySelectorAll('a[href]')).some(a =>
       a.getAttribute?.('href')?.toLowerCase() === ownerPath &&
       (/profile/i.test(a.getAttribute?.('aria-label') || '') || Array.from(a.querySelectorAll?.('img') ?? []).some(img => /profile picture/i.test(img.alt))));
-    const ownerBy = Date.now() + 6000;
-    while (!ownerLinkShown() && Date.now() < ownerBy) await new Promise(r => setTimeout(r, 250));
+    // Instagram first shows a blank logo splash; in a window that is not in front it can last a while.
+    // Wait for real signed-in content: the account's profile link or a comment box.
+    const commentBoxShown = () => Boolean(document.querySelector('textarea[aria-label*="comment" i],textarea[placeholder*="comment" i]'));
+    const ownerBy = Date.now() + 15000;
+    while (!ownerLinkShown() && !commentBoxShown() && Date.now() < ownerBy) await new Promise(r => setTimeout(r, 250));
     const ownerMatches = ownerLinkShown();
     const caption = (root?.querySelector('h1')?.innerText ?? '').trim() ||
       Array.from(root?.querySelectorAll('img[alt]') ?? []).map(img => img.alt).find(alt => alt.length > 20 && !/profile picture/i.test(alt)) || '';
