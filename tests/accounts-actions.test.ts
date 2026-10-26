@@ -37,7 +37,7 @@ describe("Instagram sign-in actions", () => {
   it("prevents a private company from using the host's signed-in Chrome", async () => {
     state.hostChromeAllowed = false; state.workspaceId = "private-company";
     const connect = new FormData(); connect.set("handle", "@private.account"); connect.set("dailyCap", "20"); connect.set("browserMode", "chrome_read_only");
-    expect((await connectAccount(connect)).error).toMatch(/separate Instagram sign-in/);
+    expect((await connectAccount(connect)).error).toMatch(/own Chrome/);
     expect(db.prepare("SELECT count(*) n FROM ig_accounts").get()).toEqual({ n: 0 });
     const account = createAccount(db, { handle: "private.account", profileDir: "/tmp/tenant-profiles/private.account" }, "test");
     const switchForm = new FormData(); switchForm.set("id", String(account.id));
@@ -47,12 +47,12 @@ describe("Instagram sign-in actions", () => {
     expect(db.prepare("SELECT count(*) n FROM jobs").get()).toEqual({ n: 0 });
   });
 
-  it("launches private-company sign-in with its own storage and disables host Chrome", async () => {
+  it("routes a private company to its own device without opening a host window", async () => {
     state.hostChromeAllowed = false; state.workspaceId = "private-company";
     const form = new FormData(); form.set("handle", "@private.account"); form.set("dailyCap", "20");
-    await connectAccount(form);
-    expect(spawn).toHaveBeenCalledWith(expect.any(String), expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ DB_PATH: "/tmp/tenant.db", PROFILES_DIR: "/tmp/tenant-profiles", OUTREACH_HOST_CHROME_ALLOWED: "0" }) }));
-    expect(db.prepare("SELECT profile_dir FROM ig_accounts").get()).toEqual({ profile_dir: "/tmp/tenant-profiles/private.account" });
+    expect((await connectAccount(form)).url).toBe("/accounts/connect");
+    expect(spawn).not.toHaveBeenCalled();
+    expect(db.prepare("SELECT count(*) n FROM ig_accounts").get()).toEqual({ n: 0 });
   });
 
   it("opens a login-only process without requiring the full worker", async () => {

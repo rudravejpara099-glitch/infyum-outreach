@@ -175,4 +175,54 @@ CREATE INDEX workspace_sessions_user ON workspace_sessions(user_id,workspace_id)
 CREATE TABLE workspace_bootstrap (id INTEGER PRIMARY KEY CHECK (id=1));
 `,
   },
+  {
+    id: 7,
+    name: "customer_device_connector",
+    sql: `
+CREATE TABLE device_pairings (
+  token_hash TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL REFERENCES workspace_catalog(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  consumed_at INTEGER
+);
+CREATE TABLE paired_devices (
+  id TEXT PRIMARY KEY,
+  token_hash TEXT NOT NULL UNIQUE,
+  workspace_id TEXT NOT NULL REFERENCES workspace_catalog(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  last_seen INTEGER,
+  revoked_at INTEGER
+);
+CREATE INDEX paired_devices_workspace ON paired_devices(workspace_id);
+CREATE TRIGGER revoke_removed_member_devices AFTER DELETE ON workspace_memberships BEGIN
+  UPDATE paired_devices SET revoked_at=CAST(strftime('%s','now') AS INTEGER)*1000
+    WHERE workspace_id=OLD.workspace_id AND user_id=OLD.user_id AND revoked_at IS NULL;
+  DELETE FROM device_pairings WHERE workspace_id=OLD.workspace_id AND user_id=OLD.user_id;
+END;
+CREATE TABLE account_devices (
+  account_id INTEGER PRIMARY KEY REFERENCES ig_accounts(id) ON DELETE CASCADE,
+  device_id TEXT NOT NULL
+);
+CREATE TABLE device_commands (
+  id TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL,
+  account_id INTEGER NOT NULL REFERENCES ig_accounts(id) ON DELETE CASCADE,
+  job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  job_attempt INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  args_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('queued','running','done','failed','uncertain')),
+  expires_at INTEGER NOT NULL,
+  started_at INTEGER,
+  result_json TEXT,
+  error TEXT,
+  callback_json TEXT,
+  callback_response_json TEXT
+);
+CREATE INDEX device_commands_pending ON device_commands(device_id,status,expires_at);
+CREATE UNIQUE INDEX device_commands_one_active ON device_commands(job_id,kind) WHERE status IN ('queued','running');
+`,
+  },
 ];

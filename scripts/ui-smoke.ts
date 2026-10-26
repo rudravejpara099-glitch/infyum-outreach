@@ -6,6 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
+import type { Request as BrowserRequest } from "playwright";
 import { openDb } from "@/lib/db/core";
 import { createAccount, setAccountStatus } from "@/lib/db/repos/accounts";
 import { enqueue } from "@/lib/db/repos/jobs";
@@ -50,7 +51,7 @@ let serverOutput = "";
 const startServer = (build: IsolatedNextBuild, apifyToken = "") => {
   serverOutput = "";
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], {
-    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
+    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4000); };
@@ -220,7 +221,8 @@ try {
   await page.getByRole("status").filter({ hasText: "Matched leads need preparation" }).waitFor();
   await page.getByText(/This matched lead needs Instagram activity before Outreach can prepare a first message/).waitFor();
   await page.getByText(/Signed-in Chrome supports this step/).waitFor();
-  await page.getByText(/To work without paid AI, complete the engagement on Instagram/).waitFor();
+  await page.getByText(/Ask your workspace administrator to connect free writing or metered AI/).waitFor();
+  await page.getByText(/After real engagement, you can also mark the lead Engaged/).waitFor();
   await page.getByRole("link", { name: "Review writing setup", exact: true }).waitFor();
   for (const mode of ["light", "dark"]) {
     await page.getByRole("button", { name: `Use ${mode} appearance`, exact: true }).click();
@@ -536,8 +538,8 @@ try {
 
   await page.goto(`${base}/settings`);
   await page.getByRole("heading", { name: "AI message writing", exact: true }).waitFor();
-  await page.getByText("Outreach uses a separately billed Anthropic API connection.", { exact: false }).waitFor();
-  await page.getByText(/Connection: (not connected for this workspace|API key is set for this workspace)\. Paid message writing stays paused until billing metering is reviewed\./).waitFor();
+  await page.getByText("Automatic message drafts are off", { exact: true }).waitFor();
+  await page.getByText(/A personal Claude subscription is not used\./).waitFor();
   await page.getByText("Connection details: not set up for this workspace. Checking this does not run a search.", { exact: true }).waitFor();
   await page.getByRole("listitem").filter({ hasText: "@another.campaign" }).getByRole("button", { name: "Remove", exact: true }).click();
   await page.getByText("Nobody blocked.", { exact: true }).waitFor();
@@ -698,9 +700,21 @@ try {
   assert.equal(await reviewAccountCard.getByText("Instagram showed a warning.", { exact: false }).count(), 0, "A sign-in problem must not be described as an Instagram warning");
   const recoveryJobId = enqueue(db, { type: "open_login", accountId: account.id });
   db.prepare("UPDATE jobs SET status='running' WHERE id=?").run(recoveryJobId);
-  await openLoginWindowJob(db, recoveryJobId, account.id, { openLogin: async () => true });
+  await page.bringToFront();
   await page.reload();
+  await reviewAccountCard.getByText("Checking Chrome sign-in", { exact: true }).waitFor();
+  let accountRefreshes = 0;
+  const accountRefresh = (request: BrowserRequest) => {
+    if (request.method() === "GET" && new URL(request.url()).pathname === "/accounts") accountRefreshes++;
+  };
+  page.on("request", accountRefresh);
+  await openLoginWindowJob(db, recoveryJobId, account.id, { openLogin: async () => true });
   await reviewAccountCard.getByText("Connected", { exact: true }).waitFor();
+  assert(accountRefreshes > 0, "A detached sign-in result must appear without a manual reload");
+  const completedRefreshes = accountRefreshes;
+  await page.waitForTimeout(6500);
+  assert.equal(accountRefreshes, completedRefreshes, "Accounts must stop polling once sign-in finishes");
+  page.off("request", accountRefresh);
   assert.equal((db.prepare("SELECT status FROM ig_accounts WHERE id=?").get(account.id) as { status: string }).status, "active");
   setCampaignStatus(db, id, "paused", "ui-fixture");
   await page.goto(campaignUrl);

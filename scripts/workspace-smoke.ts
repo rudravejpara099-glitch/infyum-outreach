@@ -11,6 +11,7 @@ import { openDb, type Db } from "@/lib/db/core";
 import { createAccount } from "@/lib/db/repos/accounts";
 import { logActivity } from "@/lib/db/repos/activity";
 import { buildIsolatedNextApp, cleanupIsolatedNextApp, type IsolatedNextBuild } from "./isolated-next-build";
+import { proveCustomerConnection } from "./connector-browser-proof";
 
 async function stopServer(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
@@ -135,7 +136,7 @@ async function main() {
   try {
     build = process.env.WORKSPACE_SMOKE_DIST ? { distDir: process.env.WORKSPACE_SMOKE_DIST, tsconfigPath: `${process.env.WORKSPACE_SMOKE_DIST.replace(".next-smoke-", ".tsconfig-smoke-")}.json` } : buildIsolatedNextApp("ui", [sessionSecret]);
     server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3192"], {
-      env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, APIFY_TOKEN: "", ANTHROPIC_API_KEY: "", STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "", BILLING_OWNER_USER_ID: "", APP_URL: base },
+      env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, APIFY_TOKEN: "", ANTHROPIC_API_KEY: "", STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "", BILLING_OWNER_USER_ID: "", APP_URL: base },
       stdio: ["ignore", "pipe", "pipe"],
     });
     const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4_000); };
@@ -174,6 +175,7 @@ async function main() {
     const betaUserId = seedPrivateFixture(betaDb, temp, "beta@example.test", "beta");
     await assertPrivatePages(alpha, base, "alpha", "beta", "alpha company campaign");
     await assertPrivatePages(beta, base, "beta", "alpha", "beta company campaign");
+    await proveCustomerConnection(alpha, beta, base, alphaDb);
     const foreignCampaign = await betaContext.request.get(`${base}/campaigns/900001`);
     // Next can stream the authenticated shell before notFound(), retaining HTTP 200.
     const denied = await foreignCampaign.text();
@@ -258,10 +260,10 @@ async function main() {
       await beta.getByRole("button", { name: `Use ${theme} appearance`, exact: true }).click();
       for (const width of [1440, 390]) {
         await beta.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-        for (const route of ["/", "/workspaces"]) {
+        for (const route of ["/", "/workspaces", "/accounts/connect", "/settings"]) {
           await beta.goto(base + route); await beta.locator("h1").waitFor();
           assert(await beta.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Workspace onboarding must fit ${width}px in ${theme} appearance`);
-          await beta.screenshot({ path: path.join(screenshots, `${route === "/" ? "overview" : "workspaces"}-${theme}-${width}.png`), fullPage: true });
+          await beta.screenshot({ path: path.join(screenshots, `${route === "/" ? "overview" : route.slice(1).replaceAll("/", "-")}-${theme}-${width}.png`), fullPage: true });
         }
       }
     }

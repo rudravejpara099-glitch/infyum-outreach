@@ -7,6 +7,7 @@ import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
 import { blockHandle, saveApifyCap, saveTimeZone, unblockHandle } from "./actions";
+import { getWritingReadiness } from "@/lib/services/writing-readiness";
 import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function Settings() {
   const user = await requireUser();
   const db = (await getDb());
+  const writing = await getWritingReadiness(user.hostChromeAllowed);
   const dnc = listDnc(db);
   const cap = getSetting(db, "apify_monthly_cap_usd");
   const portfolioLink = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
@@ -25,8 +27,8 @@ export default async function Settings() {
       <div className="grid max-w-3xl gap-6">
         <section className="card p-5">
           <h2 className="text-base font-semibold">AI message writing</h2>
-          <p className="mb-2 mt-1 text-muted">Outreach uses a separately billed Anthropic API connection. It does not use anyone’s Claude Code subscription.</p>
-          <p className="text-sm text-muted">Connection: {user.hostChromeAllowed && process.env.ANTHROPIC_API_KEY ? "API key is set for this workspace" : "not connected for this workspace"}. Paid message writing stays paused until billing metering is reviewed.</p>
+          <p className="mb-2 mt-2"><span className={`badge ${writing.available ? "badge-ok" : "badge-warn"}`}>{writing.title}</span></p>
+          <p className="text-sm text-muted">{writing.detail}</p>
         </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Link in first messages</h2>

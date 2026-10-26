@@ -10,8 +10,9 @@ const browserMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("playwright", () => ({ chromium: { launchPersistentContext: browserMocks.launchPersistentContext } }));
-vi.mock("@/worker/human", () => ({ wait: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/worker/human", () => ({ wait: vi.fn().mockResolvedValue(undefined), look: vi.fn().mockResolvedValue(undefined), click: vi.fn().mockResolvedValue(undefined), type: vi.fn().mockResolvedValue(undefined) }));
 
+import * as human from "@/worker/human";
 import { PlaywrightInstagram } from "@/worker/instagram";
 import { AccountInstagramDriver } from "@/worker/instagram-driver";
 
@@ -26,6 +27,39 @@ describe("Instagram login browser launch", () => {
       return browserMocks.context;
     });
     browserMocks.launchPersistentContext.mockResolvedValue(browserMocks.context);
+  });
+
+
+  it("forwards the campaign stop callback through the account wrapper", async () => {
+    const spy = vi.spyOn(PlaywrightInstagram.prototype, "warmUp").mockResolvedValue({ likes: 0, comments: 0, followed: false });
+    const account = { id: 9, browserMode: "isolated" } as IgAccount;
+    const makeComment = async () => "Those colors look amazing 🙌";
+    const mayContinue = () => false;
+    try {
+      await new AccountInstagramDriver().warmUp(account, "prospect", 10, makeComment, mayContinue);
+      expect(spy).toHaveBeenCalledWith(account, "prospect", 10, makeComment, mayContinue);
+    } finally { spy.mockRestore(); }
+  });
+  it("stops isolated warm-up before opening a browser when the campaign stops", async () => {
+    const account = { id: 9, browserMode: "isolated" } as IgAccount;
+    await expect(new PlaywrightInstagram().warmUp(account, "prospect", 10, async () => "text", () => false)).rejects.toThrow("stopped");
+    expect(browserMocks.launchPersistentContext).not.toHaveBeenCalled();
+  });
+
+  it("rechecks a pause after comment writing before typing or posting", async () => {
+    const account = { id: 9, profileDir: "/profiles/9" } as IgAccount;
+    let active = true;
+    browserMocks.page.goto.mockResolvedValue(undefined);
+    browserMocks.page.url.mockReturnValue("https://www.instagram.com/p/one/");
+    browserMocks.page.locator.mockImplementation((selector: string) => {
+      if (selector === "body") return { innerText: async () => "signed in" };
+      if (selector.startsWith("a[href")) return { evaluateAll: async () => ["https://www.instagram.com/p/one/"] };
+      if (selector === "main h1, article h1") return { first: () => ({ innerText: async () => "An oak table" }) };
+      return { first: () => ({ count: async () => selector.startsWith("textarea") ? 1 : 0 }) };
+    });
+    await expect(new PlaywrightInstagram().warmUp(account, "prospect", 1, async () => { active = false; return "Those details look amazing 🙌"; }, () => active)).rejects.toThrow("stopped");
+    expect(human.type).not.toHaveBeenCalled();
+    expect(human.click).not.toHaveBeenCalled();
   });
 
   it("uses a dedicated headed Playwright Chromium profile, not the owner's Chrome session", async () => {

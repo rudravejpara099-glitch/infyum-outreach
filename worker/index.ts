@@ -33,7 +33,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const driver = new AccountInstagramDriver();
+  const driver = new AccountInstagramDriver(db);
   try {
     // A second process can never re-queue the first process's in-flight send.
     const requeued = requeueStuck(db);

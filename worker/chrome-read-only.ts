@@ -7,17 +7,20 @@ import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDrive
 import { looksBlocked, looksLoggedOut } from "./parse";
 import { runChromeWarmup } from "./chrome-warmup";
 import { warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
+import { chromePages, chromeProfileNeedsReload } from "@/lib/domain/chrome-pages";
+import { chromeConnectionFailure } from "@/lib/domain/chrome-connection-failure";
 import { humanDelayMs, type DelayKind } from "@/lib/domain/pacing";
 import { INBOX_LOADING_ERROR, inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadIsLoadingFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
 
 type Page = { id: number; url: string };
 type ToolTextResult = { isError?: boolean; content?: { type: string; text: string }[]; structuredContent?: { message?: string } };
 const CHROME_REQUEST_TIMEOUT_MS = 60_000;
+const CHROME_PERMISSION_TIMEOUT_MS = 180_000;
 export function ensureChromeToolSucceeded<T extends ToolTextResult>(result: T, fallback: string): T {
   if (!result.isError) return result;
   const details = [result.structuredContent?.message, ...(result.content?.filter((part) => part.type === "text").map((part) => part.text) ?? [])].filter(Boolean).join(" ");
-  if (/EPERM|operation not permitted/i.test(details)) throw new Error("macOS blocked access to Chrome's local debugging file. Reopen the signed-in Chrome profile and retry the connection.");
-  if (/403|remote debugging|DevToolsActivePort|could not connect to Chrome/i.test(details)) throw new Error("Chrome remote debugging permission was denied.");
+  const connectionFailure = chromeConnectionFailure(details);
+  if (connectionFailure) throw new Error(connectionFailure);
   throw new Error(fallback);
 }
 export function loginStateFromToolResult(result: ToolTextResult): { text: string; loggedIn: boolean } {
@@ -34,7 +37,7 @@ export function jsonFromToolResult(result: ToolTextResult): unknown {
   try { return JSON.parse(candidate) as unknown; } catch { return null; }
 }
 export function chromeMcpArgs(bin: string): string[] {
-  return [bin, "--auto-connect", "--channel=stable", "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+  return [bin, "--auto-connect", "--channel=stable", "--experimentalStructuredContent", "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
 }
 export function isAllowedInstagramUrl(value: string): boolean {
   try {
@@ -72,6 +75,7 @@ export function instagramLoginCheckScript(handle: string): string {
 export class ChromeInstagram implements InstagramDriver {
   private client?: Client;
   private transport?: StdioClientTransport;
+  private browserConnected = false;
   constructor(testClient?: Client, private readonly pause: (kind: DelayKind) => Promise<void> = async kind => {
     await new Promise(resolve => setTimeout(resolve, humanDelayMs(kind, Math.random)));
   }) { this.client = testClient; }
@@ -99,7 +103,7 @@ export class ChromeInstagram implements InstagramDriver {
   private async pages(): Promise<Page[]> {
     let response: ToolTextResult & { structuredContent?: { pages?: Page[]; message?: string } };
     try {
-      response = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as typeof response;
+      response = await (await this.connect()).callTool({ name: "list_pages", arguments: {} }, undefined, { timeout: this.browserConnected ? CHROME_REQUEST_TIMEOUT_MS : CHROME_PERMISSION_TIMEOUT_MS }) as typeof response;
     } catch (error) {
       if (error instanceof Error && /MCP error -32001|request timed out/i.test(error.message)) {
         throw new Error("Chrome did not finish connecting. Check the signed-in Chrome window for an “Allow remote debugging?” prompt, approve it, then retry.");
@@ -107,9 +111,8 @@ export class ChromeInstagram implements InstagramDriver {
       throw error;
     }
     const result = ensureChromeToolSucceeded(response, "Chrome could not list its open pages.");
-    if (result.structuredContent?.pages?.length) return result.structuredContent.pages.map((page) => ({ id: Number(page.id), url: page.url })).filter((page) => Number.isSafeInteger(page.id));
-    const text = result.content?.filter((part) => part.type === "text").map((part) => part.text).join("\n") ?? "";
-    return [...text.matchAll(/(?:^|\n)\s*(\d+):\s*(.*?)\s+\((https?:\/\/[^)]+)\)/g)].map((m) => ({ id: Number(m[1]), url: m[3].trim() }));
+    this.browserConnected = true;
+    return chromePages(result);
   }
   private async openProfile(account: IgAccount, handle = account.handle): Promise<{ pageId: number; url: string }> {
     const client = await this.connect();
@@ -158,11 +161,13 @@ export class ChromeInstagram implements InstagramDriver {
     if (!uid) throw new Error(`Instagram did not show the expected ${name} control.`);
     ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "click", arguments: { pageId, uid } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, `Chrome could not select ${name}.`);
   }
-  private async sendPart(pageId: number, part: string, onSubmit: () => void): Promise<void> {
+  private async sendPart(pageId: number, part: string, onSubmit: () => void, mayContinue: () => boolean): Promise<void> {
     const snapshot = await this.snapshot(pageId);
     const uid = snapshot.match(/uid=([^\s]+)\s+textbox\s+"[^"]*(?:message|write a message)[^"]*"/i)?.[1];
     if (!uid) throw new Error("Instagram did not show a message box.");
+    if (!mayContinue()) throw new Error("Message sending was stopped.");
     ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "fill", arguments: { pageId, uid, value: part } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not enter the approved message.");
+    await this.pause("beforeSend");
     onSubmit();
     ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "press_key", arguments: { pageId, key: "Enter" } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not submit the message.");
   }
@@ -186,13 +191,22 @@ export class ChromeInstagram implements InstagramDriver {
   }
   async openLogin(account: IgAccount): Promise<boolean> {
     const p = await this.openProfile(account);
-    const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
-      pageId: p.pageId, waitForStableDom: false,
-      function: instagramLoginCheckScript(account.handle),
-    } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
-    const { text, loggedIn } = loginStateFromToolResult(result);
-    if (looksBlocked(text, p.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
-    if (loggedIn) return true;
+    const read = async () => {
+      const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
+        pageId: p.pageId, waitForStableDom: false,
+        function: instagramLoginCheckScript(account.handle),
+      } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
+      const state = loginStateFromToolResult(result);
+      if (looksBlocked(state.text, p.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
+      return state;
+    };
+    let state = await read();
+    if (chromeProfileNeedsReload(state)) {
+      ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "navigate_page", arguments: { pageId: p.pageId, type: "reload", ignoreCache: true } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not refresh the loading Instagram profile.");
+      state = await read();
+      if (chromeProfileNeedsReload(state)) throw new Error("Instagram is still loading in Chrome. Wait for its profile page to finish loading, then retry the check.");
+    }
+    if (state.loggedIn) return true;
 
     // Instagram may omit its owner-only profile control while the signed-in
     // inbox still clearly identifies the same account.
@@ -283,28 +297,34 @@ export class ChromeInstagram implements InstagramDriver {
       wait: kind => this.pause(kind),
     }, target.url, pieces, makeComment, mayContinue);
   }
-  async sendMessages(account: IgAccount, handle: string, parts: string[]): Promise<void> {
+  async sendMessages(account: IgAccount, handle: string, parts: string[], mayContinue = () => true): Promise<void> {
+    const check = () => { if (!mayContinue()) throw new Error("Message sending was stopped."); };
+    check();
     if (parts.length === 0 || parts.some((part) => !part.trim())) throw new Error("The approved message is empty.");
     await this.verifyOwner(account);
+    check();
     const target = await this.openProfile(account, handle);
+    check();
     let snapshot = await this.snapshot(target.pageId);
     await this.clickNamed(target.pageId, snapshot, "button", "Message");
     snapshot = await this.snapshot(target.pageId);
     if (!/textbox\s+"[^"]*(?:message|write a message)/i.test(snapshot)) throw new Error(`Chat with @${handle} did not open.`);
     let attempted = false;
     try {
-      for (const part of parts) {
-        await this.sendPart(target.pageId, part, () => { attempted = true; });
-        const check = await this.evaluate(target.pageId, `() => ({ allowed: location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && location.pathname.startsWith('/direct/'), text: document.body?.innerText ?? '' })`, "Chrome could not verify the sent message.");
-        const parsed = jsonFromToolResult(check) as { allowed?: unknown; text?: unknown } | null;
+      for (const [index, part] of parts.entries()) {
+        check();
+        await this.sendPart(target.pageId, part, () => { check(); attempted = true; }, mayContinue);
+        const receipt = await this.evaluate(target.pageId, `() => ({ allowed: location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && location.pathname.startsWith('/direct/'), text: document.body?.innerText ?? '' })`, "Chrome could not verify the sent message.");
+        const parsed = jsonFromToolResult(receipt) as { allowed?: unknown; text?: unknown } | null;
         if (parsed?.allowed !== true || typeof parsed.text !== "string") throw new Error("Instagram chat identity could not be verified after sending.");
         if (looksBlocked(parsed.text, `https://www.instagram.com/direct/inbox/`)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
         if (!parsed.text.includes(part.slice(0, Math.min(30, part.length)))) throw new Error(`The message to @${handle} did not appear in the conversation.`);
+        if (index < parts.length - 1) await this.pause("betweenParts");
       }
     } catch (error) {
       if (attempted) throw new InstagramSendUncertainError(error instanceof InstagramBlockedError);
       throw error;
     }
   }
-  async close(): Promise<void> { await this.client?.close(); await this.transport?.close(); this.client = undefined; this.transport = undefined; }
+  async close(): Promise<void> { await this.client?.close(); await this.transport?.close(); this.client = undefined; this.transport = undefined; this.browserConnected = false; }
 }

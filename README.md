@@ -12,11 +12,11 @@ The person running Outreach gives you its address. You do not need to install No
 
 Start from **Overview** and follow the setup steps. Connect Instagram from **Accounts**, create a campaign, add leads and keep message approval on. An account is connected only after its sign-in has actually been confirmed. Saved account details alone do not prove a connection.
 
-Automatic preparation and writing require a configured, independently metered AI provider, confirmed prices, a payer and an available spending limit. The app does not use the owner's personal Claude subscription. Without paid AI, complete the actual engagement yourself, mark the qualified lead Engaged, then write the three message parts and submit them for approval. The app never treats a planning estimate as real usage.
+Automatic preparation and writing can use the server’s free local model. A paid Anthropic connection instead requires confirmed prices, metering, a payer and an available spending limit. The app does not use the owner's personal Claude subscription. Without paid AI, complete the actual engagement yourself, mark the qualified lead Engaged, then write the three message parts and submit them for approval. The app never treats a planning estimate as real usage.
 
 ## For the person running the app
 
-This version uses a persistent computer for SQLite, browser sessions and the background worker. Opening the web app remotely does not move those services to another computer. Public hosting and a customer-ready remote Instagram connection still need separate deployment and live verification; this repository's self-service screens alone do not prove a hosted SaaS release.
+This version uses a persistent computer for SQLite, browser sessions and the background worker. Opening the web app remotely does not move those services to another computer. Customer browser pairing is implemented and tested through the website/device protocol. A public release still needs a signed/notarized connector, independent customer-machine verification and public deployment; the current app remains local.
 
 Install Node.js 22 or newer, Git and Google Chrome, then:
 
@@ -35,11 +35,26 @@ npm run dev
 
 Open http://localhost:3000. The initial setup creates the original team's owner. Subsequent users can register a private workspace or join an invitation. Use the app's **Start Outreach** control to run its local worker; `npm run worker` remains available for the original workspace's operator.
 
-Workspace data lives beneath the configured `DB_PATH` directory, with a separate operational SQLite database and browser-profile directory for each new company. The identity catalog is stored beside the original database as `<DB_PATH>.identity.db`. `npm run backup` snapshots the original database, identity catalog and company databases with a restore manifest. Browser profiles are excluded: reconnect Instagram after restoring, or securely preserve required profiles separately. Keep the complete backup set private; keep them private and out of Git. Existing original-team users and data are preserved when workspace support initializes.
+Workspace data lives beneath the configured `DB_PATH` directory, with a separate operational SQLite database and browser-profile directory for each new company. The identity catalog is stored beside the original database as `<DB_PATH>.identity.db`. `npm run backup` snapshots the original database, identity catalog and company databases with a restore manifest. Browser profiles are excluded: reconnect Instagram after restoring, or securely preserve required profiles separately. Keep the complete backup set private and out of Git. Existing original-team users and data are preserved when workspace support initializes.
 
-An Instagram sign-in happens in the browser window, never through a password field in Outreach. The owner's existing signed-in Chrome connection is restricted to the original workspace; a new company must use its own isolated browser session. Do not present a browser opening on the operator's computer as a remote customer's finished connection flow.
+An Instagram sign-in happens in the browser window, never through a password field in Outreach. The owner's existing signed-in Chrome connection is restricted to the original workspace; a new company connects its own Chrome with Outreach Connector. Choose Connect my Chrome in Accounts, download/open the Mac helper, create a one-time code and pair it. The website never receives Instagram passwords or browser cookies. Do not present a browser opening on the operator's computer as a remote customer's finished connection flow.
 
 AI, Apify and Stripe credentials belong to the operator's private configuration. Apify also requires a saved monthly cap. Billing remains in **test mode**. Do not enable paid calls, real charges or Instagram actions without the owner's approval. Confirm the actual configured provider and exact model prices before enabling automatic writing.
+
+## Free local writing (server administrator)
+
+Normal users do not need Claude, API keys or their own model installation. The server administrator installs Ollama and a local GGUF model, keeps Ollama bound to loopback and sets `OLLAMA_NO_CLOUD=1`. Select it in the private app environment:
+
+```text
+AI_PROVIDER=local
+LOCAL_AI_MODEL=qwen2.5:7b
+```
+
+The adapter checks local model metadata before every generation and rejects cloud-backed aliases. There is no paid fallback or usage charge for local inference. Comment and message rules still apply, and first messages remain in the approval queue. If the model goes offline, the app shows the problem and pauses preparation.
+
+## Customer connector (server administrator)
+
+Build the Mac download with `node --import tsx scripts/build-connector.ts --verify`. This bundles the installed runtime and checks the actual packaged executable using disposable data. The current package targets Apple silicon Macs; it is unsigned and not notarized. Do not bypass macOS security or present it as verified public distribution. A Developer ID signing identity is not available on this machine. Disconnecting a device revokes its credential; quitting the helper preserves pairing for reopening. Other companies cannot claim its account commands.
 
 ## Verification
 
@@ -51,6 +66,8 @@ npm run build
 npm run smoke:ui
 npm run smoke:billing
 npx tsx scripts/workspace-smoke.ts
+# Optional real local inference, synthetic data only:
+LOCAL_AI_MODEL=qwen2.5:7b npx tsx scripts/local-writing-smoke.ts
 ```
 
 Browser smoke tests use disposable data. Billing smoke uses a local fake payment provider. Workspace smoke checks two separate companies, invitations, switching, access removal and session revocation without a worker or external provider calls. These checks do not substitute for an approved live first-message and first-reply test.

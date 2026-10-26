@@ -1434,3 +1434,119 @@ NOT verified: public remote customer Instagram onboarding, per-company provider 
 Decisions made: original signed-in Chrome and host API credentials never become another company's connection. Private workspace default; optional invitation-only shared team; original billing-owner designation stays separate from workspace owner. Old stateless cookies require normal sign-in once. Next migration free is 7. All owner data/settings and approval/spending boundaries remain.
 Needs from you: review the separate workspace PR; no input blocks the completed no-spend implementation. Public/live proof remains on the completion checklist.
 Next I will: publish this branch and PR, preserve both backups, and leave the app available without starting outreach.
+
+
+### [2026-10-24] Codex #182: Connect the customer's own browser
+Changed: claim `feat/customer-connection` from PR #14 head 893ca88. Owner instructs us to make the product usable by an ordinary external customer. Claim migration 7 for workspace-scoped device pairing and durable remote browser commands. First fix: AccountInstagramDriver currently drops the runner's mayContinue callback; forward and regression-test it. Build customer-side outbound-only connector using existing TypeScript/Chrome driver, with no cookie/password transfer or exposed Chrome debugging port.
+Verified: branch clean, git pull current; host-local launch and Meta API's inability to start cold DMs checked from code and Meta's documentation. No outreach deployment exists in connected Vercel account (only separate infyum-site; untouched).
+NOT verified: connector implementation, customer-device distribution, public deployment or live sends.
+Decisions made: retain approvals, no-spend, limits/warning stops, first-reply handoff and company isolation; paired devices never inherit host credentials. Existing Mac remains unchanged while code is verified separately. No new paid service or provider call.
+Needs from you: none for implementation under owner's explicit backend takeover/delegation. Public exposure/install permissions will remain normal product authorization steps.
+Next I will: implement scoped pairing, command transport, customer connector and honest connection status; verify with disposable data.
+
+### [2026-10-24] Codex #183: No-spend automatic-writing option
+Changed: bounded extension of customer-connection work: optional loopback-only Ollama model adapter using the existing AI contract. Paid Anthropic behavior stays intact. A local writing service is necessary so automatic drafting can work without paid API calls or anyone's personal Claude subscription. No model/provider call will run on real leads during verification. Customer connector packaging uses the already-installed esbuild build dependency; package metadata will declare it directly for reproducible builds.
+Verified: customer connector package builds offline without owner data/credentials; generated app is unsigned pilot distribution. Code/API tests are in progress.
+NOT verified: local model availability/quality or independent customer installation.
+Decisions made: local inference has zero external API spend and no paid fallback; no fabricated usage bill, no relaxation of content/approval/daily-limit rules.
+Needs from you: none for no-spend implementation. Any necessary model download remains a free local installation, not a paid service or personal subscription.
+Next I will: check hardware, validate local model with synthetic inputs, then verify the complete no-spend code flow before rollout.
+
+
+### [2026-10-25] Codex #184: Finish customer connection and real local writing verification
+Changed: continuing existing uncommitted `feat/customer-connection` work; no rewrite. Backend, companion packaging and onboarding agents complete scoped work in parallel. Fixing a discovered prompt conflict: warm-up comments currently use a system instruction demanding JSON and forbidding emojis, conflicting with their required plain-text/emoji format. Use a separate comment system instruction while preserving all business/comment rules.
+Verified: baseline 542 tests and typecheck pass before these final fixes; branch base refreshed explicitly from origin/feat/self-service-workspaces (new local branch has no upstream yet). Installed the official Ollama runtime in ignored local app data; loopback only, cloud explicitly disabled. Downloading an official local model for synthetic tests only. No paid API or Instagram write.
+NOT verified: real local draft generation, complete new connector browser flow and independent customer installation. This Mac has zero Developer ID signing identities, so signed/notarized public distribution cannot be claimed.
+Decisions made: preserve no-spend, approvals, tenant/profile isolation and first-reply scope; no paid fallback or personal Claude subscription.
+Needs from you: none for implementation/test completion.
+Next I will: finish these bounded fixes, test synthetic real model generation and website/device round trip, then publish accurate evidence and remaining external release requirements.
+
+
+### [2026-10-25] Codex #185: Deliver customer connection and verified free local drafts
+Changed: finished `feat/customer-connection` on PR #14 base. Migration 7; scoped device pairing/commands/callbacks, remote driver and cancellation forwarding, recoverable account rebinding, three-step Accounts onboarding, packaged customer helper, local-only AI adapter, bounded comment repair and explicit sender prompt, regression/browser tests and current HANDOFF/audit. Declared existing esbuild directly for reproducible offline packaging. Enabled verified `qwen2.5:7b` locally, no paid fallback.
+Verified: 585 tests / 75 files, typecheck, lint, production Webpack build, UI smoke, fake billing smoke, company/device HTTP browser proof, actual packaged executable startup/permission/cancel/quit checks, and real synthetic local generation (10 seconds: comment, pending three-part draft, follow-up; zero paid usage/sends). All live data/configuration preserved with pre-update complete backup. No worker or social write started.
+NOT verified: independent customer install (unsigned/not notarized Apple silicon pilot; no Developer ID identity), actual new-device Instagram connection, real first-contact/fresh-reply handoff, public deployment or paid services. Owner app sign-in subsequently confirmed in Rudra099; actual Overview shows local writing available and Accounts loads. Owner authorized the fresh Chrome permission prompt. Initial attempts expired while awaiting permission; job #48 then completed with authenticated:true for @timelessmoments.al when promptly allowed. This verifies the existing owner connection, not a new remote customer installation. No social write or inbox message text was read. Earlier small models failed; no false success claim or validation relaxation.
+Decisions made: no personal Claude subscription, no money spent, no paid fallback, no owner cookies/profile sharing, approval and first-reply scope retained. Next migration free is 8. Signed public distribution is an external release requirement; no macOS security bypass.
+Needs from you: no implementation ACK required under the owner's takeover authorization. Live app sign-in and eventual exact in-app approval are normal product/user steps; signed distribution requires an authorized signing identity.
+Next I will: publish this reviewable branch/PR and leave the app available with outreach stopped; complete actual live proof when the required sign-in and approval exist.
+
+
+### [2026-10-25] Codex #186: Resume bounded connection reliability fixes
+Changed: claiming the observed first-connection permission timeout and stale Accounts status after detached sign-in. Root owns Chrome timeout/error mapping; onboarding agent owns pending-only Accounts refresh and tests. No shipped migration or business/outbound rule changes.
+Verified: feature branch clean and git pull current; app responds HTTP 200; last actual sign-in #48 authenticated:true. No prepared leads or approved outgoing messages exist. This Mac still has no Developer ID signing identity.
+NOT verified: independent customer installation or approved live outreach/reply flow.
+Decisions made: preserve no-spend, approval ON, existing Chrome profile, first-reply handoff and warning stops. No live action authorized by the word resume; prepare a reviewable test before asking for specific social-action approval.
+Needs from you: no ACK under owner-authorized takeover; eventual live warm-up/send still requires exact owner approval.
+Next I will: fix these two observed failures, verify with disposable data, and update this branch and handoff.
+
+
+### [2026-10-25] Codex #187: Finish permission-wait and Accounts feedback fixes
+Changed: first browser permission request allows 180 seconds; normal requests stay 60 seconds. Failed permission is not replayed automatically; timeout mapping preserves warnings/permission priority and hides paths. Latest pending sign-in mounts a visibility-aware Accounts refresh which unmounts on completion. No migration/dependency.
+Verified: 587 tests, typecheck, lint, isolated production build, UI browser smoke proving automatic Connected status and stopped polling, responsive visual review, rebuilt packaged helper startup checks.
+NOT verified: independent signed customer installation and full live outreach/reply flow.
+Decisions made: owner explicitly authorized preparing only the three saved Credit and tax pilot prospects from @timelessmoments.al, with DM approval ON and no paid calls. No message approval or send authorized.
+Needs from you: no code ACK required under prior takeover; exact DM review remains a human step.
+Next I will: apply final production update and start the owner-authorized pilot through the app, respecting schedule, warning stops and no-spend.
+
+
+### [2026-10-25] Codex #188: Start authorized pilot, preserve no-send boundary
+Changed: campaign #2 started through UI and preparation worker started after fresh no-send evidence satisfied automatic approval review. Only its three qualified prospects are eligible; both active campaigns require approval, zero approved outgoing messages/send tasks, paid providers unconfigured. Corrected campaign preparation guidance for verified free local writing versus metered/offline configurations; no outbound business rule change.
+Verified: 591 tests/76 files, typecheck, lint, production build, UI smoke and company/device browser smoke. Actual Overview shows running; preparation jobs #49–51 scheduled for 26 Oct 2026 09:42:16 IST. No live like/comment/follow/send or paid call has occurred.
+NOT verified: actual preparation while scheduled outside working hours; independent signed customer installation; real approved first-contact/fresh reply.
+Decisions made: owner’s exact preparation authorization retained; no DM approval or send authorized, no pacing/window changes. Original data preserved.
+Needs from you: exact messages will need human review before sending.
+Next I will: publish the bounded changes and leave the pilot queued. Worker read-only check #52 currently reports denied Chrome access; owner action is pending. Browser security policy blocked automated navigation to internal Chrome debugging settings; no alternative surface/workaround is authorized. The earlier detached authenticated:true check does not prove the present persistent worker connection.
+
+
+### [2026-10-26] Codex #189: Diagnose persistent Chrome connection rejection
+Changed: owner confirmed enabling/allowing Chrome. Read-only check #53 still failed after a clean worker restart. Paused pilot #2 and stopped worker through normal UI; no repeated social work. Claim narrow error-classification fix: the current generic Chrome matcher incorrectly labels any connection failure as denied permission and hides socket/missing-file/macOS causes.
+Verified: fresh zero approved DMs/send tasks; exact three authorized prospects remain qualified. No Instagram write or paid call.
+NOT verified: current worker/browser connection and live preparation.
+Decisions made: no settings/security bypass or new browser transport. Browser policy’s internal-page restriction remains respected; use only normal product read-only sign-in flow.
+Needs from you: no repeated setup request until the app exposes a specific cause.
+Next I will: add fixed-message, path/token-safe diagnostic classification with tests, then run one read-only product check.
+
+
+### [2026-10-26] Codex #190: Expose specific Chrome failure and pause retry loop
+Changed: pure Chrome connection failure classifier shared by bridge and login errors. Specific underlying causes now precede the generic wrapper; fixed messages avoid paths, tokens and raw provider errors. Paused pilot #2 and stopped worker through UI after owner-enabled Chrome plus one clean worker restart still failed. No migration/dependency/transport change.
+Verified: 598 tests/77 files, typecheck, lint, production Webpack build and rebuilt packaged-helper startup/permission/cancel/quit smoke. Actual normal Accounts read-only job #53 reports missing debugging connection file; no social action, approved DM, send task or paid call. Three pilot leads remain qualified.
+NOT verified: current Chrome connection, preparation, live first-contact/handoff, independent signed installation. Prior detached authenticated:true evidence does not prove today’s session.
+Decisions made: do not keep retrying or ask owner to repeat the same setting blindly. Keep pilot paused; previous 09:42 schedule is superseded until connection is proven. Browser internal-page security restriction remains binding.
+Needs from you: showing the exact Chrome page enabled may be necessary to identify the mismatch; no credential or password is needed.
+Next I will: publish tests/build/package evidence and resume only normal, authorized product connection after resolving that mismatch.
+
+
+### [2026-10-26] Codex #191: Supported Chrome reconnect and robust page discovery
+Changed: investigating latest owner demand to finish the live connection. Official maintainer recommends a clean Chrome restart for a listening debug port with missing discovery file. Quit/reopened Chrome normally through UI, chose existing Rudra099, restored the saved Outreach tab group; no profile/cookie/security changes. This reached a real Chrome connection prompt; owner approved the fresh session and Allow was clicked. Read-only check #54 progressed past discovery but sign-in still failed. Claim bounded structured-response/page parsing fix: current text parser ignores URL-only untitled tabs while Chrome loads, despite official MCP emitting that format.
+Verified: correct installed stable Chrome 155; normal app unchanged, no send/spend. No internal Chrome settings URL was opened through a workaround; no raw CDP endpoint or custom browser transport.
+NOT verified: persistent sign-in and live preparation. Pilot remains paused.
+Decisions made: use the installed connector’s supported structured-content option and parse both documented text forms; preserve exact Instagram/sender binding. No dependency/migration.
+Needs from you: no repeated setup question while this code fix is tested.
+Next I will: test parser boundary cases and driver sign-in with URL-only responses, then retry only the normal read-only Accounts flow.
+
+
+### [2026-10-26] Codex #192: Recover sign-in and handle loading pages reliably
+Changed: supported structured Chrome responses plus pure parser for titled/untitled tab lists. An empty Instagram profile splash receives one cache-free reload of the same page; a second empty result holds the check with explicit loading feedback, never signed-out success. Warnings/human checks stop before recovery, including after reload. No dependency, migration, copied cookies or new browser transport.
+Verified: 606 tests/79 files, typecheck, lint, packaged-helper executable smoke. Chrome was quit/reopened normally, existing Rudra099 selected and saved Outreach group restored. Fresh-session permission explicitly approved by owner. Instagram initially remained on its splash; one normal hard refresh restored the actual signed-in owner profile. Normal Accounts job #56 completed authenticated:true with the updated adapter. Reload recovery itself is regression-tested; no claim it was necessary in the already-loaded successful check.
+NOT verified: independent signed customer installation and full live outbound/reply loop.
+Decisions made: existing approval, no-spend, sender binding and first-reply boundaries unchanged. Owner’s three-prospect preparation permission remains; zero approved DMs/send tasks required before restarting worker.
+Needs from you: exact DM approval remains human. No repeated setup needed for the recovered session.
+Next I will: publish this bounded fix, apply production build and resume only the three authorized preparation prospects.
+
+
+### [2026-10-26] Codex #193: Resume authorized pilot and repair prior-day session rollover
+Changed: normal Accounts job #56 authenticated:true after supported Chrome restart/owner-approved fresh permission and Instagram resource recovery. Resumed campaign #2 through UI and started worker after freshly verifying zero approved outgoing messages/send jobs, approval ON on both active campaigns, exactly the three authorized eligible prospects and no paid credentials. Worker deferred preparation to an existing 10:23 IST rest; no pacing state was edited. Agent pacing_day_recovery claims only pure pacing/test files to fix an expired prior-local-day session being treated as a same-day session ending now. Preserve genuine same-day rests, hours, jitter, limits and all durations.
+Verified: actual sign-in and running worker; no DM approval/send authorization. Root is preparing persistent worker sign-in during the existing break.
+NOT verified: actual preparation result and full live first-contact/reply.
+Decisions made: wait the already-persisted break rather than bypass it; do not alter live pace state. No dependency/migration or extra prospect.
+Needs from you: exact messages remain human approval.
+Next I will: verify persistent connection and let only the authorized preparation jobs run at their saved times, while testing the date rollover repair.
+
+
+### [2026-10-26] Codex #194: Verify persistent connection; fix stale prior-day pacing session
+Changed: worker sign-in #57 authenticated:true, following #56 detached success. Pilot #2 active and worker running via normal UI with approval ON/zero approved DMs/send jobs. Pure pacing repair discards only an expired prior-local-day sessionEnd while retaining genuine running rests and all existing hours/durations. Agent touched pacing source/test only; root reviewed. No live state correction.
+Verified: 610 tests/79 files, typecheck/lint and production Webpack build; four new pacing regressions cover prior-day resume, genuine rest and both timezone-boundary directions. Existing persisted rest ends 10:23:43 IST; it was NOT cleared. No paid call/send, no migration/dependency.
+NOT verified: preparation result and full first-contact/reply path; independent signed customer installation.
+Decisions made: keep same three authorized prospects and human DM review; let the current saved break finish naturally. New pacing code applies on next normal worker start.
+Needs from you: no setup step for the now-confirmed worker connection; exact drafted messages require human approval.
+Next I will: publish the small repair and observe actual preparation when the existing rest ends.

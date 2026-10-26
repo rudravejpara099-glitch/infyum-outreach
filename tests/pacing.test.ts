@@ -26,6 +26,41 @@ describe("working hours", () => {
 });
 
 describe("sessions, rests and lunch", () => {
+  it("starts a fresh session after a prior day's saved session instead of inventing a new rest", () => {
+    const state = { ...EMPTY_STATE, sessionEnd: "2026-10-24T14:40:00Z", lunchDay: "2026-10-24", nextActionAt: "2026-10-24T14:45:00Z" };
+    const now = at("2026-10-26T14:00:00Z");
+    const g = gate(now, 1, state, cfg, seeded(7));
+    expect(g.ok).toBe(true);
+    const sessionMinutes = (Date.parse(g.state.sessionEnd!) - now.getTime()) / 60_000;
+    expect(sessionMinutes).toBeGreaterThanOrEqual(cfg.sessionMinutes[0]);
+    expect(sessionMinutes).toBeLessThanOrEqual(cfg.sessionMinutes[1]);
+    expect(g.state.restUntil).toBeNull();
+    expect(state.sessionEnd).toBe("2026-10-24T14:40:00Z");
+  });
+  it("keeps an existing current-day rest even when the saved session belongs to an earlier day", () => {
+    const restUntil = "2026-10-26T14:10:00Z";
+    const state = { ...EMPTY_STATE, sessionEnd: "2026-10-24T14:40:00Z", restUntil };
+    const g = gate(at("2026-10-26T14:00:00Z"), 1, state, cfg, seeded(7));
+    expect(g).toMatchObject({ ok: false, reason: "resting", until: new Date(restUntil), state: { restUntil } });
+  });
+  it("uses the configured local midnight even when both timestamps share a UTC date", () => {
+    const allDay = { ...cfg, tz: "Asia/Kolkata", dayStartHour: 0, dayEndHour: 24, startJitterMinutes: 0, lunchFromHour: 24 };
+    const state = { ...EMPTY_STATE, sessionEnd: "2026-10-20T18:20:00Z" }; // Oct 20, 23:50 local
+    const g = gate(at("2026-10-20T18:45:00Z"), 1, state, allDay, seeded(7)); // Oct 21, 00:15 local
+    expect(g.ok).toBe(true);
+  });
+  it("still rests for an expired same-local-day session across a UTC date boundary", () => {
+    const allDay = { ...cfg, dayStartHour: 0, dayEndHour: 24, startJitterMinutes: 0, lunchFromHour: 24 };
+    const now = at("2026-10-21T01:00:00Z"); // Oct 20, 21:00 local
+    const state = { ...EMPTY_STATE, sessionEnd: "2026-10-20T23:50:00Z" }; // Oct 20, 19:50 local
+    const g = gate(now, 1, state, allDay, seeded(7));
+    expect(g).toMatchObject({ ok: false, reason: "resting" });
+    if (!g.ok) {
+      const restMinutes = (g.until.getTime() - now.getTime()) / 60_000;
+      expect(restMinutes).toBeGreaterThanOrEqual(cfg.restMinutes[0]);
+      expect(restMinutes).toBeLessThanOrEqual(cfg.restMinutes[1]);
+    }
+  });
   it("rests after a work session and resumes after the rest", () => {
     const rng = seeded(7);
     const g = gate(at("2026-10-20T14:00:00Z"), 1, EMPTY_STATE, cfg, rng);

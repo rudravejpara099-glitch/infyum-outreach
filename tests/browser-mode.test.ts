@@ -22,6 +22,9 @@ describe("signed-in Chrome mode", () => {
   it("gives a safe next step for Chrome connection failures without showing local paths", () => {
     expect(loginCheckFailure("Could not connect to Chrome (403) at /Users/private/Chrome")).toContain("permission prompt");
     expect(loginCheckFailure("Instagram showed a human check")).toContain("Instagram needs you to review");
+    expect(loginCheckFailure("MCP error -32001: Request timed out at /Users/private/Chrome")).toBe("Instagram took too long to respond. Check that Instagram loads in Chrome, then try again from Accounts.");
+    expect(loginCheckFailure("remote debugging request timed out")).toContain("connection is unavailable");
+    expect(loginCheckFailure("human check timed out")).toContain("Instagram needs you to review");
     expect(loginCheckFailure("unexpected page error")).toBe("The sign-in check could not finish. Try again from Accounts.");
   });
 
@@ -58,11 +61,11 @@ describe("signed-in Chrome mode", () => {
     expect(() => ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "internal path and diagnostic" }] }, "Chrome could not verify sign-in."))
       .toThrow("Chrome could not verify sign-in.");
     expect(() => ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "403 at /Users/private/profile" }] }, "fallback"))
-      .toThrow("Chrome remote debugging permission was denied.");
+      .toThrow("Chrome denied the connection.");
     let chromeAccessError = "";
     try { ensureChromeToolSucceeded({ isError: true, content: [{ type: "text", text: "EPERM: operation not permitted, open '/Users/private/Library/Application Support/Google/Chrome/DevToolsActivePort'" }] }, "fallback"); }
     catch (error) { chromeAccessError = error instanceof Error ? error.message : String(error); }
-    expect(chromeAccessError).toContain("Reopen the signed-in Chrome profile");
+    expect(chromeAccessError).toContain("macOS blocked access");
     expect(chromeAccessError).not.toContain("/Users/private");
     expect(ensureChromeToolSucceeded({ content: [{ type: "text", text: "ok" }] }, "fallback")).toEqual({ content: [{ type: "text", text: "ok" }] });
     expect(loginStateFromToolResult({ content: [{ type: "text", text: "```json\n{\"allowed\":true,\"loggedIn\":false}\n```" }] })).toEqual({ text: "", loggedIn: false });

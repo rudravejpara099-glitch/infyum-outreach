@@ -9,7 +9,7 @@ async function main() {
   if (!Number.isSafeInteger(accountId) || accountId < 1 || !Number.isSafeInteger(jobId) || jobId < 1) throw new Error("A valid sign-in request is required");
   const db = openDb(config.dbPath);
   try {
-    const driver = new AccountInstagramDriver();
+    const driver = new AccountInstagramDriver(db);
     try { await openLoginWindowJob(db, jobId, accountId, driver); }
     finally { await driver.close(); }
   } finally {

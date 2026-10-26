@@ -1,3 +1,21 @@
+# Current pilot status — 2026-10-26
+
+Chrome connection recovered through a normal browser restart and owner-approved fresh session. Read-only sign-in jobs #56 and #57 authenticated:true; the latter uses the persistent running worker. Pilot #2 resumed with approval ON, zero approved DMs/send tasks, and exactly three authorized qualified prospects. Its existing rest ends 10:23:43 IST; no live pace state was edited. Actual preparation remains pending that rest. 610 tests/79 files, typecheck/lint pass, including bounded splash recovery/tab parsing and prior-local-day session rollover. Earlier missing-file/paused snapshots below are superseded for this observed session; full outbound/reply and public signed distribution remain unverified.
+
+# Current Chrome blocker — 2026-10-26
+
+Pilot #2 is PAUSED and worker stopped after enabled Chrome still rejected fresh connection checks. Fixed the misleading blanket permission-denied message; actual normal product check #53 now identifies a missing debugging connection file. 598 tests/77 files, typecheck/lint pass. No live preparation, DM or paid call occurred. Earlier 09:42 scheduled-run statements below are superseded by the pause. Current connection/live outreach remains unverified; do not keep retrying or bypass Chrome/security restrictions. See newest HANDOFF section.
+
+# Pilot follow-up — 2026-10-25
+
+591 tests, typecheck/lint, production build, UI smoke and workspace/device browser smoke pass. Chrome first-permission allowance and automatic Accounts feedback are fixed; campaign guidance correctly recognizes verified free local writing. Owner authorized preparation for exactly three existing pilot prospects with DM approval ON and no paid calls. Campaign and worker started through the real app after fresh no-send checks. Preparation jobs #49–51 are scheduled for 26 October 09:42 IST. The persistent worker’s current Chrome access is denied (#52); owner setup is pending because browser security policy blocks automating that internal Chrome page. No preparation/send or paid call has run. Keep public-release/live first-contact claims unverified. See newest HANDOFF entry for exact state.
+
+# Customer connection update — 2026-10-25
+
+Implemented private customer-device pairing, durable remote browser commands, guided Accounts onboarding, packaged Apple silicon Mac helper, and free server-side local writing. Verified with 585 tests, typecheck/lint/build, isolated website/device browser flow, UI and simulated billing checks, packaged-app startup, and real local synthetic inference. The actual local draft remained pending approval; zero sends and zero paid calls.
+
+**Still unverified:** an independent customer's installation (package unsigned/not notarized), real new-device Instagram connection, and app-sent first-contact followed by fresh reply/handoff. The owner's current app sign-in is confirmed in Rudra099; Chrome permission was subsequently authorized/allowed; initial waits expired, then read-only sign-in job #48 completed with authenticated:true for @timelessmoments.al. The existing owner connection is verified; new remote customer installation remains unverified. Hosting and paid services remain off/deferred. See the latest HANDOFF.md section; older status entries below are historical and superseded where stated. Do not claim public-release readiness from simulated Instagram checks.
+
 # Self-service update — 2026-10-24
 
 Private company workspaces are now the default signup path. Invitation-only teams, workspace switching, membership removal, revocable sessions, database/browser separation and company-scoped test billing are implemented. Existing owner data is preserved. Verification: 444 tests, typecheck, lint, Webpack production build, disposable UI flow, fake billing flow and two-company browser flow pass. See the latest `HANDOFF.md` section for exact evidence and remaining live proof.

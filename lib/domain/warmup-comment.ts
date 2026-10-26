@@ -1,5 +1,6 @@
 /** Comments are validated before any Instagram interaction on the post. */
 export function warmupCommentError(text: string): string | null {
+  if (/[{}]|```|~~~/.test(text) || /^\s*\[|\]\s*$/.test(text)) return "Comments must be plain text without JSON or code fences.";
   const words = text.match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu) ?? [];
   const emoji = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)]
     .filter(({ segment }) => /\p{Extended_Pictographic}/u.test(segment)).length;
