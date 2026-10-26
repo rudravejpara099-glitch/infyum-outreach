@@ -39,7 +39,8 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
       let post = await check(url);
       if (!post.caption) throw new Error("Instagram did not provide enough post context for a specific comment.");
       let comment: string | null = null;
-      if (!skipComment(post.caption)) {
+      // Never comment twice on one post: an interrupted warm-up may already have commented here.
+      if (!skipComment(post.caption) && !post.ownerCommented) {
         comment = (await makeComment(post.caption.slice(0, 400))).trim();
         const error = warmupCommentError(comment);
         if (error) throw new Error(error);

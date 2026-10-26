@@ -1,6 +1,8 @@
 export type WarmupPage = {
   allowed: boolean; ownerMatches: boolean; text: string; caption: string;
   postUrls: string[]; liked: boolean; following: boolean; commentVisible: boolean;
+  /** Our account already has a comment on this post (from an earlier, interrupted warm-up). */
+  ownerCommented?: boolean;
 };
 
 /** Instagram's profile grid includes /handle/p/id links; opening them resolves to /p/id. */
@@ -68,6 +70,8 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
       }
       return false;
     }));
-    return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible };
+    // Inside the post, our profile link only appears on our own comments.
+    const ownerCommented = Array.from(root?.querySelectorAll('a[href]') ?? []).some(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath);
+    return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible, ownerCommented };
   }`;
 }
