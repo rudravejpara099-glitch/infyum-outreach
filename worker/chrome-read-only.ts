@@ -119,7 +119,8 @@ export class ChromeInstagram implements InstagramDriver {
     const url = instagramProfileUrl(handle);
     let page = bindInstagramPage(await this.pages(), handle);
     if (!page) {
-      ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url, background: true } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
+      // Open in front: Chrome throttles hidden tabs and Instagram barely renders them.
+      ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url, background: false } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
       page = bindInstagramPage(await this.pages(), handle);
     }
     if (!page) throw new Error("Could not open the Instagram profile in Chrome.");
@@ -129,7 +130,7 @@ export class ChromeInstagram implements InstagramDriver {
     const client = await this.connect();
     let pages = (await this.pages()).filter((item) => isInstagramInboxUrl(item.url));
     if (pages.length === 0) {
-      ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url: inboxIdentityUrl(), background: true } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open Instagram replies.");
+      ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url: inboxIdentityUrl(), background: false } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open Instagram replies.");
       pages = (await this.pages()).filter((item) => isInstagramInboxUrl(item.url));
     }
     if (pages.length === 0) throw new Error("Could not open Instagram replies in Chrome.");
