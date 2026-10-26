@@ -1,0 +1,5 @@
+# Vercel only needs the front door. Never upload the app, local data, secrets or browser profiles.
+/*
+!/deploy
+/deploy/*
+!/deploy/vercel
