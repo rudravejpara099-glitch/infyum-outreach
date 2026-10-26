@@ -33,7 +33,7 @@ describe("local background service actions", () => {
     expect(spawn).not.toHaveBeenCalled();
     expect((await startWorker()).message).toMatch(/starting/);
     expect(workerControl(db).phase).toBe("starting");
-    expect(spawn).toHaveBeenCalledWith(process.execPath, ["--import", "tsx", expect.stringContaining("worker/index.ts")], expect.objectContaining({ detached: true, stdio: "ignore", env: expect.objectContaining({ DB_PATH: expect.any(String), OUTREACH_WORKER_LEASE_TOKEN: expect.any(String) }) }));
+    expect(spawn).toHaveBeenCalledWith(process.execPath, ["--import", "tsx", expect.stringContaining("worker/index.ts")], expect.objectContaining({ detached: true, stdio: ["ignore", expect.any(Number), expect.any(Number)], env: expect.objectContaining({ DB_PATH: expect.any(String), OUTREACH_WORKER_LEASE_TOKEN: expect.any(String) }) }));
     expect((await startWorker()).message).toMatch(/already starting/);
     expect(spawn).toHaveBeenCalledTimes(1);
     expect((await stopWorker()).message).toMatch(/stopped/);

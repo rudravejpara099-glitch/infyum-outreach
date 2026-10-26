@@ -1,5 +1,6 @@
 "use server";
 import { spawn } from "node:child_process";
+import { openSync } from "node:fs";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/dal";
@@ -26,8 +27,10 @@ export async function startWorker(form: FormData = new FormData()): Promise<Acti
   const token = reserveWorker(db);
   if (!token) return { message: "Outreach is already starting or running. Check its status below." };
   try {
+    // Errors from the background service go to a private log beside the workspace database.
+    const log = openSync(`${paths.dbPath}.worker.log`, "a");
     const child = spawn(process.execPath, ["--import", "tsx", path.join(process.cwd(), "worker", "index.ts")], {
-      cwd: process.cwd(), detached: true, stdio: "ignore",
+      cwd: process.cwd(), detached: true, stdio: ["ignore", log, log],
       env: { ...workspaceWorkerEnv(process.env, paths.hostChromeAllowed), DB_PATH: paths.dbPath, PROFILES_DIR: paths.profilesDir, OUTREACH_HOST_CHROME_ALLOWED: paths.hostChromeAllowed ? "1" : "0", OUTREACH_WORKER_LEASE_TOKEN: token },
     });
     child.once("error", () => { try { failWorkerLaunch(db, token); } catch { /* Status will show the timed-out start. */ } });
