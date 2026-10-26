@@ -59,9 +59,15 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
     const following = Array.from(root?.querySelectorAll('button,[role=button]') ?? []).some(e => /^(Following|Requested)$/.test((e.innerText || '').trim()));
     const comment = ${JSON.stringify(comment)};
     const input = root?.querySelector('textarea[aria-label*="comment" i],textarea[placeholder*="comment" i]');
-    const commentVisible = Boolean(comment && input && !input.value && Array.from(root?.querySelectorAll('li,[role=listitem],div[role=button]') ?? []).some(row =>
-      Array.from(row.querySelectorAll('a[href]')).some(a => a.getAttribute('href')?.toLowerCase() === ownerPath) &&
-      Array.from(row.querySelectorAll('span')).some(span => span.textContent?.trim() === comment)));
+    // Comment rows are plain blocks now: find our exact text, then our profile link within a few levels.
+    const commentVisible = Boolean(comment && input && !input.value && Array.from(root?.querySelectorAll('span') ?? []).some(span => {
+      if (span.textContent?.trim() !== comment) return false;
+      let row = span.parentElement;
+      for (let level = 0; level < 4 && row; level++, row = row.parentElement) {
+        if (Array.from(row.querySelectorAll('a[href]')).some(a => a.getAttribute('href')?.toLowerCase() === ownerPath)) return true;
+      }
+      return false;
+    }));
     return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible };
   }`;
 }
