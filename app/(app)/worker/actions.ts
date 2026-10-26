@@ -1,6 +1,7 @@
 "use server";
 import { spawn } from "node:child_process";
 import { openSync } from "node:fs";
+import { requestIsFromThisComputer } from "@/lib/request-origin";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/dal";
@@ -12,13 +13,15 @@ import { failWorkerLaunch, requestWorkerStop, reserveWorker } from "@/lib/servic
 import { workerStartProblem } from "@/lib/services/worker-start-readiness";
 import type { ActionResult } from "@/lib/ui/action-result";
 
-function localControlAllowed(): boolean {
-  return process.env.VERCEL !== "1" && process.env.BILLING_DEPLOYMENT !== "hosted" && process.env.OUTREACH_SMOKE_MODE !== "1";
+async function localControlAllowed(): Promise<boolean> {
+  if (process.env.VERCEL === "1" || process.env.BILLING_DEPLOYMENT === "hosted" || process.env.OUTREACH_SMOKE_MODE === "1") return false;
+  // Starting or stopping processes on this computer is never allowed from the public address.
+  return requestIsFromThisComputer();
 }
 
 export async function startWorker(form: FormData = new FormData()): Promise<ActionResult> {
   const user = await requireUser();
-  if (!localControlAllowed()) return { error: "Start Outreach from the local app on this computer." };
+  if (!(await localControlAllowed())) return { error: "Start Outreach from the local app on this computer." };
   const db = (await getDb(form));
   const paths = getWorkspacePaths(user.workspaceId);
   const problem = workerStartProblem(db);
@@ -46,7 +49,7 @@ export async function startWorker(form: FormData = new FormData()): Promise<Acti
 
 export async function stopWorker(form: FormData = new FormData()): Promise<ActionResult> {
   await requireUser();
-  if (!localControlAllowed()) return { error: "Stop Outreach from the local app on this computer." };
+  if (!(await localControlAllowed())) return { error: "Stop Outreach from the local app on this computer." };
   const db = (await getDb(form));
   if (workerStatus(db, new Date()).phase === "legacy_running") return { error: "This background service was started in a terminal. Stop it there." };
   const phase = requestWorkerStop(db);

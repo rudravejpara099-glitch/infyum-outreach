@@ -1,5 +1,6 @@
 "use server";
 import { spawn } from "node:child_process";
+import { requestIsFromThisComputer } from "@/lib/request-origin";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { config } from "@/lib/config";
@@ -18,9 +19,11 @@ import { loginWindowCommand } from "@/lib/services/login-window-command";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { accountIdSchema, capSchema, connectSchema } from "./validation";
 
-function startLoginWindow(db: Awaited<ReturnType<typeof getDb>>, workspaceId: string, accountId: number, jobId: number): boolean {
+async function startLoginWindow(db: Awaited<ReturnType<typeof getDb>>, workspaceId: string, accountId: number, jobId: number): Promise<boolean> {
   const paths = getWorkspacePaths(workspaceId);
   if (process.env.OUTREACH_SMOKE_MODE === "1") return true;
+  // A sign-in window opens on this computer, so only a person at this computer may open one.
+  if (!(await requestIsFromThisComputer())) return false;
   try {
     const command = loginWindowCommand(accountId, jobId);
     const child = spawn(command.command, command.args, {
@@ -86,7 +89,7 @@ export async function connectAccount(form: FormData): Promise<ActionResult> {
     accountId = account.id;
     request = requestLogin(db, account.id, backgroundRunning);
   }).immediate();
-  const started = !request.launch || startLoginWindow(db, user.workspaceId, accountId, request.jobId);
+  const started = !request.launch || await startLoginWindow(db, user.workspaceId, accountId, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: parsed.data.browserMode === "chrome_read_only"
@@ -112,7 +115,7 @@ export async function useSignedInChrome(form: FormData): Promise<ActionResult> {
   const backgroundRunning = smoke || workerMayOwnJobs(worker.phase);
   let request: LoginRequest = { jobId: 0, launch: false, alreadyOpening: false };
   db.transaction(() => { request = requestLogin(db, account.id, backgroundRunning); }).immediate();
-  const started = !request.launch || startLoginWindow(db, user.workspaceId, account.id, request.jobId);
+  const started = !request.launch || await startLoginWindow(db, user.workspaceId, account.id, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: "Chrome connection was selected, but the check could not start. Try again." };
@@ -143,7 +146,7 @@ export async function reopenLogin(form: FormData): Promise<ActionResult> {
   db.transaction(() => {
     request = requestLogin(db, account.id, backgroundRunning);
   }).immediate();
-  const started = !request.launch || startLoginWindow(db, user.workspaceId, account.id, request.jobId);
+  const started = !request.launch || await startLoginWindow(db, user.workspaceId, account.id, request.jobId);
   if (!started) db.prepare("UPDATE jobs SET status='failed',last_error=? WHERE id=? AND status='running'").run("The sign-in window could not start. Try again from Accounts.", request.jobId);
   revalidatePath("/accounts");
   if (!started) return { error: account.browserMode === "chrome_read_only" ? "The Chrome sign-in check could not start. Try again shortly." : "The sign-in window could not open. Try again shortly." };
