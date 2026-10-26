@@ -122,7 +122,7 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
     } else if (e instanceof InstagramWarmupUncertainError) {
       failJobPermanently(deps.db, job.id, msg);
       if (e.blockedByInstagram && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
-      logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
+      logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}${e.reason ? ` Cause: ${e.reason}` : ""}` });
     } else if (job.type === "warmup" && !(e instanceof InstagramBlockedError) && isChromeUnreachable(msg)) {
       // Chrome was not reachable, so nothing happened on Instagram: wait and retry instead of giving up.
       // Retry every minute: Chrome's "Allow remote debugging?" prompt lasts about a minute, so one is

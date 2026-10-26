@@ -12,8 +12,11 @@ export class InstagramSendUncertainError extends Error {
 
 /** Some engagement may already exist. Hold the job for review rather than duplicate it. */
 export class InstagramWarmupUncertainError extends Error {
-  constructor(readonly blockedByInstagram = false) {
+  /** What actually went wrong, for the history log (never shown as the headline). */
+  readonly reason: string;
+  constructor(readonly blockedByInstagram = false, reason = "") {
     super("Warm-up may be partly complete. Check this profile on Instagram before preparing it again.");
+    this.reason = reason.slice(0, 160);
   }
 }
 
