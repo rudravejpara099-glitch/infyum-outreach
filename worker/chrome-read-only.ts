@@ -36,8 +36,17 @@ export function jsonFromToolResult(result: ToolTextResult): unknown {
   if (!candidate) return null;
   try { return JSON.parse(candidate) as unknown; } catch { return null; }
 }
+/** Instagram pages plus the CDNs Instagram itself loads styles, scripts and images from. */
+export const INSTAGRAM_CONTENT_PATTERNS = [
+  "https://www.instagram.com/*", "https://instagram.com/*", "https://*.instagram.com/*",
+  "https://*.cdninstagram.com/*", "https://*.fbcdn.net/*", "https://*.facebook.com/*", "https://*.facebook.net/*",
+];
 export function chromeMcpArgs(bin: string): string[] {
-  return [bin, "--auto-connect", "--channel=stable", "--experimentalStructuredContent", "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+  // The allow-list also applies to subresources: Instagram's own styles, scripts and images come from its CDNs,
+  // and blocking them leaves pages on the splash or unstyled. Navigation is still limited to instagram.com by
+  // isAllowedInstagramUrl and the page checks.
+  return [bin, "--auto-connect", "--channel=stable", "--experimentalStructuredContent",
+    ...INSTAGRAM_CONTENT_PATTERNS.map((pattern) => `--allowed-url-pattern=${pattern}`), "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
 }
 export function isAllowedInstagramUrl(value: string): boolean {
   try {
