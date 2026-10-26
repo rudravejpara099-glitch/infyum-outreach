@@ -25,6 +25,12 @@ Business rules the code must keep:
 - Extras in v1: global dedupe, do-not-contact list, similarity block, dashboard, CSV export of the action log.
 - Look (owner revision, 2026-10-20): liquid-glass depth and fluid interactions, a plain “Outreach” app identity with no company logo, light/dark/system appearance, and HIG hierarchy/progressive disclosure. Plus Jakarta Sans and Inter remain. See `docs/DESIGN.md`. This supersedes the original flat, company-branded UI direction; outbound business identity and messaging rules are unchanged.
 
+## Connection recovered — 2026-10-26
+
+Normal Chrome restart (no flags/new profile/security changes), selecting existing Rudra099 and restoring the saved Outreach group recovered the missing debugging discovery file and reached the real permission prompt. Owner explicitly approved the fresh session. Instagram itself then stalled at its splash; one hard resource reload restored the signed-in @timelessmoments.al profile. Updated normal Accounts check **#56 completed authenticated:true**. This supersedes the prior missing-file blocker for the observed session; persistent worker/preparation results must still be recorded separately.
+
+Code now explicitly requests supported structured MCP content, accepts URL-only untitled tabs as well as titled text, keeps exact Instagram/sender binding, and performs at most one cache-free reload for an empty profile splash. A still-empty page reports loading, while warnings/human checks stop recovery. Tests: **606/79 files**, typecheck/lint, packaged-helper smoke pass. Normal sign-in was live verified after manual page recovery; automatic splash recovery is covered by regression tests and is not falsely claimed observed in that already-loaded check. No dependency/migration, passwords/cookies copied, paid call or social write. Public signed installer and full real first-DM/reply handoff remain unverified.
+
 ## Current blocker and paused pilot — 2026-10-26
 
 The owner confirmed Chrome debugging was enabled/allowed. A fresh read-only check and one clean worker restart still failed. Before restart, verified zero approved outgoing messages/send jobs and both active campaigns approval ON; normal UI retry passed automatic approval review after a fresh check. Stopped the worker and paused campaign #2 through its real UI to prevent repeated retries; its three leads remain qualified and unsent. Earlier 26 Oct 09:42 IST scheduling is historical and will NOT run while paused.

@@ -1514,3 +1514,21 @@ NOT verified: current Chrome connection, preparation, live first-contact/handoff
 Decisions made: do not keep retrying or ask owner to repeat the same setting blindly. Keep pilot paused; previous 09:42 schedule is superseded until connection is proven. Browser internal-page security restriction remains binding.
 Needs from you: showing the exact Chrome page enabled may be necessary to identify the mismatch; no credential or password is needed.
 Next I will: publish tests/build/package evidence and resume only normal, authorized product connection after resolving that mismatch.
+
+
+### [2026-10-26] Codex #191: Supported Chrome reconnect and robust page discovery
+Changed: investigating latest owner demand to finish the live connection. Official maintainer recommends a clean Chrome restart for a listening debug port with missing discovery file. Quit/reopened Chrome normally through UI, chose existing Rudra099, restored the saved Outreach tab group; no profile/cookie/security changes. This reached a real Chrome connection prompt; owner approved the fresh session and Allow was clicked. Read-only check #54 progressed past discovery but sign-in still failed. Claim bounded structured-response/page parsing fix: current text parser ignores URL-only untitled tabs while Chrome loads, despite official MCP emitting that format.
+Verified: correct installed stable Chrome 155; normal app unchanged, no send/spend. No internal Chrome settings URL was opened through a workaround; no raw CDP endpoint or custom browser transport.
+NOT verified: persistent sign-in and live preparation. Pilot remains paused.
+Decisions made: use the installed connector’s supported structured-content option and parse both documented text forms; preserve exact Instagram/sender binding. No dependency/migration.
+Needs from you: no repeated setup question while this code fix is tested.
+Next I will: test parser boundary cases and driver sign-in with URL-only responses, then retry only the normal read-only Accounts flow.
+
+
+### [2026-10-26] Codex #192: Recover sign-in and handle loading pages reliably
+Changed: supported structured Chrome responses plus pure parser for titled/untitled tab lists. An empty Instagram profile splash receives one cache-free reload of the same page; a second empty result holds the check with explicit loading feedback, never signed-out success. Warnings/human checks stop before recovery, including after reload. No dependency, migration, copied cookies or new browser transport.
+Verified: 606 tests/79 files, typecheck, lint, packaged-helper executable smoke. Chrome was quit/reopened normally, existing Rudra099 selected and saved Outreach group restored. Fresh-session permission explicitly approved by owner. Instagram initially remained on its splash; one normal hard refresh restored the actual signed-in owner profile. Normal Accounts job #56 completed authenticated:true with the updated adapter. Reload recovery itself is regression-tested; no claim it was necessary in the already-loaded successful check.
+NOT verified: independent signed customer installation and full live outbound/reply loop.
+Decisions made: existing approval, no-spend, sender binding and first-reply boundaries unchanged. Owner’s three-prospect preparation permission remains; zero approved DMs/send tasks required before restarting worker.
+Needs from you: exact DM approval remains human. No repeated setup needed for the recovered session.
+Next I will: publish this bounded fix, apply production build and resume only the three authorized preparation prospects.

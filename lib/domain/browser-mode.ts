@@ -8,6 +8,7 @@ export function browserModeAllowsLeadSearch(modes: InstagramBrowserMode[]): bool
 }
 export function loginCheckFailure(message: string): string {
   if (/warning|human check|captcha/i.test(message)) return "Instagram needs you to review a warning or verification in Chrome. The app stopped the check.";
+  if (/Instagram is still loading/i.test(message)) return "Instagram is still loading in Chrome. Wait for its profile page to finish loading, then retry the check.";
   const connectionFailure = chromeConnectionFailure(message);
   if (connectionFailure) return connectionFailure;
   if (/timed out|timeout|took too long/i.test(message)) return "Instagram took too long to respond. Check that Instagram loads in Chrome, then try again from Accounts.";

@@ -18,7 +18,7 @@ describe("signed-in Chrome DM driver", () => {
           { id: 8, url: "https://www.instagram.com/direct/inbox/" },
         ] } };
         if (name === "evaluate_script" && String(args.function).includes("edit profile")) {
-          return result("```json\n{\"allowed\":true,\"loggedIn\":false}\n```");
+          return result("```json\n{\"allowed\":true,\"loggedIn\":false,\"text\":\"Public profile\"}\n```");
         }
         return result("```json\n{\"allowed\":true,\"ownerMatches\":true,\"isInbox\":true,\"listReady\":true,\"indices\":[]}\n```");
       }),
@@ -39,7 +39,7 @@ describe("signed-in Chrome DM driver", () => {
           { id: 8, url: "https://www.instagram.com/direct/inbox/" },
         ] } };
         if (name === "evaluate_script" && String(args.function).includes("edit profile")) {
-          return result("```json\n{\"allowed\":true,\"loggedIn\":false}\n```");
+          return result("```json\n{\"allowed\":true,\"loggedIn\":false,\"text\":\"Public profile\"}\n```");
         }
         return result("```json\n{\"allowed\":true,\"ownerMatches\":false,\"isInbox\":true,\"listReady\":true,\"indices\":[]}\n```");
       }),

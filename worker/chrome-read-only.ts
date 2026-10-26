@@ -7,6 +7,7 @@ import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDrive
 import { looksBlocked, looksLoggedOut } from "./parse";
 import { runChromeWarmup } from "./chrome-warmup";
 import { warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
+import { chromePages, chromeProfileNeedsReload } from "@/lib/domain/chrome-pages";
 import { chromeConnectionFailure } from "@/lib/domain/chrome-connection-failure";
 import { humanDelayMs, type DelayKind } from "@/lib/domain/pacing";
 import { INBOX_LOADING_ERROR, inboxIdentityUrl, inboxItemFromToolResult, inboxListScript, inboxOpenThreadScript, inboxThreadIndicesFromToolResult, inboxThreadIsLoadingFromToolResult, inboxThreadPathFromToolResult, inboxThreadScript, profileFactsFromToolResult, profileFactsScript } from "./chrome-read-only-data";
@@ -36,7 +37,7 @@ export function jsonFromToolResult(result: ToolTextResult): unknown {
   try { return JSON.parse(candidate) as unknown; } catch { return null; }
 }
 export function chromeMcpArgs(bin: string): string[] {
-  return [bin, "--auto-connect", "--channel=stable", "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
+  return [bin, "--auto-connect", "--channel=stable", "--experimentalStructuredContent", "--allowed-url-pattern=https://www.instagram.com/*", "--allowed-url-pattern=https://instagram.com/*", "--no-usage-statistics", "--no-performance-crux", "--no-category-emulation", "--no-category-performance", "--no-category-network", "--no-category-memory", "--no-category-extensions", "--no-category-pwa"];
 }
 export function isAllowedInstagramUrl(value: string): boolean {
   try {
@@ -111,9 +112,7 @@ export class ChromeInstagram implements InstagramDriver {
     }
     const result = ensureChromeToolSucceeded(response, "Chrome could not list its open pages.");
     this.browserConnected = true;
-    if (result.structuredContent?.pages?.length) return result.structuredContent.pages.map((page) => ({ id: Number(page.id), url: page.url })).filter((page) => Number.isSafeInteger(page.id));
-    const text = result.content?.filter((part) => part.type === "text").map((part) => part.text).join("\n") ?? "";
-    return [...text.matchAll(/(?:^|\n)\s*(\d+):\s*(.*?)\s+\((https?:\/\/[^)]+)\)/g)].map((m) => ({ id: Number(m[1]), url: m[3].trim() }));
+    return chromePages(result);
   }
   private async openProfile(account: IgAccount, handle = account.handle): Promise<{ pageId: number; url: string }> {
     const client = await this.connect();
@@ -192,13 +191,22 @@ export class ChromeInstagram implements InstagramDriver {
   }
   async openLogin(account: IgAccount): Promise<boolean> {
     const p = await this.openProfile(account);
-    const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
-      pageId: p.pageId, waitForStableDom: false,
-      function: instagramLoginCheckScript(account.handle),
-    } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
-    const { text, loggedIn } = loginStateFromToolResult(result);
-    if (looksBlocked(text, p.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
-    if (loggedIn) return true;
+    const read = async () => {
+      const result = await (await this.connect()).callTool({ name: "evaluate_script", arguments: {
+        pageId: p.pageId, waitForStableDom: false,
+        function: instagramLoginCheckScript(account.handle),
+      } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult;
+      const state = loginStateFromToolResult(result);
+      if (looksBlocked(state.text, p.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review it in Chrome.");
+      return state;
+    };
+    let state = await read();
+    if (chromeProfileNeedsReload(state)) {
+      ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "navigate_page", arguments: { pageId: p.pageId, type: "reload", ignoreCache: true } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not refresh the loading Instagram profile.");
+      state = await read();
+      if (chromeProfileNeedsReload(state)) throw new Error("Instagram is still loading in Chrome. Wait for its profile page to finish loading, then retry the check.");
+    }
+    if (state.loggedIn) return true;
 
     // Instagram may omit its owner-only profile control while the signed-in
     // inbox still clearly identifies the same account.
