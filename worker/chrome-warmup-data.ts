@@ -7,13 +7,17 @@ export type WarmupPage = {
   at?: string;
 };
 
-/** Instagram's profile grid includes /handle/p/id links; opening them resolves to /p/id. */
+/**
+ * Instagram's profile grid includes /handle/p/id and /handle/reel/id links. Every item, reels included,
+ * opens as /p/id: that keeps the normal post layout with its like button and comment box, while
+ * /reel/id jumps to the full-screen reels viewer, which has no comment box.
+ */
 export function instagramPostUrl(value: string): string | null {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || !["instagram.com", "www.instagram.com"].includes(url.hostname)) return null;
     const match = url.pathname.match(/^\/(?:[A-Za-z0-9._]+\/)?(p|reel)\/([A-Za-z0-9_-]+)\/?$/);
-    return match ? `https://www.instagram.com/${match[1]}/${match[2]}/` : null;
+    return match ? `https://www.instagram.com/p/${match[2]}/` : null;
   } catch { return null; }
 }
 
@@ -26,10 +30,12 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
   return `async () => {
     // A tab that was just opened or navigated may not have reached its address yet; give it a moment.
     const arriveBy = Date.now() + 8000;
-    while (location.pathname !== ${JSON.stringify(url.pathname)} && Date.now() < arriveBy) await new Promise(r => setTimeout(r, 250));
+    // Instagram serves reels at /reels/<id>/ even when opened as /reel/<id>/.
+    const expectedPaths = ${JSON.stringify([url.pathname, url.pathname.replace(/^\/reel\//, "/reels/")])};
+    while (!expectedPaths.includes(location.pathname) && Date.now() < arriveBy) await new Promise(r => setTimeout(r, 250));
     const allowed = location.protocol === 'https:' &&
       (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
-      location.pathname === ${JSON.stringify(url.pathname)};
+      expectedPaths.includes(location.pathname);
     if (!allowed) return { allowed: false, at: location.hostname + location.pathname };
     const until = Date.now() + 6000;
     while (!document.querySelector('main,article') && Date.now() < until) await new Promise(r => setTimeout(r, 200));

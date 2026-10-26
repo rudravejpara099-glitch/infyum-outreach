@@ -10,7 +10,7 @@ import type { IgAccount } from "@/lib/db/types";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 const profileUrl = "https://www.instagram.com/prospect/";
-const posts = ["https://www.instagram.com/p/first/", "https://www.instagram.com/reel/second/"];
+const posts = ["https://www.instagram.com/p/first/", "https://www.instagram.com/p/second/"];
 const validComment = "Those details look amazing 🙌";
 function fixture(captions = ["A detailed woodworking project", "A lesson on wood finishing"]) {
   let current = profileUrl, followed = false;
@@ -135,7 +135,7 @@ describe("Chrome campaign preparation", () => {
   });
 
   it("supports the username-prefixed post links observed on the live Instagram grid", async () => {
-    expect(instagramPostUrl("https://www.instagram.com/prospect/reel/AbC_123/?img_index=1")).toBe("https://www.instagram.com/reel/AbC_123/");
+    expect(instagramPostUrl("https://www.instagram.com/prospect/reel/AbC_123/?img_index=1")).toBe("https://www.instagram.com/p/AbC_123/");
     expect(instagramPostUrl("https://evil.example/prospect/p/AbC_123/")).toBeNull();
     const root = {
       querySelector: () => null,
