@@ -171,9 +171,9 @@ describe("signed-in Chrome DM driver", () => {
 
     expect(pause).toHaveBeenCalledWith("beforeSend");
     expect(calls.filter((call) => ["click", "fill", "press_key"].includes(call.name))).toEqual([
-      { name: "click", args: { pageId: 8, uid: "msg-button" } },
-      { name: "fill", args: { pageId: 8, uid: "message-box", value: "A reviewed message from the user" } },
-      { name: "press_key", args: { pageId: 8, key: "Enter" } },
+      { name: "click", args: { pageId: 7, uid: "msg-button" } },
+      { name: "fill", args: { pageId: 7, uid: "message-box", value: "A reviewed message from the user" } },
+      { name: "press_key", args: { pageId: 7, key: "Enter" } },
     ]);
   });
 
