@@ -10,6 +10,13 @@ export class InstagramSendUncertainError extends Error {
   }
 }
 
+/** The Instagram chat already holds our earlier outreach, so a first message must not be sent. */
+export class AlreadyContactedError extends Error {
+  constructor(handle: string) {
+    super(`@${handle} was already messaged by us on Instagram before; the message was not sent.`);
+  }
+}
+
 /** Some engagement may already exist. Hold the job for review rather than duplicate it. */
 export class InstagramWarmupUncertainError extends Error {
   /** What actually went wrong, for the history log (never shown as the headline). */

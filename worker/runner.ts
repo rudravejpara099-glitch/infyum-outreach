@@ -2,7 +2,7 @@ import type { Db } from "@/lib/db/core";
 import type { AiEngine, MeteredAiCall } from "@/lib/engine/types";
 import { AiUsageUncertainError } from "@/lib/engine/anthropic";
 import type { InstagramDriver } from "./driver";
-import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError } from "./driver";
+import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError } from "./driver";
 import { draftWarmupComment } from "@/lib/services/comment-writing";
 import { qualify } from "@/lib/domain/qualify";
 import { remainingToday } from "@/lib/domain/limits";
@@ -12,6 +12,7 @@ import { isDnc } from "@/lib/db/repos/dnc";
 import { isChromeUnreachable } from "@/lib/domain/chrome-connection-failure";
 import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, resolveSupersededInboxJobs, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
+import { canMove } from "@/lib/domain/stages";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
@@ -136,6 +137,14 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
       failJobPermanently(deps.db, job.id, msg);
       if (e instanceof InstagramBlockedError && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
       logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
+    } else if (e instanceof AlreadyContactedError) {
+      // Never send a first message into a conversation that already holds our outreach.
+      completeJob(deps.db, job.id);
+      const messageId = Number(job.payload.messageId);
+      if (Number.isSafeInteger(messageId) && messageId > 0) markFailed(deps.db, messageId, msg);
+      const current = job.leadId ? getLead(deps.db, job.leadId) : null;
+      if (current && canMove(current.stage, "dm_sent")) moveStage(deps.db, current.id, "dm_sent", "worker", "already contacted on Instagram before");
+      logActivity(deps.db, "worker", "lead.already_contacted", { leadId: job.leadId, accountId: job.accountId, detail: msg });
     } else if (e instanceof InstagramSendUncertainError) {
       const messageId = Number(job.payload.messageId);
       const message = Number.isSafeInteger(messageId) && messageId > 0 ? getMessage(deps.db, messageId) : null;

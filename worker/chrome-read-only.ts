@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { IgAccount } from "@/lib/db/types";
-import { InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
+import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { looksBlocked, looksLoggedOut } from "./parse";
 import { runChromeWarmup } from "./chrome-warmup";
 import { warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
@@ -405,6 +405,16 @@ export class ChromeInstagram implements InstagramDriver {
       snapshot = await this.snapshot(target.pageId);
     }
     if (!chatOpen(snapshot)) throw new Error(`Chat with @${handle} did not open.`);
+    // A first message must only go into a conversation we have never written in. Our earlier outreach
+    // always carries our name or portfolio link, so look for it in the open conversation before typing.
+    const history = jsonFromToolResult(await this.evaluate(target.pageId, `() => {
+      const box = document.querySelector('[contenteditable="true"][role="textbox"], textarea[placeholder*="essage" i]');
+      let area = box;
+      for (let level = 0; area && level < 16 && (area.innerText || '').length < 300; level++) area = area.parentElement;
+      const text = (area?.innerText || '');
+      return { found: Boolean(box), ours: /infyum|portfolio\\.infyum\\.com/i.test(text) };
+    }`, "Chrome could not read the Instagram conversation.")) as { found?: unknown; ours?: unknown } | null;
+    if (history?.ours === true) throw new AlreadyContactedError(handle);
     let attempted = false;
     try {
       for (const [index, part] of parts.entries()) {
