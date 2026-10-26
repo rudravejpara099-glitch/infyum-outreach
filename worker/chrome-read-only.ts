@@ -346,6 +346,7 @@ export class ChromeInstagram implements InstagramDriver {
       ensureChromeToolSucceeded(await (await this.connect()).callTool({ name, arguments: { pageId: target.pageId, ...args } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, error);
     return runChromeWarmup({
       navigate: async (url) => { await call("navigate_page", { type: "url", url }, "Chrome could not open the Instagram post."); },
+      reload: async () => { await call("navigate_page", { type: "reload", ignoreCache: true }, "Chrome could not reload the Instagram page."); },
       read: async (url, comment) => {
         const parsed = jsonFromToolResult(await this.evaluate(target.pageId, warmupPageScript(url, account.handle, comment), "Chrome could not inspect warm-up progress."));
         if (!parsed || typeof parsed !== "object") throw new Error("Instagram returned no warm-up progress.");

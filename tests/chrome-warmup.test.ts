@@ -67,6 +67,18 @@ describe("Chrome campaign preparation", () => {
     browser.read = vi.fn(async (url: string, comment?: string) => ({ ...(await read(url, comment)), ownerMatches: url === profileUrl, canComment: url !== profileUrl }));
     await expect(runChromeWarmup(browser, profileUrl, 2, async () => validComment)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
   });
+  it("reloads a page stuck on Instagram's splash once, then continues", async () => {
+    const { browser } = fixture();
+    const read = browser.read;
+    let stuck = true;
+    browser.read = vi.fn(async (url: string, comment?: string) => {
+      const page = await read(url, comment);
+      return url === profileUrl && stuck ? { ...page, ownerMatches: false, canComment: false, ownerLinks: 0, postUrls: [] } : page;
+    });
+    browser.reload = vi.fn(async () => { stuck = false; });
+    await expect(runChromeWarmup(browser, profileUrl, 2, async () => validComment)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
+    expect(browser.reload).toHaveBeenCalledTimes(1);
+  });
   it("prepares the profile's posts, confirms each action, and follows last", async () => {
     const { browser, actions } = fixture();
     const write = vi.fn(async () => validComment);
