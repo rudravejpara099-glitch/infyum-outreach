@@ -1550,3 +1550,8 @@ NOT verified: preparation result and full first-contact/reply path; independent 
 Decisions made: keep same three authorized prospects and human DM review; let the current saved break finish naturally. New pacing code applies on next normal worker start.
 Needs from you: no setup step for the now-confirmed worker connection; exact drafted messages require human approval.
 Next I will: publish the small repair and observe actual preparation when the existing rest ends.
+
+### [2026-10-26] Claude #6: Reviewed and merged the Codex stack (#7, #11 to #15)
+Owner asked for a platform a random user can use and gave full control. Verified `feat/customer-connection` (top of the stack) on a fresh clone: `npm ci`, `npm test` 610 passed, `npm run typecheck`, `npx next build --webpack`, and `scripts/workspace-smoke.ts` (signup, private company, invitations, switching, isolation) all pass. Merged the whole stack into `main`. Closed #2 as superseded.
+Local machine: installed Ollama, pulled `qwen2.5:7b`; `scripts/local-writing-smoke.ts` passed (real comment and three-part draft, zero billing, zero sends). Owner `.env.local` now uses `AI_PROVIDER=local`. Real database backed up with `npm run backup` before the new migrations ran; app runs with `npm start` on port 3000.
+NOT done (owner decisions): public hosting (the app only runs on this Mac), Developer ID signing for the Mac connector, real payments. No Instagram writes, paid API, Apify or Stripe calls were made.
