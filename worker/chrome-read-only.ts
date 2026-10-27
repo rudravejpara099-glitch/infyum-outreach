@@ -6,7 +6,9 @@ import type { IgAccount } from "@/lib/db/types";
 import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { looksBlocked, looksLoggedOut } from "./parse";
 import { runChromeWarmup } from "./chrome-warmup";
-import { warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
+import { storyLikeScript, warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
+
+const handleOf = (profileUrl: string) => new URL(profileUrl).pathname.split("/").filter(Boolean)[0] ?? "";
 import { chromePages, chromeProfileNeedsReload } from "@/lib/domain/chrome-pages";
 import { chromeConnectionFailure } from "@/lib/domain/chrome-connection-failure";
 import { humanDelayMs, type DelayKind } from "@/lib/domain/pacing";
@@ -368,6 +370,11 @@ export class ChromeInstagram implements InstagramDriver {
         const parsed = jsonFromToolResult(await this.evaluate(target.pageId, warmupPageScript(url, account.handle, comment), "Chrome could not inspect warm-up progress."));
         if (!parsed || typeof parsed !== "object") throw new Error("Instagram returned no warm-up progress.");
         return parsed as WarmupPage;
+      },
+      likeStory: async () => {
+        const parsed = jsonFromToolResult(await this.evaluate(target.pageId, storyLikeScript(handleOf(target.url)), "Chrome could not check the profile story."));
+        const story = parsed && typeof parsed === "object" ? parsed as { hadStory?: unknown; liked?: unknown } : {};
+        return { hadStory: story.hadStory === true, liked: story.liked === true };
       },
       click: async (name) => {
         const snapshot = await this.snapshot(target.pageId);

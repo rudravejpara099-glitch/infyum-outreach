@@ -10,6 +10,8 @@ export type WarmupBrowser = {
   click(name: string): Promise<void>;
   comment(text: string): Promise<void>;
   wait(kind: DelayKind): Promise<void>;
+  /** Likes the profile's story if it has one. Best effort; the profile page must be restored afterwards. */
+  likeStory?(): Promise<{ hadStory: boolean; liked: boolean }>;
   /** Fresh reload of the current page (used once when Instagram stays on its splash). */
   reload?(): Promise<void>;
 };
@@ -47,6 +49,19 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
     const profile = await check(profileUrl);
     const posts = [...new Set(profile.postUrls.map(instagramPostUrl).filter((url): url is string => url !== null))].slice(0, pieces);
     if (posts.length < pieces) throw new Error(`This profile needs ${pieces} available posts before warm-up can finish.`);
+    if (browser.likeStory && !profile.following) {
+      // Story first, like a person landing on the profile. It is a bonus: only a warning from Instagram stops the run.
+      attempted = true;
+      try {
+        const story = await browser.likeStory();
+        if (story.hadStory) result.storyLiked = story.liked;
+      } catch (error) {
+        if (error instanceof InstagramBlockedError) throw error;
+      }
+      await browser.navigate(profileUrl);
+      await browser.wait("read");
+      await check(profileUrl);
+    }
     for (const url of posts) {
       // Only post URLs actually read from this profile may be opened.
       const target = new URL(url);
