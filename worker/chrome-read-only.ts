@@ -6,7 +6,7 @@ import type { IgAccount } from "@/lib/db/types";
 import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { looksBlocked, looksLoggedOut } from "./parse";
 import { runChromeWarmup } from "./chrome-warmup";
-import { storyLikeScript, warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
+import { storyLikeScript, tagPostLikeScript, warmupPageScript, type WarmupPage } from "./chrome-warmup-data";
 
 const handleOf = (profileUrl: string) => new URL(profileUrl).pathname.split("/").filter(Boolean)[0] ?? "";
 import { chromePages, chromeProfileNeedsReload } from "@/lib/domain/chrome-pages";
@@ -377,6 +377,14 @@ export class ChromeInstagram implements InstagramDriver {
         return { hadStory: story.hadStory === true, liked: story.liked === true };
       },
       click: async (name) => {
+        if (name === "Like") {
+          // Pages also carry tiny hearts on comments; tag the post's own heart and click that one.
+          const tag = jsonFromToolResult(await this.evaluate(target.pageId, tagPostLikeScript(), "Chrome could not find the post's like button."));
+          if (tag && typeof tag === "object" && (tag as { tagged?: unknown }).tagged === true) {
+            await this.clickNamed(target.pageId, await this.snapshot(target.pageId), "button", "Outreach post like");
+            return;
+          }
+        }
         const snapshot = await this.snapshot(target.pageId);
         await this.clickNamed(target.pageId, snapshot, name === "Like" && /image\s+"Like"/.test(snapshot) ? "image" : "button", name);
       },

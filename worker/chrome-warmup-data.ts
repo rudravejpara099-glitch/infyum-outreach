@@ -80,6 +80,16 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
       catch { return ''; }
     }).filter(Boolean))];
     const labels = Array.from(root?.querySelectorAll('[aria-label]') ?? []).map(e => e.getAttribute('aria-label'));
+    // A post page also has tiny hearts on comments. The post's own heart sits in the same row as its Comment icon.
+    const postHeart = (() => {
+      let row = root?.querySelector?.('svg[aria-label="Comment"]');
+      for (let level = 0; row && level < 6; level++, row = row.parentElement) {
+        const heart = row.querySelector?.('svg[aria-label="Like"],svg[aria-label="Unlike"]');
+        if (heart) return heart;
+      }
+      return null;
+    })();
+    const likedNow = postHeart ? postHeart.getAttribute('aria-label') === 'Unlike' : labels.includes('Unlike');
     const following = Array.from(root?.querySelectorAll('button,[role=button]') ?? []).some(e => /^(Following|Requested)$/.test((e.innerText || '').trim()));
     const comment = ${JSON.stringify(comment)};
     const input = root?.querySelector('textarea[aria-label*="comment" i],textarea[placeholder*="comment" i]');
@@ -96,7 +106,7 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
     const ownerCommented = Array.from(root?.querySelectorAll('a[href]') ?? []).some(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath);
     // Diagnostics only (no personal data): how many links point at the signed-in account anywhere on the page.
     const ownerLinks = Array.from(document.querySelectorAll('a[href]')).filter(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath).length;
-    return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible, ownerCommented, at: location.hostname + location.pathname, ownerLinks, canComment: Boolean(input) };
+    return { allowed: true, ownerMatches, text, caption, postUrls, liked: likedNow, following, commentVisible, ownerCommented, at: location.hostname + location.pathname, ownerLinks, canComment: Boolean(input) };
   }`;
 }
 
@@ -133,5 +143,24 @@ export function storyLikeScript(handle: string): string {
     const doneBy = Date.now() + 4000;
     while (!heart('Unlike') && Date.now() < doneBy) await sleep(200);
     return { hadStory: true, liked: Boolean(heart('Unlike')) && location.pathname.toLowerCase().startsWith(storyPath) };
+  }`;
+}
+
+/** Marks the post's own like button (not a comment's heart) so it can be clicked by name. Returns { tagged }. */
+export function tagPostLikeScript(): string {
+  return `() => {
+    const root = document.querySelector('article') ?? document.querySelector('main');
+    let row = root?.querySelector('svg[aria-label="Comment"]');
+    for (let level = 0; row && level < 6; level++, row = row.parentElement) {
+      const heart = row.querySelector('svg[aria-label="Like"],svg[aria-label="Unlike"]');
+      if (heart) {
+        if (heart.getAttribute('aria-label') !== 'Like') return { tagged: false };
+        const button = heart.closest('[role=button],button');
+        if (!button) return { tagged: false };
+        button.setAttribute('aria-label', 'Outreach post like');
+        return { tagged: true };
+      }
+    }
+    return { tagged: false };
   }`;
 }
