@@ -52,8 +52,9 @@ ${opts.profileNotes || "(nothing captured)"}
 Return exactly: {"parts":["..."]}`;
 }
 
-export function commentPrompt(postContext: string): string {
-  return `Write one short Instagram comment on this post. 3 to 8 words, 1 to 3 emojis, specific to the post, warm, no dashes, no hashtags, no questions about business. Answer with only the comment text.
+export function commentPrompt(postContext: string, alreadyUsed: string[] = []): string {
+  const avoid = alreadyUsed.length ? `\n\nComments already posted on this person's other posts, never reuse their wording or opening:\n${alreadyUsed.map((c) => `- ${c}`).join("\n")}` : "";
+  return `Write one short Instagram comment on this post. 3 to 8 words, 1 to 3 emojis, specific to the post, warm, no dashes, no hashtags, no questions about business. Never start with "Love this", "Great" or "Nice". Name one concrete detail from the post's own text. Answer with only the comment text.${avoid}
 
 Post: ${postContext}`;
 }
