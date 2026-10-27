@@ -37,6 +37,20 @@ export function profileFactsScript(targetHandle: string): string {
     };
     const deadline = Date.now() + 6000;
     while (!ready() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
+    // The follower count can render before the Follow/Following button on slow pages; wait for the button too.
+    const relationLabels = (scope) => Array.from(scope?.querySelectorAll?.('button,[role=button]') ?? []).map((e) =>
+      ((typeof e.getAttribute === 'function' ? e.getAttribute('aria-label') : '') || e.innerText || '').trim().toLowerCase())
+      .filter((s) => /^(follow|follow back|following|requested)$/.test(s));
+    const relationShown = () => {
+      for (let scope = document.querySelector('header'), depth = 0; scope && depth < 3; depth++, scope = scope.parentElement) {
+        if (relationLabels(scope).length) return true;
+      }
+      return false;
+    };
+    const relationDeadline = Date.now() + 15000;
+    while (/followers/i.test(document.body?.innerText ?? '') && !relationShown() && Date.now() < relationDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
     const body = document.body?.innerText ?? '';
     if (/restricted profile|you must be \\d+ years old or over to see this profile/i.test(body)) return { allowed, restricted: true };
     const blocked = /action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(body) || /\\/(challenge|accounts\\/suspended)\\//i.test(location.pathname);
