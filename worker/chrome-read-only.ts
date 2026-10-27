@@ -143,10 +143,16 @@ export class ChromeInstagram implements InstagramDriver {
       ensureChromeToolSucceeded(await client.callTool({ name: "navigate_page", arguments: { pageId: ownerTab.id, type: "url", url } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
       return { pageId: ownerTab.id, url };
     }
+    const owned = !page && this.ownedPageId !== undefined ? pages.find((item) => item.id === this.ownedPageId) ?? null : null;
+    if (owned) {
+      ensureChromeToolSucceeded(await client.callTool({ name: "navigate_page", arguments: { pageId: owned.id, type: "url", url } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
+      return { pageId: owned.id, url };
+    }
     if (!page) {
       // Open in front: Chrome throttles hidden tabs and Instagram barely renders them.
       ensureChromeToolSucceeded(await client.callTool({ name: "new_page", arguments: { url, background: false } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open the Instagram profile.");
       page = bindInstagramPage(await this.pages(), handle);
+      if (page) this.ownedPageId = page.id;
     }
     if (!page) throw new Error("Could not open the Instagram profile in Chrome.");
     return { pageId: page.id, url: page.url };
@@ -234,6 +240,8 @@ export class ChromeInstagram implements InstagramDriver {
    */
   private signedInPageId?: number;
   private lastPages: Page[] = [];
+  /** Tabs this app opened itself; reused for the next lead so Chrome never fills up with Instagram tabs. */
+  private ownedPageId?: number;
   /** The signed-in tab was moved to the inbox and must go back to the profile afterwards. */
   private inboxBorrowed = false;
   async openLogin(account: IgAccount): Promise<boolean> {

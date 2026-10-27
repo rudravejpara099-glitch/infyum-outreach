@@ -124,6 +124,11 @@ export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
       failJobPermanently(deps.db, job.id, msg);
       if (e.blockedByInstagram && job.accountId) setAccountStatus(deps.db, job.accountId, "blocked", msg, "worker");
       logActivity(deps.db, "worker", "job.error", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}${e.reason ? ` Cause: ${e.reason}` : ""}` });
+    } else if (job.type === "qualify" && /About this account popup failed to load/i.test(msg)) {
+      // Instagram's own popup failed; qualifying only reads, so wait a while and read again instead of failing the lead.
+      deferJob(deps.db, job, 15);
+      const noted = deps.db.prepare("SELECT 1 FROM activity WHERE action='job.waiting_for_instagram' AND lead_id IS ? AND ts > datetime('now','-30 minutes') LIMIT 1").get(job.leadId);
+      if (!noted) logActivity(deps.db, "worker", "job.waiting_for_instagram", { leadId: job.leadId, accountId: job.accountId, detail: `${job.type}: ${msg}` });
     } else if (job.type === "warmup" && !(e instanceof InstagramBlockedError) && isChromeUnreachable(msg)) {
       // Chrome was not reachable, so nothing happened on Instagram: wait and retry instead of giving up.
       // Retry every minute: Chrome's "Allow remote debugging?" prompt lasts about a minute, so one is
