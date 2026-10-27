@@ -69,6 +69,19 @@ describe("worker pipeline", () => {
     expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='qualify' AND lead_id=? AND status='queued'").get(lead.id)).toEqual({ n: 0 });
   });
 
+  it("waits instead of failing a warm-up when the local writer is not running", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "writer-down", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    deps.engine = { ...engine, async assertReady() { throw new Error("Local writing is unavailable or returned an invalid response. Start Ollama."); } };
+
+    await runOne(deps, { accountId: acct.id });
+
+    expect(driver.warmups).toBe(0);
+    expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").get(lead.id)).toEqual({ status: "queued" });
+  });
+
   it("does not repeat a warm-up after crash recovery held it for review", () => {
     const { acct, camp } = setup(true);
     const { lead } = addLead(db, { handle: "interrupted-warmup", campaignId: camp.id, stage: "qualified" }, "t");
