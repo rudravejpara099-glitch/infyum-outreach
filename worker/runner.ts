@@ -291,10 +291,16 @@ async function process(deps: Deps, job: Job): Promise<void> {
           && campaignAccountIds(db, freshCampaign.id).includes(account.id) && !isDnc(db, freshLead.handle)
           && workerControl(db).phase !== "stopping";
       };
+      // Never repeat a comment: remember what this warm-up wrote and what other prospects recently got.
+      const usedComments = (db.prepare("SELECT detail FROM activity WHERE action='warmup.comment' ORDER BY id DESC LIMIT 40").all() as { detail: string }[])
+        .map((row) => row.detail.replace(/^.*?::\s*/, "")).reverse();
       const result = await driver.warmUp(account, lead.handle, WARMUP_PIECES, async (context) => {
         commentCall += 1;
         const metering = meteringFor(commentCall);
-        return draftWarmupComment(engine, context, metering);
+        const comment = await draftWarmupComment(engine, context, metering, usedComments);
+        usedComments.push(comment);
+        logActivity(db, "worker", "warmup.comment", { leadId: lead.id, accountId: account.id, detail: `@${lead.handle} :: ${comment}` });
+        return comment;
       }, mayContinue);
       if (!mayContinue() || !warmupComplete(result, WARMUP_PIECES)) throw new InstagramWarmupUncertainError();
       try {

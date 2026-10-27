@@ -207,3 +207,12 @@ describe("warm-up comment rules", () => {
     }
   });
 });
+
+describe("comment repetition guard", () => {
+  it("rejects generic openers and repeats of earlier comments", async () => {
+    const { repeatedCommentError } = await import("@/lib/services/comment-writing");
+    expect(repeatedCommentError("Love this cleanup strategy! 🚀", [])).toMatch(/generic/);
+    expect(repeatedCommentError("Taco night looks so fun 🌮", ["Taco night looks great 🌮"])).toMatch(/repeats/);
+    expect(repeatedCommentError("Those books balance perfectly 📊", ["Taco night looks great 🌮"])).toBeNull();
+  });
+});
