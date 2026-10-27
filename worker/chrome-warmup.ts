@@ -87,7 +87,13 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
         attempted = true;
         await browser.click("Like");
         await browser.wait("afterLike");
-        if (!(await check(url)).liked) throw new Error("Instagram did not confirm the like.");
+        // The heart can take a few seconds to turn; look again before calling it unconfirmed.
+        let after = await check(url);
+        for (let look = 0; !after.liked && look < 5; look++) {
+          await browser.wait("afterLike");
+          after = await check(url);
+        }
+        if (!after.liked) throw new Error(`Instagram did not confirm the like (page said: ${String(after.text ?? "").replace(/\s+/g, " ").slice(0, 160)}).`);
       }
       result.likes++;
       if (comment) {
