@@ -71,23 +71,30 @@ export function profileFactsScript(targetHandle: string): string {
     let country = null;
     let dialog = Array.from(document.querySelectorAll('[role=dialog]')).find((item) => /Account based in/i.test(item.innerText || ''));
     const options = header?.querySelector('[aria-label="Options"],[aria-label="More options"]')?.closest('button,[role="button"]');
-    if (!dialog && options && typeof options.click === 'function') {
+    let aboutFailed = false;
+    for (let attempt = 0; !dialog && options && typeof options.click === 'function' && attempt < 3; attempt++) {
+      aboutFailed = false;
       options.click();
       await new Promise((resolve) => setTimeout(resolve, 300));
       const about = Array.from(document.querySelectorAll('button,[role=button],a,div'))
         .find((e) => (e.innerText || '').trim() === 'About this account');
-      if (about) {
-        about.click();
-        const aboutDeadline = Date.now() + 2000;
-        while (!dialog && Date.now() < aboutDeadline) {
-          dialog = Array.from(document.querySelectorAll('[role=dialog]')).find((item) => /Account based in/i.test(item.innerText || ''));
-          if (!dialog) await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-        if (location.pathname.toLowerCase() !== ${JSON.stringify(targetPath)}) return { allowed: false, blocked: false };
-        const afterDialog = document.body?.innerText ?? '';
-        if (/action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(afterDialog) || /\\/(challenge|accounts\\/suspended)\\//i.test(location.pathname)) {
-          return { allowed, blocked: true };
-        }
+      if (!about) break;
+      about.click();
+      const aboutDeadline = Date.now() + 6000;
+      while (!dialog && Date.now() < aboutDeadline) {
+        dialog = Array.from(document.querySelectorAll('[role=dialog]')).find((item) => /Account based in/i.test(item.innerText || ''));
+        if (!dialog && Array.from(document.querySelectorAll('[role=dialog]')).some((item) => /failed to load/i.test(item.innerText || ''))) { aboutFailed = true; break; }
+        if (!dialog) await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+      if (location.pathname.toLowerCase() !== ${JSON.stringify(targetPath)}) return { allowed: false, blocked: false };
+      const afterDialog = document.body?.innerText ?? '';
+      if (/action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(afterDialog) || /\\/(challenge|accounts\\/suspended)\\//i.test(location.pathname)) {
+        return { allowed, blocked: true };
+      }
+      if (!dialog && aboutFailed) {
+        const failedClose = Array.from(document.querySelectorAll('[role=dialog] button, [role=dialog] [role=button]')).find((e) => (e.innerText || '').trim() === 'Close');
+        failedClose?.click();
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     }
     if (dialog) {
@@ -99,7 +106,7 @@ export function profileFactsScript(targetHandle: string): string {
     }
     return {
       allowed, blocked: false, loggedOut: false,
-      isPublic: !/this account is private/i.test(body), followerText, relation, country,
+      isPublic: !/this account is private/i.test(body), followerText, relation, country, aboutFailed: aboutFailed && !dialog,
     };
   }`;
 }
@@ -111,6 +118,7 @@ export function profileFactsFromToolResult(result: ToolResult): ProfileFacts {
   if (parsed.blocked === true) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
   if (parsed.restricted === true) throw new Error("Instagram restricts this profile, so its facts cannot be read.");
   if (parsed.loggedOut === true) throw new InstagramBlockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
+  if (parsed.aboutFailed === true) throw new Error("Instagram's About this account popup failed to load, so the country could not be read. Will retry.");
   const followerText = typeof parsed.followerText === "string" ? parsed.followerText : "";
   const followers = followersFromText(followerText);
   if (followers === null) throw new Error("Could not read the Instagram follower count safely.");
