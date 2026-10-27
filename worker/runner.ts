@@ -256,7 +256,17 @@ async function process(deps: Deps, job: Job): Promise<void> {
         source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
       } : undefined;
       // Never like/follow a post before discovering writing/billing is disconnected.
-      await engine.assertReady?.(meteringFor(1));
+      try {
+        await engine.assertReady?.(meteringFor(1));
+      } catch (e) {
+        // Nothing has touched Instagram yet, so a missing local writer is safe to wait out instead of failing the lead.
+        const why = e instanceof Error ? e.message : String(e);
+        if (!/^Local writing is unavailable/.test(why)) throw e;
+        deferJob(db, job, 5);
+        const noted = db.prepare("SELECT 1 FROM activity WHERE action='job.waiting_for_writer' AND ts > datetime('now','-30 minutes') LIMIT 1").get();
+        if (!noted) logActivity(db, "worker", "job.waiting_for_writer", { leadId: job.leadId, accountId: job.accountId, detail: `warmup: ${why}` });
+        return;
+      }
       const mayContinue = () => {
         const freshLead = getLead(db, lead.id), freshAccount = getAccount(db, account.id);
         const freshCampaign = campaign ? getCampaign(db, campaign.id) : null;
