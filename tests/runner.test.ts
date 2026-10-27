@@ -396,7 +396,21 @@ describe("worker pipeline", () => {
     deps.engine = { async complete({ prompt }) {
       if (prompt.includes("Write one short Instagram comment")) return "Nice 🙌";
       n++;
-      return JSON.stringify({ parts: [`Unique opener number ${n} about topic${n}x${n}y`, `I'm Rudra at Infyum, small team in India. ${LINK}`, `Question number ${n} about funnel${n}z?`] });
+      const topics = [
+        "Your credit rebuild reel about disputing old collections accounts was genuinely useful, especially the part on goodwill letters",
+        "That bookkeeping checklist carousel for freelancers made quarterly estimated taxes feel manageable for once",
+        "The tax season story highlight showing real refund timelines cleared up a question I had last spring",
+        "Your podcast clip on paying down revolving debt before applying for funding changed how I think about utilization",
+        "The funding story highlight where you walk through a business line approval was refreshingly specific and honest",
+      ];
+      const asks = [
+        "Which page do most of your callers land on before they book a consultation with your team these days?",
+        "How do people usually reach you after watching one of these reels, is it mostly through direct messages?",
+        "What does the path from a new follower to a booked call look like for your business right now exactly?",
+        "Where do most of your warm leads drop off between the first message and a scheduled strategy call?",
+        "Who on your team handles inbound messages when a prospect asks about pricing or timelines on a weekend?",
+      ];
+      return JSON.stringify({ parts: [`${topics[(n - 1) % 5]}`, `I'm Rudra at Infyum, a small team in India building ${["sales funnels", "booking pages", "landing pages", "lead capture forms", "offer pages"][(n - 1) % 5]} for coaches. ${LINK}`, asks[(n - 1) % 5]] });
     } };
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(2);
@@ -407,6 +421,9 @@ describe("worker pipeline", () => {
     expect(getAccount(db, acct.id)!.status).toBe("active");
     clock = new Date("2026-10-21T10:00:00Z");
     db.prepare("UPDATE jobs SET run_after = datetime('now','-1 minute') WHERE status='queued'").run();
+    await runUntilIdle(deps);
+    // The similarity guard may hold a later draft for a person's approval; that is the intended safety net.
+    for (const held of listMessages(db, { status: "pending_approval" })) approveMessage(db, held.id, "t");
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(3);
   });

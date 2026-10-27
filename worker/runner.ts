@@ -54,11 +54,27 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   for (const c of active) {
     const accounts = campaignAccountIds(db, c.id);
     if (accounts.length === 0) continue;
-    for (const lead of listLeads(db, { campaignId: c.id, limit: 2000 })) {
+    const leads = listLeads(db, { campaignId: c.id, limit: 2000 });
+    const stepOf = (stage: string) => ({ found: "qualify", qualified: "warmup", warmed: "draft_dm" } as Record<string, string | undefined>)[stage];
+    // One prospect at a time per account: a lead already part-way through (qualified or warmed, no first message
+    // drafted yet) finishes before the next one is opened, so Chrome never works on several profiles at once.
+    const focus = new Map<number, number>();
+    for (const lead of leads) {
+      const step = stepOf(lead.stage);
+      if (!lead.accountId || !step || step === "qualify" || focus.has(lead.accountId)) continue;
+      if (hasOutgoing(db, lead.id, "dm") || failedJobExists(db, step, lead.id)) continue;
+      focus.set(lead.accountId, lead.id);
+    }
+    for (const lead of leads) {
       const chosen = lead.accountId ?? leastLoadedAccount(db, accounts)!;
       if (!lead.accountId) assignLead(db, lead.id, c.id, chosen);
-      const step = { found: "qualify", qualified: "warmup", warmed: "draft_dm" }[lead.stage as "found" | "qualified" | "warmed"];
-      if (!step || activeJobExists(db, step, lead.id) || failedJobExists(db, step, lead.id)) continue;
+      const step = stepOf(lead.stage) as "qualify" | "warmup" | "draft_dm" | undefined;
+      if (!step || failedJobExists(db, step, lead.id)) continue;
+      if (step === "draft_dm" && hasOutgoing(db, lead.id, "dm")) continue; // drafted already: waiting on approval or send, not in progress
+      const turn = focus.get(chosen);
+      if (turn !== undefined && turn !== lead.id) continue;
+      focus.set(chosen, lead.id);
+      if (activeJobExists(db, step, lead.id)) continue;
       const account = getAccount(db, chosen);
       if (!account || !browserModeAllowsJob(account.browserMode, step)) continue;
       if (step === "draft_dm" && hasOutgoing(db, lead.id, "dm")) continue;

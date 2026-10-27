@@ -52,6 +52,19 @@ describe("Chrome campaign preparation", () => {
     await expect(driver.warmUp(account, "prospect", 1, async () => validComment)).resolves.toEqual({ likes: 1, comments: 1, followed: true });
     expect(calls.filter(name => ["click", "fill", "press_key"].includes(name))).toEqual(["click", "fill", "press_key", "click"]);
   });
+  it("likes the story first when the profile has one, and a failing story never stops the warm-up", async () => {
+    const { browser, actions } = fixture();
+    browser.likeStory = vi.fn(async () => { actions.push("story"); return { hadStory: true, liked: true }; });
+    const result = await runChromeWarmup(browser, profileUrl, 2, async () => validComment);
+    expect(result).toEqual({ likes: 2, comments: 2, followed: true, storyLiked: true });
+    expect(actions.indexOf("story")).toBeLessThan(actions.indexOf("Like"));
+    const failing = fixture();
+    failing.browser.likeStory = vi.fn(async () => { throw new Error("story viewer did not open"); });
+    await expect(runChromeWarmup(failing.browser, profileUrl, 2, async () => validComment)).resolves.toMatchObject({ likes: 2, comments: 2, followed: true });
+    const noStory = fixture();
+    noStory.browser.likeStory = vi.fn(async () => ({ hadStory: false, liked: false }));
+    expect((await runChromeWarmup(noStory.browser, profileUrl, 2, async () => validComment)).storyLiked).toBeUndefined();
+  });
   it("never comments twice on a post our account already commented on (an interrupted earlier warm-up)", async () => {
     const { browser, actions } = fixture();
     const read = browser.read;

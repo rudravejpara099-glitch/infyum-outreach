@@ -99,3 +99,39 @@ export function warmupPageScript(expectedUrl: string, ownerHandle: string, comme
     return { allowed: true, ownerMatches, text, caption, postUrls, liked: labels.includes('Unlike'), following, commentVisible, ownerCommented, at: location.hostname + location.pathname, ownerLinks, canComment: Boolean(input) };
   }`;
 }
+
+export type StoryResult = { hadStory: boolean; liked: boolean; at?: string };
+
+/**
+ * Likes the profile's current story, if it has one. Opens the avatar, checks the viewer is on THIS profile's
+ * story (never another account's, since viewers auto-advance), likes the first frame and confirms it.
+ * It never types, follows or messages. The caller navigates back to the profile afterwards.
+ */
+export function storyLikeScript(handle: string): string {
+  if (!/^[a-zA-Z0-9._]{1,30}$/.test(handle)) throw new Error("Invalid Instagram story target.");
+  return `async () => {
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const storyPath = ${JSON.stringify(`/stories/${handle.toLowerCase()}/`)};
+    if (location.hostname !== 'www.instagram.com' && location.hostname !== 'instagram.com') return { hadStory: false, liked: false };
+    const avatar = Array.from(document.querySelectorAll('header img[alt*="profile picture" i]')).find(Boolean);
+    let ring = avatar;
+    for (let depth = 0; ring && depth < 5 && ring.getAttribute?.('role') !== 'button'; depth++) ring = ring.parentElement;
+    // A plain avatar has no button around it; a story ring does.
+    if (!ring || ring.getAttribute?.('role') !== 'button') return { hadStory: false, liked: false };
+    ring.click();
+    const openBy = Date.now() + 6000;
+    while (!location.pathname.toLowerCase().startsWith(storyPath) && Date.now() < openBy) await sleep(200);
+    if (!location.pathname.toLowerCase().startsWith(storyPath)) return { hadStory: false, liked: false, at: location.pathname.slice(0, 60) };
+    const heart = (label) => Array.from(document.querySelectorAll('svg[aria-label="' + label + '"]')).find(Boolean);
+    const likeBy = Date.now() + 8000;
+    while (!heart('Like') && !heart('Unlike') && Date.now() < likeBy) await sleep(200);
+    if (!location.pathname.toLowerCase().startsWith(storyPath)) return { hadStory: true, liked: false };
+    if (heart('Unlike')) return { hadStory: true, liked: true };
+    const target = heart('Like')?.closest('[role=button],button') ?? heart('Like')?.parentElement;
+    if (!target) return { hadStory: true, liked: false };
+    target.click();
+    const doneBy = Date.now() + 4000;
+    while (!heart('Unlike') && Date.now() < doneBy) await sleep(200);
+    return { hadStory: true, liked: Boolean(heart('Unlike')) && location.pathname.toLowerCase().startsWith(storyPath) };
+  }`;
+}

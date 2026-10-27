@@ -28,7 +28,7 @@ export class InstagramWarmupUncertainError extends Error {
 }
 
 export type ProfileFacts = { isPublic: boolean; country: string | null; followers: number; linkedToInfyum: boolean };
-export type WarmUpResult = { likes: number; comments: number; followed: boolean };
+export type WarmUpResult = { likes: number; comments: number; followed: boolean; /** Present when the profile had a story. Best effort: never required for a complete warm-up. */ storyLiked?: boolean };
 
 /** Everything the app needs from Instagram. The real one drives a browser; tests use a fake. */
 export interface InstagramDriver {
