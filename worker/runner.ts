@@ -18,7 +18,7 @@ import { canMove } from "@/lib/domain/stages";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setFit, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
-import { safetySettings, withDmCap } from "@/lib/services/safety";
+import { actionLimits, safetySettings, withDmCap } from "@/lib/services/safety";
 import { actionsToday, recordActions } from "@/lib/db/repos/daily-actions";
 import { parseWritingSettings } from "@/lib/domain/writing-settings";
 import { logActivity } from "@/lib/db/repos/activity";
@@ -289,11 +289,10 @@ async function process(deps: Deps, job: Job): Promise<void> {
         db, userId: campaignPayer, operationId: `ai:${job.id}:warmup-comment:${call}`,
         source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
       } : undefined;
-      // Daily caps per action (Settings): wait for tomorrow rather than start a warm-up that would go over.
-      const dayCaps = safetySettings(db).caps, capDay = teamDate(db, deps.now());
-      if (actionsToday(db, account.id, capDay, "like") + WARMUP_PIECES > dayCaps.likes
-        || actionsToday(db, account.id, capDay, "comment") + WARMUP_PIECES > dayCaps.comments
-        || actionsToday(db, account.id, capDay, "follow") + 1 > dayCaps.follows) {
+      // Daily caps per action (Settings) and the week-one ramp: do as many posts as today's room allows, or wait for tomorrow.
+      const capDay = teamDate(db, deps.now()), room = actionLimits(db, account, capDay);
+      const pieces = Math.min(WARMUP_PIECES, room.likes - actionsToday(db, account.id, capDay, "like"), room.comments - actionsToday(db, account.id, capDay, "comment"));
+      if (pieces < 1 || actionsToday(db, account.id, capDay, "follow") + 1 > room.follows) {
         deferJob(db, job, 120);
         logActivity(db, "worker", "warmup.limit_reached", { accountId: account.id, leadId: lead.id });
         return;
@@ -321,7 +320,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
       // Never repeat a comment: remember what this warm-up wrote and what other prospects recently got.
       const usedComments = (db.prepare("SELECT detail FROM activity WHERE action='warmup.comment' ORDER BY id DESC LIMIT 40").all() as { detail: string }[])
         .map((row) => row.detail.replace(/^.*?::\s*/, "")).reverse();
-      const result = await driver.warmUp(account, lead.handle, WARMUP_PIECES, async (context) => {
+      const result = await driver.warmUp(account, lead.handle, pieces, async (context) => {
         commentCall += 1;
         const metering = meteringFor(commentCall);
         const comment = await draftWarmupComment(engine, context, metering, usedComments, parseWritingSettings(getSetting(db, "writing_settings")).commentPrompt);
@@ -329,7 +328,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
         logActivity(db, "worker", "warmup.comment", { leadId: lead.id, accountId: account.id, detail: `@${lead.handle} :: ${comment}` });
         return comment;
       }, mayContinue);
-      if (!mayContinue() || !warmupComplete(result, WARMUP_PIECES)) throw new InstagramWarmupUncertainError();
+      if (!mayContinue() || !warmupComplete(result, pieces)) throw new InstagramWarmupUncertainError();
       try {
         db.transaction(() => {
           logActivity(db, "worker", "lead.warmed_up", { leadId: lead.id, accountId: account.id, detail: `${result.likes} likes, ${result.comments} comments, followed: ${result.followed}` });

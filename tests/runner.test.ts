@@ -15,7 +15,7 @@ const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudr
 class FakeDriver implements InstagramDriver {
   sent: { handle: string; parts: string[] }[] = [];
   inbox: { handle: string; text: string }[] = [];
-  factsRead = 0; warmups = 0; inboxReads = 0;
+  factsRead = 0; warmups = 0; lastPieces = 0; inboxReads = 0;
   authenticated = true;
   facts = { isPublic: true, country: "United States", followers: 5000, linkedToInfyum: false };
   blockOnSend = false;
@@ -25,7 +25,7 @@ class FakeDriver implements InstagramDriver {
   async openLogin() { return this.authenticated; }
   async readFacts(account?: unknown) { void account; this.factsRead++; return this.facts; }
   async readProfileNotes() { return "bio: credit coach in Texas"; }
-  async warmUp() { this.warmups++; return { likes: 10, comments: 10, followed: true }; }
+  async warmUp(_a?: unknown, _h?: string, pieces = 10) { this.warmups++; this.lastPieces = pieces; return { likes: pieces, comments: pieces, followed: true }; }
   async sendMessages(_a: unknown, handle: string, parts: string[]) {
     if (this.blockOnSend) throw new InstagramBlockedError("Action blocked");
     if (this.errorOnSend) throw new Error("Chat did not open");
@@ -122,13 +122,24 @@ describe("worker pipeline", () => {
     const counts = db.prepare("SELECT kind, n FROM daily_actions ORDER BY kind").all();
     expect(counts).toEqual([{ kind: "comment", n: 10 }, { kind: "follow", n: 1 }, { kind: "like", n: 10 }]);
 
-    db.prepare("INSERT INTO settings (key,value) VALUES ('safety_settings', ?)").run(JSON.stringify({ dayStartHour: 0, dayEndHour: 24, caps: { follows: 20, likes: 15, comments: 40, dms: 35 } }));
+    db.prepare("INSERT INTO settings (key,value) VALUES ('safety_settings', ?)").run(JSON.stringify({ dayStartHour: 0, dayEndHour: 24, caps: { follows: 20, likes: 10, comments: 40, dms: 35 } }));
     const { lead: second } = addLead(db, { handle: "cap-two", campaignId: camp.id, stage: "qualified" }, "t");
     db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, second.id);
     enqueue(db, { type: "warmup", leadId: second.id, accountId: acct.id });
     await runOne(deps);
     expect(driver.warmups).toBe(1);
     expect(db.prepare("SELECT count(*) n FROM activity WHERE action='warmup.limit_reached'").get()).toEqual({ n: 1 });
+  });
+
+  it("shrinks a warm-up to the week-one ramp on a new account", async () => {
+    const { acct, camp } = setup(true);
+    db.prepare("UPDATE ig_accounts SET ramp_start = date('now') WHERE id = ?").run(acct.id);
+    const { lead } = addLead(db, { handle: "ramp-one", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    await runUntilIdle(deps);
+    expect(driver.lastPieces).toBe(5);
+    expect(getLead(db, lead.id)?.stage).toBe("warmed");
   });
 
   it("takes Chrome leads through preparation and holds the first message for approval", async () => {
