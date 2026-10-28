@@ -157,7 +157,7 @@ it("the extension's Stop button switches everything off, and a running task is t
   expect((await kill(request("kill", device.token))).status).toBe(200);
   expect(killSwitchOn(db)).toBe(true);
   expect(commandMayContinue(db, command)).toBe(false);
-  expect(await (await poll(request("poll", device.token))).json()).toEqual({ command: null, killed: true });
+  expect(await (await poll(request("poll", device.token))).json()).toMatchObject({ command: null, killed: true });
   expect((await kill(request("kill"))).status).toBe(401);
   setKillSwitch(db, false, "owner");
   expect(killSwitchOn(db)).toBe(false);

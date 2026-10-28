@@ -34,7 +34,7 @@ function inputFor(tabId) {
       const px = x + jitter(), py = y + jitter();
       await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: px, y: py });
       await sleep(60 + Math.random() * 120);
-      await send("Input.dispatchMouseEvent", { type: "mousePressed", x: px, y: py, button: "left", clickCount: 1 });
+      await send("Input.dispatchMouseEvent", { type: "mousePressed", x: px, y: py, button: "left", buttons: 1, clickCount: 1 });
       await sleep(40 + Math.random() * 80);
       await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: px, y: py, button: "left", clickCount: 1 });
     },
@@ -57,7 +57,17 @@ function rectOfNamed(name) {
       const r = e.getBoundingClientRect();
       return label === name && r.width > 0 && r.height > 0;
     });
-    if (found) { found.scrollIntoView({ block: "center" }); const r = found.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }
+    if (found) {
+      found.scrollIntoView({ block: "center" });
+      const r = found.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+      const top = document.elementFromPoint(x, y);
+      // Only click when the button itself is what is under that point; otherwise say what is in the way.
+      if (!top || !(found.contains(top) || top.contains(found))) {
+        const what = top ? `${top.tagName.toLowerCase()} ${(top.getAttribute("aria-label") || top.innerText || "").trim().slice(0, 30)}` : "nothing";
+        return { x, y, covered: `${what} (window ${innerWidth}x${innerHeight}, button at ${Math.round(x)},${Math.round(y)})` };
+      }
+      return { x, y };
+    }
   }
   return null;
 }
@@ -96,6 +106,7 @@ export async function warmUp(command, gate) {
         }
         const spot = await exec(tabId, rectOfNamed, [name]);
         if (!spot) throw new Error(`Instagram did not show a ${name} button.`);
+        if (spot.covered) throw new Error(`The ${name} button was covered by ${spot.covered}.`);
         await input.click(spot.x, spot.y);
       },
       comment: async (text) => {

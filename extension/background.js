@@ -161,6 +161,8 @@ async function tick() {
     for (let look = 0; look < 6 && !command; look++) {
       const reply = await post(credential, "/api/connector/poll", {});
       if (reply.killed) { await setStatus("Stopped. Resume in Outreach."); return; }
+      // A newer copy of the extension is on disk: reload so changes apply without visiting chrome://extensions.
+      if (!reply.command && typeof reply.extensionVersion === "string" && reply.extensionVersion !== chrome.runtime.getManifest().version) { chrome.runtime.reload(); return; }
       command = reply.command;
       if (!command) { await setStatus("Connected. Waiting for work from Outreach."); if (look < 5) await sleep(5000); }
     }
