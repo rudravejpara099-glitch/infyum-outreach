@@ -9,6 +9,7 @@ import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainErr
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 import { handleIncoming } from "@/lib/services/outreach";
 import { setKillSwitch } from "@/lib/services/kill-switch";
+import { armStep, isArmed } from "@/lib/services/run-steps";
 
 const LINK = "https://portfolio.infyum.com/sales-funnel";
 const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudra at Infyum, a small team in India. ${LINK}`, "Which link do most callers use?"] });
@@ -55,6 +56,8 @@ function setup(approvalRequired: boolean) {
 beforeEach(() => {
   db = openDb(":memory:"); driver = new FakeDriver(); clock = new Date("2026-10-20T10:00:00Z");
   deps = { db, engine, driver, now: () => clock, pace: async () => {} };
+  // These tests cover the pipeline itself; the four-button gate has its own tests below.
+  db.prepare("INSERT INTO settings (key,value) VALUES ('run_mode','automatic')").run();
 });
 afterEach(() => db.close());
 
@@ -130,6 +133,33 @@ describe("worker pipeline", () => {
     await runOne(deps);
     expect(driver.warmups).toBe(1);
     expect(db.prepare("SELECT count(*) n FROM activity WHERE action='warmup.limit_reached'").get()).toEqual({ n: 1 });
+  });
+
+  it("in button mode plans nothing until a button is pressed, then only that step, and turns itself off when done", async () => {
+    const { acct, camp } = setup(true);
+    db.prepare("UPDATE settings SET value='buttons' WHERE key='run_mode'").run();
+    const { lead: found } = addLead(db, { handle: "btn-found", campaignId: camp.id }, "t");
+    const { lead: engaged } = addLead(db, { handle: "btn-warmed", campaignId: camp.id, stage: "warmed" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id IN (?,?)").run(acct.id, found.id, engaged.id);
+    const queued = () => db.prepare("SELECT type, lead_id l FROM jobs WHERE status='queued' ORDER BY id").all();
+
+    planWork(deps);
+    expect(queued()).toEqual([]);
+
+    armStep(db, "engage", "t");
+    planWork(deps);
+    expect(queued()).toEqual([{ type: "qualify", l: found.id }]);   // engaging, not writing the message of the warmed lead
+    expect(isArmed(db, "engage")).toBe(true);
+
+    await runUntilIdle(deps);                                          // qualify, warm-up; both are Engage work
+    expect(getLead(db, found.id)?.stage).toBe("warmed");
+    expect(listMessages(db, { leadId: found.id })).toHaveLength(0);    // no message written: Send DMs was not pressed
+    planWork(deps);
+    expect(isArmed(db, "engage")).toBe(false);                         // nothing left, so the button is idle again
+
+    armStep(db, "send", "t");
+    planWork(deps);
+    expect(queued().map((j) => (j as { type: string }).type)).toContain("draft_dm");
   });
 
   it("does nothing while the kill switch is on, and carries on when it is off", async () => {

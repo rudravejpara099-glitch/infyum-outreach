@@ -6,6 +6,8 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
+import { runMode } from "@/lib/services/run-steps";
+import { saveRunMode } from "../step-actions";
 import { blockHandle, saveApifyCap, saveProspectFilters, saveSafety, saveTimeZone, saveWriting, unblockHandle } from "./actions";
 import { parseProspectFilters } from "@/lib/domain/prospect-filters";
 import { getWritingReadiness } from "@/lib/services/writing-readiness";
@@ -26,6 +28,7 @@ export default async function Settings() {
   const zones = [...new Set([...supportedTimeZones(), zone])].sort();
   const filters = parseProspectFilters(getSetting(db, "prospect_filters"));
   const safety = parseSafetySettings(getSetting(db, "safety_settings"));
+  const mode = runMode(db);
   const writingSettings = parseWritingSettings(getSetting(db, "writing_settings"));
   return (
     <>
@@ -82,6 +85,16 @@ export default async function Settings() {
           <p className="mb-3 mt-1 text-muted">{cap ? `Monthly limit: $${cap}. The app stops searching before it goes over.` : "Switched off. Set a monthly limit in dollars to turn it on. Leave the limit empty or use 0 to keep searches off."}</p>
           <ActionForm action={saveApifyCap} className="flex flex-wrap items-end gap-2">
             <div className="w-40"><label className="label" htmlFor="cap">Monthly limit (USD)</label><input id="cap" name="cap" type="number" min={0} step="0.000001" defaultValue={cap ?? ""} className="input" /></div>
+            <button className="btn">Save</button>
+          </ActionForm>
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-base font-semibold">How work starts</h2>
+          <p className="mb-3 mt-1 text-sm text-muted">With action buttons (recommended), nothing runs until you press Find leads, Engage, Send DMs or Follow up on the Overview page. With automatic, Outreach runs every step by itself within your limits.</p>
+          <ActionForm action={saveRunMode} className="flex flex-wrap items-end gap-3">
+            <div><label className="label" htmlFor="runMode">Mode</label>
+              <select id="runMode" name="runMode" defaultValue={mode} className="input"><option value="buttons">Action buttons (I press each step)</option><option value="automatic">Automatic (all steps on their own)</option></select></div>
             <button className="btn">Save</button>
           </ActionForm>
         </section>

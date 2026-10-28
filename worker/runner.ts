@@ -19,6 +19,7 @@ import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveSta
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { killSwitchOn } from "@/lib/services/kill-switch";
+import { disarmFinished, isArmed, type Step } from "@/lib/services/run-steps";
 import { actionLimits, safetySettings, withDmCap } from "@/lib/services/safety";
 import { actionsToday, recordActions } from "@/lib/db/repos/daily-actions";
 import { parseWritingSettings } from "@/lib/domain/writing-settings";
@@ -57,6 +58,8 @@ const teamDate = (db: Db, now: Date) => dateInTimeZone(now, getSetting(db, "team
 /** Looks at the whole database and queues whatever work is due. Safe to run as often as you like. */
 export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   if (killSwitchOn(db)) return;
+  // Four action buttons: in the default "buttons" mode only a step someone has started is planned.
+  const on = (step: Step) => isArmed(db, step);
   const active = listCampaigns(db).filter((c) => c.status === "active");
   for (const c of active) {
     const accounts = campaignAccountIds(db, c.id);
@@ -68,7 +71,7 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
     const focus = new Map<number, number>();
     for (const lead of leads) {
       const step = stepOf(lead.stage);
-      if (!lead.accountId || !step || step === "qualify" || focus.has(lead.accountId)) continue;
+      if (!lead.accountId || !step || step === "qualify" || focus.has(lead.accountId) || !on(step === "draft_dm" ? "send" : "engage")) continue;
       if (hasOutgoing(db, lead.id, "dm") || failedJobExists(db, step, lead.id)) continue;
       focus.set(lead.accountId, lead.id);
     }
@@ -76,7 +79,7 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
       const chosen = lead.accountId ?? leastLoadedAccount(db, accounts)!;
       if (!lead.accountId) assignLead(db, lead.id, c.id, chosen);
       const step = stepOf(lead.stage) as "qualify" | "warmup" | "draft_dm" | undefined;
-      if (!step || failedJobExists(db, step, lead.id)) continue;
+      if (!step || failedJobExists(db, step, lead.id) || !on(step === "draft_dm" ? "send" : "engage")) continue;
       if (step === "draft_dm" && hasOutgoing(db, lead.id, "dm")) continue; // drafted already: waiting on approval or send, not in progress
       const turn = focus.get(chosen);
       if (turn !== undefined && turn !== lead.id) continue;
@@ -88,7 +91,7 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
       enqueue(db, { type: step, leadId: lead.id, accountId: chosen });
     }
   }
-  for (const lead of dueFollowups(db, now().toISOString().replace("T", " ").slice(0, 19))) {
+  if (on("followup")) for (const lead of dueFollowups(db, now().toISOString().replace("T", " ").slice(0, 19))) {
     const c = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
     if (c?.status !== "active" || !c.followupsEnabled || isDnc(db, lead.handle)) continue;
     const account = lead.accountId ? getAccount(db, lead.accountId) : null;
@@ -99,14 +102,14 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
   }
   for (const m of approvedQueue(db)) {
     const lead = getLead(db, m.leadId);
-    if (!lead || !canSendAtStage(lead.stage, m.kind)) continue;
+    if (!lead || !canSendAtStage(lead.stage, m.kind) || !on(m.kind === "followup" ? "followup" : "send")) continue;
     const account = m.accountId ? getAccount(db, m.accountId) : null;
     if (!account || !browserModeAllowsJob(account.browserMode, "send")) continue;
     if (!activeJobExists(db, "send", m.leadId) ) enqueue(db, { type: "send", leadId: m.leadId, accountId: m.accountId, payload: { messageId: m.id } });
   }
-  const inboxAccounts = new Set(active.flatMap((c) => campaignAccountIds(db, c.id)));
+  const inboxAccounts = new Set(on("followup") ? active.flatMap((c) => campaignAccountIds(db, c.id)) : []);
   // A paused campaign can still receive the reply we were waiting for.
-  for (const row of db.prepare("SELECT DISTINCT account_id FROM leads WHERE stage='dm_sent' AND account_id IS NOT NULL").all() as { account_id: number }[]) {
+  if (on("followup")) for (const row of db.prepare("SELECT DISTINCT account_id FROM leads WHERE stage='dm_sent' AND account_id IS NOT NULL").all() as { account_id: number }[]) {
     inboxAccounts.add(row.account_id);
   }
   for (const accountId of inboxAccounts) {
@@ -119,6 +122,7 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
       setSetting(db, key, String(now().getTime()));
     }
   }
+  disarmFinished(db);
 }
 
 function hasOutgoing(db: Db, leadId: number, kind: string, statuses = ["draft", "pending_approval", "approved", "sent", "failed"]): boolean {
