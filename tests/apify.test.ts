@@ -45,6 +45,7 @@ function fixture(niches = ["Credit repair"], assigned = true) {
 describe("metered Apify search", () => {
   it("accepts common actor result fields and rejects junk", () => {
     expect(toCandidate({ username: "Foo.Bar", followersCount: 5000 }, "x")).toEqual({ handle: "foo.bar", followers: 5000, niche: "x" });
+    expect(toCandidate({ username: "a", followersCount: 9000, biography: "Credit coach", isPrivate: false }, "x")).toMatchObject({ bio: "Credit coach", isPrivate: false });
     expect(toCandidate({ ownerUsername: "a_b" }, "x")?.followers).toBeNull();
     expect(toCandidate({ username: "bad handle!" }, "x")).toBeNull();
     expect(toCandidate({}, "x")).toBeNull();
