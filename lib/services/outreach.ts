@@ -6,7 +6,7 @@ import { getLead, moveStage, scheduleFollowup } from "@/lib/db/repos/leads";
 import { getMessage, hasIncomingText, markSent, recordIncoming } from "@/lib/db/repos/messages";
 import { logActivity } from "@/lib/db/repos/activity";
 
-export const FIRST_FOLLOWUP_DAYS = 2;
+export const FIRST_FOLLOWUP_DAYS = 3;
 export const NEXT_FOLLOWUP_DAYS = 4;
 export const MAX_FOLLOWUPS = 2;
 

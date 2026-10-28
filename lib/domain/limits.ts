@@ -6,10 +6,11 @@ export type AccountLimits = {
   rampStart: string;
 };
 
-/** New accounts start slow: 10 a day, then 20, then the full cap. */
+/** Build plan, Safety rules: about 5 actions a day in week one, rising slowly, then the full cap. */
 const RAMP = [
-  { untilDay: 3, perDay: 10 },
-  { untilDay: 7, perDay: 20 },
+  { untilDay: 7, perDay: 5 },
+  { untilDay: 14, perDay: 10 },
+  { untilDay: 21, perDay: 20 },
 ] as const;
 
 export function daysBetween(fromIso: string, toIso: string): number {

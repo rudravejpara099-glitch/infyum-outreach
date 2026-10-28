@@ -52,9 +52,11 @@ describe("qualify", () => {
 describe("limits", () => {
   const acct = { status: "active" as const, dailyCap: 35, rampStart: "2026-10-01" };
   it("ramps up new accounts, then uses the cap", () => {
-    expect(dailyAllowance(acct, "2026-10-01")).toBe(10);
-    expect(dailyAllowance(acct, "2026-10-04")).toBe(20);
-    expect(dailyAllowance(acct, "2026-10-08")).toBe(35);
+    expect(dailyAllowance(acct, "2026-10-01")).toBe(5);
+    expect(dailyAllowance(acct, "2026-10-07")).toBe(5);
+    expect(dailyAllowance(acct, "2026-10-08")).toBe(10);
+    expect(dailyAllowance(acct, "2026-10-15")).toBe(20);
+    expect(dailyAllowance(acct, "2026-10-22")).toBe(35);
   });
   it("never exceeds the cap, even during ramp", () => {
     expect(dailyAllowance({ ...acct, dailyCap: 5 }, "2026-10-01")).toBe(5);
@@ -64,8 +66,8 @@ describe("limits", () => {
     expect(dailyAllowance({ ...acct, status: "blocked" }, "2026-10-20")).toBe(0);
   });
   it("subtracts what was already sent today and never goes negative", () => {
-    expect(remainingToday(acct, "2026-10-20", 30)).toBe(5);
-    expect(remainingToday(acct, "2026-10-20", 99)).toBe(0);
+    expect(remainingToday(acct, "2026-10-30", 30)).toBe(5);
+    expect(remainingToday(acct, "2026-10-30", 99)).toBe(0);
   });
 });
 

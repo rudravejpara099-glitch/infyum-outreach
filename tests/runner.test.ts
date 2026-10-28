@@ -492,9 +492,9 @@ describe("worker pipeline", () => {
     const { camp } = setup(false);
     const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");
     await runUntilIdle(deps);
-    expect(getLead(db, lead.id)!.nextFollowupAt).toBe("2026-10-22 10:00:00");
+    expect(getLead(db, lead.id)!.nextFollowupAt).toBe("2026-10-23 10:00:00");
     deps.engine = { async complete() { return JSON.stringify({ parts: ["One thing I noticed: your booking page hides the call button below four other links."] }); } };
-    clock = new Date("2026-10-22T10:30:00Z");
+    clock = new Date("2026-10-23T10:30:00Z");
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(2);
     expect(getLead(db, lead.id)!.followupsSent).toBe(1);
