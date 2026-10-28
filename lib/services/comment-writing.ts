@@ -15,8 +15,8 @@ export function repeatedCommentError(comment: string, avoid: string[]): string |
   return null;
 }
 
-export async function draftWarmupComment(engine: AiEngine, context: string, metering?: MeteredAiCall, avoid: string[] = []): Promise<string> {
-  const prompt = commentPrompt(context, avoid.slice(-12));
+export async function draftWarmupComment(engine: AiEngine, context: string, metering?: MeteredAiCall, avoid: string[] = [], instructions?: string): Promise<string> {
+  const prompt = commentPrompt(context, avoid.slice(-12), instructions);
   let rejection: string | null = null;
   let previous = "";
   for (let attempt = 1; attempt <= 3; attempt++) {
