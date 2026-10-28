@@ -4,6 +4,10 @@ import { requireUser } from "@/lib/auth/dal";
 import { WorkerStatusRefresh } from "@/components/worker-status-refresh";
 import { ActionForm } from "@/components/action-form";
 import { startWorker, stopWorker } from "./worker/actions";
+import { runStep } from "./step-actions";
+import { runMode, stepHasWork, STEPS, STEP_HELP, STEP_LABEL, type Step } from "@/lib/services/run-steps";
+import { approvedQueue } from "@/lib/db/repos/messages";
+import { dueFollowups } from "@/lib/db/repos/leads";
 import { nextQueuedWork, workerStatus } from "@/lib/queries/worker-status";
 import { workerStartProblem } from "@/lib/services/worker-start-readiness";
 import { dashboardData } from "@/lib/queries/dashboard";
@@ -32,6 +36,13 @@ export default async function Dashboard() {
   const writing = await getWritingReadiness(user.hostChromeAllowed);
   const writingCopy = writing.provider !== "anthropic" ? writing.detail : automaticWritingCopy(writing.available, d.stages.warmed ?? 0);
   const recent = d.recentActivity;
+  const mode = runMode(db);
+  const waiting: Record<Step, string> = {
+    find: "Searches new prospects",
+    engage: `${(d.stages.found ?? 0) + (d.stages.qualified ?? 0)} waiting`,
+    send: `${d.stages.warmed ?? 0} to write, ${approvedQueue(db).length} approved to send`,
+    followup: `${dueFollowups(db, new Date().toISOString().replace("T", " ").slice(0, 19)).length} due`,
+  };
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
 
@@ -77,6 +88,24 @@ export default async function Dashboard() {
           {worker.phase === "stopped" && !workerProblem && <ActionForm action={startWorker} className="flex flex-col gap-1"><button className="btn btn-primary">Start Outreach</button></ActionForm>}
           {(worker.phase === "running" || worker.phase === "starting" || worker.phase === "unresponsive") && <ActionForm action={stopWorker} className="flex flex-col gap-1"><button className="btn">Stop after current task</button></ActionForm>}
           <WorkerStatusRefresh /><Link href="/activity" className="btn">View activity</Link>
+        </div>
+      </section>
+      <section className="card mb-4 p-5" aria-labelledby="actions-title">
+        <h2 id="actions-title" className="text-base font-semibold">Actions</h2>
+        <p className="mt-1 text-sm text-muted">{mode === "buttons" ? "Nothing runs until you press a button. Each step stops by itself when it has nothing left to do, within your daily limits." : "Outreach runs every step on its own (change this in Settings)."}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {STEPS.map((step) => {
+            const working = stepHasWork(db, step);
+            return (
+              <ActionForm key={step} action={runStep} className="rounded-2xl border border-line bg-bg p-4">
+                <input type="hidden" name="step" value={step} />
+                <div className="flex items-center justify-between gap-2"><span className="font-medium">{STEP_LABEL[step]}</span>{working ? <span className="badge badge-ok">Working</span> : null}</div>
+                <p className="mt-1 text-xs text-muted">{STEP_HELP[step]}</p>
+                <p className="mt-2 text-sm">{waiting[step]}</p>
+                <button className="btn btn-primary mt-3 w-full" disabled={working}>{working ? "Working…" : STEP_LABEL[step]}</button>
+              </ActionForm>
+            );
+          })}
         </div>
       </section>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
