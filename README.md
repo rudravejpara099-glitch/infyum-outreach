@@ -2,7 +2,7 @@
 
 **Let your own Claude find the right prospects on Instagram, warm them up, and send a first message. You approve, Claude does the clicking. It stops when they reply.**
 
-No app to install. No account to create with us. No permission to ask for. Everything runs through your own Claude and your own Chrome, and everything it saves stays on your computer.
+No app to install. No account to create with us. No permission to ask for. Everything runs through your own Claude and your own Chrome. Your lead list and settings are saved only on your computer.
 
 ---
 
@@ -39,7 +39,7 @@ That's it. From then on, you just talk to it.
 | You say | Claude does |
 |---|---|
 | **"Find 10 prospects"** | Searches, checks each one against your rules, shows you a short list with a reason for each |
-| **"Go"** | Takes the next approved prospect: likes their story, likes and comments on their latest posts (each comment written about that specific post), follows them |
+| **"Go"** | Takes the next approved prospect: shows you the comments it plans to post, then likes their story (when they have one), likes and comments on their latest posts (each comment written about that specific post), and follows them |
 | **"Send"** | Shows you the three-part first message for approval, then sends it one part at a time, like a person |
 | **"Follow up"** | Writes the day-3 and day-7 follow-ups for people who haven't answered |
 | **"Check replies"** | Reads your inbox, tells you who really replied, and hands the conversation to you |
@@ -56,15 +56,15 @@ Claude follows the same rules we learned by running 17 real prospects by hand. T
 - **Who it skips:** anyone whose DMs are closed, anyone connected to your team, anyone already messaged by you or a teammate.
 - **Comments:** 3 to 8 words plus an emoji or two, about something visible in that post, never generic ("Love this"), never repeated, in the prospect's language. It never types a coach's comment-to-DM keyword.
 - **First message:** three short messages. One true, specific detail from their link or posts. Who you are, with your one link. One curious question. No invented results, no guessed names.
-- **Pace:** slow and human. Roughly **5 actions a day in week one**, rising to a steady daily limit by week four, only during your active hours, with pauses between everything.
+- **Pace:** slow and human. **5 of each action a day in week one** (5 likes, 5 comments, 5 follows, 5 messages), rising to a steady daily limit by week four, only during your active hours, with pauses between everything.
 - **Safety:** at any Instagram warning, Claude stops and tells you. It never keeps clicking.
 
 Everything is written out in [`phase1/GUIDE-FOR-CLAUDE.md`](phase1/GUIDE-FOR-CLAUDE.md), the file your Claude reads. You never have to.
 
 ## Your data stays yours
 
-- Your settings, your lead list and the activity log live in a folder on **your** computer: `~/INFYUM-Phase1/`.
-- **Passwords and tokens are never typed into the chat.** You sign in to Instagram yourself in Chrome. If you use Apify, you save its key into a file yourself; Claude only reads it to run a capped search.
+- Your settings, your lead list and the activity log live in a folder on **your** computer: `~/INFYUM-Phase1/`. (What you type to Claude goes to Anthropic as usual, and searches go to Apify.)
+- **Passwords and tokens are never typed into the chat.** You sign in to Instagram yourself in Chrome. If you use Apify, you save its key into a file yourself; the small search tool reads it to run a capped search.
 - This repository is **read-only reference material**: nothing here needs editing, and Claude never edits it.
 
 ## Worth knowing

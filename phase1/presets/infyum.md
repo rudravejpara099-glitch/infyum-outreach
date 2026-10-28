@@ -15,11 +15,11 @@ Use this when the person says they are part of the INFYUM team. These values rep
 - At least 2 posts in the last 14 days.
 - Market: English-speaking (US, UK, Canada, Australia).
 - Business size: pre-medium or medium; able to pay $750 or more.
-- Fit signal: they need funnels, lead capture, booking, a CRM or follow-up. A bare Linktree or a "DM me" bio is a strong signal. They show selling signals (a program, a call-booking link, ads, launches) and affordability signals.
+- The problem INFYUM fixes (use as setup question 6): they need funnels, lead capture, booking, a CRM or follow-up. A bare Linktree or a "DM me" bio is a strong signal. They show selling signals (a program, a call-booking link, ads, launches) and affordability signals.
 - Skip: agencies and competitors, large brands, private accounts, anyone already in the team's lead list or do-not-contact list.
-- Engagement filter: off. Fit score threshold: off (0).
+- Fit score threshold: off (0).
 
 ## Team rules
-- Several people may use this kit. **Never contact someone a teammate has already worked.** Ask the user for the team's shared lead list (a sheet or file) if one exists, and check every prospect against it as well as against their own `leads.csv`. Ask them to add each new lead to it.
-- Ask for the Instagram usernames of the user's teammates and INFYUM's own accounts. Skip any prospect those accounts follow (look at the profile's "Followed by").
+- Several people may use this kit. **Never contact someone a teammate has already worked.** Ask the user where the team's shared lead list is. Ask them to export it as a CSV (or paste the usernames) and save it in `~/INFYUM-Phase1/team-leads.csv`, and check every prospect against it as well as against their own `leads.csv`. If there is no shared list, tell them one should exist and suggest the team keeps one sheet everyone exports from. Ask them to add each new lead to it.
+- Ask for the Instagram usernames of the user's teammates and INFYUM's own accounts, and put them in the avoid list. The profile's "Followed by" line only helps when the outreach account follows them, so the shared lead list is the real protection.
 - Follow-ups: day 3 and day 7, at most 2.
