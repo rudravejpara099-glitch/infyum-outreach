@@ -111,6 +111,26 @@ describe("worker pipeline", () => {
     expect(driver.warmups).toBe(0);
   });
 
+  it("records warm-up actions toward the daily caps and holds a warm-up that would go over", async () => {
+    const { acct, camp } = setup(true);
+    setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");
+    const { lead } = addLead(db, { handle: "cap-one", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    await runUntilIdle(deps);
+    expect(driver.warmups).toBe(1);
+    const counts = db.prepare("SELECT kind, n FROM daily_actions ORDER BY kind").all();
+    expect(counts).toEqual([{ kind: "comment", n: 10 }, { kind: "follow", n: 1 }, { kind: "like", n: 10 }]);
+
+    db.prepare("INSERT INTO settings (key,value) VALUES ('safety_settings', ?)").run(JSON.stringify({ dayStartHour: 0, dayEndHour: 24, caps: { follows: 20, likes: 15, comments: 40, dms: 35 } }));
+    const { lead: second } = addLead(db, { handle: "cap-two", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, second.id);
+    enqueue(db, { type: "warmup", leadId: second.id, accountId: acct.id });
+    await runOne(deps);
+    expect(driver.warmups).toBe(1);
+    expect(db.prepare("SELECT count(*) n FROM activity WHERE action='warmup.limit_reached'").get()).toEqual({ n: 1 });
+  });
+
   it("takes Chrome leads through preparation and holds the first message for approval", async () => {
     const { acct, camp } = setup(true);
     setAccountBrowserMode(db, acct.id, "chrome_read_only", "t");

@@ -8,6 +8,7 @@ import { isDnc } from "@/lib/db/repos/dnc";
 import { getSetting } from "@/lib/db/repos/settings";
 import { canSendAtStage } from "@/lib/domain/stages";
 import { remainingToday } from "@/lib/domain/limits";
+import { withDmCap } from "@/lib/services/safety";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { connectorKindAllowed, connectorWrites } from "@/lib/domain/connector";
 
@@ -31,5 +32,5 @@ export function commandMayContinue(db: Db, command: Command, now = new Date()): 
   if (!message || message.status !== "approved" || message.accountId !== account.id || message.leadId !== lead.id || !canSendAtStage(lead.stage, message.kind)
     || JSON.stringify(message.parts) !== JSON.stringify(command.args.parts)) return false;
   const zone = getSetting(db, "team_timezone") ?? "America/New_York", today = dateInTimeZone(now, zone);
-  return remainingToday(account, today, sentTodayForAccount(db, account.id, today, zone)) > 0;
+  return remainingToday(withDmCap(db, account), today, sentTodayForAccount(db, account.id, today, zone)) > 0;
 }

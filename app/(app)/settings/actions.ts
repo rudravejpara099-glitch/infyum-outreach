@@ -11,6 +11,7 @@ import { logActivity } from "@/lib/db/repos/activity";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { handleSchema, validCap, validTimeZone } from "./validation";
 import { filtersFromForm } from "@/lib/domain/prospect-filters";
+import { safetyFromForm } from "@/lib/domain/safety-settings";
 import { writingFromForm } from "@/lib/domain/writing-settings";
 
 function commitAtomically(db: Awaited<ReturnType<typeof getDb>>, write: () => void): boolean {
@@ -99,4 +100,19 @@ export async function saveWriting(form: FormData): Promise<ActionResult> {
   })) return { error: "Couldn’t save this change. Try again shortly." };
   revalidatePath("/settings");
   return { message: "Sender details and prompts saved. The next messages and comments use them." };
+}
+
+export async function saveSafety(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const values: Record<string, string> = {};
+  for (const key of ["dayStartHour", "dayEndHour", "followsCap", "likesCap", "commentsCap", "dmsCap"]) values[key] = String(form.get(key) ?? "");
+  const parsed = safetyFromForm(values);
+  if ("error" in parsed) return { error: parsed.error.message, field: parsed.error.field };
+  const db = (await getDb(form));
+  if (!commitAtomically(db, () => {
+    setSetting(db, "safety_settings", JSON.stringify(parsed.safety));
+    logActivity(db, user.email, "settings.safety", { detail: `${parsed.safety.dayStartHour}:00 to ${parsed.safety.dayEndHour}:00` });
+  })) return { error: "Couldn’t save this change. Try again shortly." };
+  revalidatePath("/settings");
+  return { message: "Daily caps and active hours saved. The worker uses them from its next job." };
 }
