@@ -170,8 +170,8 @@ async function tick() {
     } catch (error) {
       const writes = command.kind === "warmUp" || command.kind === "sendMessages";
       const blocked = error.blocked === true || error instanceof InstagramBlockedError || (error instanceof InstagramWarmupUncertainError && error.blockedByInstagram);
-      await post(credential, "/api/connector/result", { id: command.id, error: writes ? "The operation did not finish. Review it in Outreach before retrying." : (error.message || "The action did not finish."), uncertain: writes, blockedByInstagram: blocked });
-      await setStatus("That action did not finish. See Outreach.");
+      await post(credential, "/api/connector/result", { id: command.id, error: writes ? `The operation did not finish. Review it in Outreach before retrying. Cause: ${String(error.message || error).slice(0, 200)}` : (error.message || "The action did not finish."), uncertain: writes, blockedByInstagram: blocked });
+      await setStatus(`That action did not finish: ${String(error.message || error).slice(0, 120)}`);
     }
   } catch (error) {
     await setStatus(error.message === "revoked" ? "This connection was revoked. Create a new code in Accounts." : "Outreach is unreachable. Waiting to retry.");
