@@ -11,12 +11,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
-const term = args.find((a) => !a.startsWith("--") && !/^\d/.test(a));
+const FLAGS = new Set(["--limit", "--max-usd"]);
+const term = args.find((a, i) => !a.startsWith("--") && !FLAGS.has(args[i - 1]));
 const flag = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] ? args[i + 1] : fallback; };
 if (!term) { console.error('Usage: node apify-search.mjs "search phrase" [--limit 20] [--max-usd 0.10]'); process.exit(2); }
 
 const limit = Math.min(50, Math.max(1, Number.parseInt(flag("limit", "20"), 10) || 20));
-const maxUsd = Math.min(1, Math.max(0.01, Number.parseFloat(flag("max-usd", "0.10")) || 0.1));
+const maxUsd = Math.min(0.1, Math.max(0.01, Number.parseFloat(flag("max-usd", "0.10")) || 0.1)); // hard ceiling: 10 cents per search
 
 function token() {
   if (process.env.APIFY_TOKEN) return process.env.APIFY_TOKEN.trim();
@@ -53,4 +54,4 @@ for (const item of items) {
     url: `https://www.instagram.com/${username}/`,
   }));
 }
-console.error(`Found ${items.length} account(s). Spending is capped at $${maxUsd.toFixed(2)} for this search.`);
+console.error(`Found ${items.length} account(s). Spending is capped at $${maxUsd.toFixed(2)} for this search. Missing follower counts: check them on the profile.`);
