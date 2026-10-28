@@ -74,7 +74,7 @@ export class ApifyClient {
   }
 }
 
-export type Candidate = { handle: string; followers: number | null; niche: string };
+export type Candidate = { handle: string; followers: number | null; niche: string; bio?: string; isPrivate?: boolean; recentPosts?: number | null };
 
 /** Different actor versions name fields differently, so accept the common spellings. */
 export function toCandidate(item: unknown, niche: string): Candidate | null {
@@ -82,5 +82,13 @@ export function toCandidate(item: unknown, niche: string): Candidate | null {
   const raw = r.username ?? r.ownerUsername ?? r.handle;
   if (typeof raw !== "string" || !/^[A-Za-z0-9._]+$/.test(raw)) return null;
   const f = r.followersCount ?? r.followers_count ?? r.followers;
-  return { handle: raw.toLowerCase(), followers: typeof f === "number" ? f : null, niche };
+  const bio = r.biography ?? r.bio;
+  const priv = r.private ?? r.isPrivate ?? r.is_private;
+  const posts = r.recentPostsCount ?? r.postsLast14Days;
+  return {
+    handle: raw.toLowerCase(), followers: typeof f === "number" ? f : null, niche,
+    ...(typeof bio === "string" ? { bio } : {}),
+    ...(typeof priv === "boolean" ? { isPrivate: priv } : {}),
+    ...(typeof posts === "number" ? { recentPosts: posts } : {}),
+  };
 }

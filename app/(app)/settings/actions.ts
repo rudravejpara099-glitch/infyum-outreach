@@ -10,6 +10,7 @@ import { rescheduleQueuedReadOnlyJobs } from "@/lib/db/repos/jobs";
 import { logActivity } from "@/lib/db/repos/activity";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { handleSchema, validCap, validTimeZone } from "./validation";
+import { filtersFromForm } from "@/lib/domain/prospect-filters";
 
 function commitAtomically(db: Awaited<ReturnType<typeof getDb>>, write: () => void): boolean {
   try { db.transaction(write).immediate(); return true; }
@@ -67,4 +68,19 @@ export async function saveTimeZone(form: FormData): Promise<ActionResult> {
   })) return { error: "Couldn’t save this change. Try again shortly." };
   revalidatePath("/settings"); revalidatePath("/");
   return { message: rechecked ? "Team time zone saved. Queued lead and reply checks will use the updated hours." : "Team time zone saved. The worker uses it for working hours." };
+}
+
+export async function saveProspectFilters(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const values: Record<string, string> = {};
+  for (const key of ["minFollowers", "maxFollowers", "recentDays", "minRecentPosts", "minEngagementPct", "fitThreshold", "nicheKeywords", "excludeKeywords", "markets"]) values[key] = String(form.get(key) ?? "");
+  const parsed = filtersFromForm(values);
+  if ("error" in parsed) return { error: parsed.error.message, field: parsed.error.field };
+  const db = (await getDb(form));
+  if (!commitAtomically(db, () => {
+    setSetting(db, "prospect_filters", JSON.stringify(parsed.filters));
+    logActivity(db, user.email, "settings.prospect_filters", { detail: `${parsed.filters.minFollowers} to ${parsed.filters.maxFollowers} followers` });
+  })) return { error: "Couldn’t save this change. Try again shortly." };
+  revalidatePath("/settings");
+  return { message: "Prospect filters saved. New searches and checks use them." };
 }

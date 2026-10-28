@@ -4,6 +4,7 @@ import { isDnc } from "@/lib/db/repos/dnc";
 import { addLead } from "@/lib/db/repos/leads";
 import { getSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
+import { evaluateProspect, parseProspectFilters } from "@/lib/domain/prospect-filters";
 import { ApifyOffError, ApifyUsageUncertainError, DEFAULT_SEARCH_ACTOR, MAX_APIFY_RUN_MICROS, toCandidate, type ApifySearchClient, type Candidate } from "@/lib/leads/apify";
 import { attachApifyRun, payerFor, reserveUsage, settleUsage } from "@/lib/billing";
 import type { Reservation, Source } from "@/lib/billing/types";
@@ -75,6 +76,14 @@ async function runTerm(db: Db, client: ApifySearchClient, campaignId: number, pa
   return client.getDatasetItems(run.datasetId);
 }
 
+/** Applies the team's prospect filters to a search result; returns why it was dropped, or null to keep it. */
+function rejection(db: Db, c: Candidate): string | null {
+  const filters = parseProspectFilters(getSetting(db, "prospect_filters"));
+  // Search results often lack a follower count; the live check when qualifying covers it, so unknown is not a reason to drop.
+  const verdict = evaluateProspect({ handle: c.handle, followers: c.followers ?? filters.minFollowers, bio: c.bio, isPrivate: c.isPrivate, recentPosts: c.recentPosts }, filters);
+  return verdict.ok ? null : verdict.reason;
+}
+
 export async function findLeadsForCampaign(db: Db, client: ApifySearchClient, campaignId: number, jobId: number, perTerm = 40) {
   const campaign = getCampaign(db, campaignId);
   if (!campaign) throw new Error("Campaign not found");
@@ -103,12 +112,13 @@ export async function findLeadsForCampaign(db: Db, client: ApifySearchClient, ca
   }
   if (recoveredPreviousSearch) {
     const found = [...foundByHandle.values()];
-    let added = 0;
+    let added = 0, filtered = 0;
     for (const candidate of found) {
       if (isDnc(db, candidate.handle)) continue;
+      if (rejection(db, candidate)) { filtered++; continue; }
       if (addLead(db, { handle: candidate.handle, followers: candidate.followers, niche: candidate.niche, source: "apify", campaignId }, "apify").created) added++;
     }
-    logActivity(db, "apify", "leads.found", { detail: `${added} recovered of ${found.length} results for "${campaign.name}"` });
+    logActivity(db, "apify", "leads.found", { detail: `${added} recovered of ${found.length} results for "${campaign.name}"${filtered ? `, ${filtered} dropped by prospect filters` : ""}` });
     return { found: found.length, added };
   }
 
@@ -120,11 +130,12 @@ export async function findLeadsForCampaign(db: Db, client: ApifySearchClient, ca
     }
   }
   const found = [...foundByHandle.values()];
-  let added = 0;
+  let added = 0, filtered = 0;
   for (const c of found) {
     if (isDnc(db, c.handle)) continue;
+    if (rejection(db, c)) { filtered++; continue; }
     if (addLead(db, { handle: c.handle, followers: c.followers, niche: c.niche, source: "apify", campaignId }, "apify").created) added++;
   }
-  logActivity(db, "apify", "leads.found", { detail: `${added} new of ${found.length} found for "${campaign.name}"` });
+  logActivity(db, "apify", "leads.found", { detail: `${added} new of ${found.length} found for "${campaign.name}"${filtered ? `, ${filtered} dropped by prospect filters` : ""}` });
   return { found: found.length, added };
 }
