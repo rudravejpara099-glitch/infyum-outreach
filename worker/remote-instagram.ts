@@ -26,7 +26,7 @@ export class RemoteInstagramDriver implements InstagramDriver {
     if (running.length !== 1) throw new Error("The browser task must belong to one active account job.");
     if (!mayContinue()) throw new Error("Campaign preparation was stopped.");
     const write = kind === "warmUp" || kind === "sendMessages";
-    const uncertain = (blocked = false) => kind === "sendMessages" ? new InstagramSendUncertainError(blocked) : new InstagramWarmupUncertainError(blocked);
+    const uncertain = (blocked = false, reason = "") => kind === "sendMessages" ? new InstagramSendUncertainError(blocked) : new InstagramWarmupUncertainError(blocked, reason);
     const existing = write ? this.db.prepare("SELECT id FROM device_commands WHERE job_id=? AND kind=? ORDER BY job_attempt DESC LIMIT 1").get(running[0].id, kind) as { id: string } | undefined : undefined;
     const previous = existing ? getDeviceCommand(this.db, existing.id) : null;
     if (!previous && !this.online()) throw new Error("Open Outreach Connector on your connected computer, then try again.");
@@ -43,7 +43,7 @@ export class RemoteInstagramDriver implements InstagramDriver {
       if (current.status === "done") return current.result;
       if (current.status === "failed" || current.status === "uncertain") {
         const blocked = /warning|human check|blocked by instagram/i.test(current.error ?? "");
-        if (write) throw uncertain(blocked);
+        if (write) throw uncertain(blocked, (current.error ?? "").replace(/^.*Cause:\s*/, ""));
         if (blocked) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account on your connected device.");
         throw new Error(current.error || "The connected browser could not finish this task.");
       }
