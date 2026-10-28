@@ -63,7 +63,13 @@ export class RemoteInstagramDriver implements InstagramDriver {
           const response = await makeComment(current.callback.context);
           if (!mayContinue()) throw new Error("Campaign preparation was stopped.");
           respondDeviceCallback(this.db, command.id, current.callback.id, response, this.clock());
-        } catch {
+        } catch (error) {
+          // The writer could not make a comment that follows the rules: this post gets a like only and the warm-up carries on.
+          const message = error instanceof Error ? error.message : "";
+          if (/^Comment writing did not return valid text/.test(message)) {
+            respondDeviceCallback(this.db, command.id, current.callback.id, { error: "Comment writing did not return valid text" }, this.clock());
+            continue;
+          }
           respondDeviceCallback(this.db, command.id, current.callback.id, { error: "Comment preparation failed. Review this lead before retrying." }, this.clock());
           cancelDeviceCommand(this.db, command.id, "Comment preparation failed.", this.clock());
           throw uncertain();
