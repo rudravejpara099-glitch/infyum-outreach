@@ -1,5 +1,6 @@
 import { connectorBody, connectorContext, connectorJson, wireCommand } from "@/lib/connectors/http";
 import { cancelDeviceCommand, claimDeviceCommand, getDeviceCommand } from "@/lib/connectors/commands";
+import { killSwitchOn } from "@/lib/services/kill-switch";
 import { commandMayContinue } from "@/lib/connectors/authorization";
 export const runtime = "nodejs";
 /** Scoped device credential is checked before opening any company data. */
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
       if (!allowed) cancelDeviceCommand(db, command.id, "This task was stopped or expired. Review any partial Instagram actions.");
       return connectorJson({ continue: allowed, command: wireCommand(db, getDeviceCommand(db, command.id)!) });
     }
+    if (killSwitchOn(db)) return connectorJson({ command: null, killed: true });
     const command = claimDeviceCommand(db, device.id);
     if (!command) return connectorJson({ command: null });
     if (!commandMayContinue(db, command)) {

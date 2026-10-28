@@ -18,6 +18,7 @@ import { canMove } from "@/lib/domain/stages";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setFit, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
+import { killSwitchOn } from "@/lib/services/kill-switch";
 import { actionLimits, safetySettings, withDmCap } from "@/lib/services/safety";
 import { actionsToday, recordActions } from "@/lib/db/repos/daily-actions";
 import { parseWritingSettings } from "@/lib/domain/writing-settings";
@@ -55,6 +56,7 @@ const teamDate = (db: Db, now: Date) => dateInTimeZone(now, getSetting(db, "team
 
 /** Looks at the whole database and queues whatever work is due. Safe to run as often as you like. */
 export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
+  if (killSwitchOn(db)) return;
   const active = listCampaigns(db).filter((c) => c.status === "active");
   for (const c of active) {
     const accounts = campaignAccountIds(db, c.id);
@@ -125,6 +127,7 @@ function hasOutgoing(db: Db, leadId: number, kind: string, statuses = ["draft", 
 
 /** Runs at most one job (from one lane when given). Returns false when nothing was due. */
 export async function runOne(deps: Deps, lane?: Lane): Promise<boolean> {
+  if (killSwitchOn(deps.db)) return false;
   const job = claimNext(deps.db, undefined, lane, deps.mayClaim);
   if (!job) return false;
   try {
@@ -315,7 +318,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
         return !!freshLead && freshLead.stage === "qualified" && freshLead.accountId === account.id
           && !!freshAccount && freshAccount.status === "active" && !!freshCampaign && freshCampaign.status === "active"
           && campaignAccountIds(db, freshCampaign.id).includes(account.id) && !isDnc(db, freshLead.handle)
-          && workerControl(db).phase !== "stopping";
+          && workerControl(db).phase !== "stopping" && !killSwitchOn(db);
       };
       // Never repeat a comment: remember what this warm-up wrote and what other prospects recently got.
       const usedComments = (db.prepare("SELECT detail FROM activity WHERE action='warmup.comment' ORDER BY id DESC LIMIT 40").all() as { detail: string }[])
@@ -369,7 +372,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
       }
       if (isDnc(db, lead.handle)) { markFailed(db, message.id, "Handle is on the do-not-contact list"); return; }
       await deps.pace();
-      if (workerControl(db).phase === "stopping") return;
+      if (workerControl(db).phase === "stopping" || killSwitchOn(db)) return;
       // Approval, campaign state, or first-reply handoff can change while the worker waits.
       const freshLead = getLead(db, lead.id), freshMessage = getMessage(db, message.id);
       const freshAccount = getAccount(db, account.id);

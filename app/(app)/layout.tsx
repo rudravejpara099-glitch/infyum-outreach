@@ -8,10 +8,15 @@ import { Icon } from "@/components/icon";
 import { PageTransition } from "@/components/page-transition";
 import { WorkspaceProvider } from "@/components/workspace-context";
 import Link from "next/link";
+import { ActionForm } from "@/components/action-form";
+import { killSwitchOn } from "@/lib/services/kill-switch";
+import { resumeEverything, stopEverything } from "./kill-switch-actions";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
-  const pending = countPendingMessages((await getDb()));
+  const db = await getDb();
+  const pending = countPendingMessages(db);
+  const stopped = killSwitchOn(db);
   return (
     <WorkspaceProvider id={user.workspaceId}><div className="app-shell">
       <a className="skip-link" href="#main-content">Skip to content</a>
@@ -28,7 +33,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </form>
       </aside>
       <main id="main-content" className="workspace-panel" tabIndex={-1}>
-        <div className="workspace-toolbar"><Link href="/workspaces" className="workspace-caption min-w-0 truncate">{user.workspaceName}</Link><Appearance /></div>
+        {stopped ? (
+          <ActionForm action={resumeEverything} className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-red-50 px-4 py-2 text-sm text-red-900">
+            <span><strong>Everything is stopped.</strong> No jobs run and the Chrome extension does nothing until you resume.</span>
+            <button className="btn">Resume</button>
+          </ActionForm>
+        ) : null}
+        <div className="workspace-toolbar"><Link href="/workspaces" className="workspace-caption min-w-0 truncate">{user.workspaceName}</Link>{stopped ? null : <ActionForm action={stopEverything}><button className="btn" title="Stop all jobs and the Chrome extension at once">Stop everything</button></ActionForm>}<Appearance /></div>
         <PageTransition>{children}</PageTransition>
         <footer className="workspace-footer"><span>Local workspace</span><span>Actions stay within your account limits.</span></footer>
       </main>

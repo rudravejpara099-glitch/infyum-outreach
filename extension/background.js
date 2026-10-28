@@ -99,6 +99,14 @@ async function run(command) {
   throw new Error("The extension cannot do this action yet.");
 }
 
+/** The Stop button: tells Outreach to stop everything, which also cancels a task that is in progress. */
+async function stop() {
+  const { credential } = await chrome.storage.local.get("credential");
+  if (!credential) return { error: "Not connected." };
+  try { await post(credential, "/api/connector/kill", {}); await setStatus("Stopped. Resume in Outreach."); return {}; }
+  catch { return { error: "Could not reach Outreach. Close this Chrome window to stop actions." }; }
+}
+
 let busy = false;
 async function tick() {
   if (busy) return;
@@ -106,7 +114,8 @@ async function tick() {
   if (!credential) return;
   busy = true;
   try {
-    const { command } = await post(credential, "/api/connector/poll", {});
+    const { command, killed } = await post(credential, "/api/connector/poll", {});
+    if (killed) { await setStatus("Stopped. Resume in Outreach."); return; }
     if (!command) { await setStatus("Connected. Waiting for work from Outreach."); return; }
     if (command.expiresAt <= Date.now()) return;
     await setStatus(`Working: ${command.kind}…`);
@@ -128,6 +137,7 @@ async function tick() {
 
 chrome.runtime.onMessage.addListener((message, _sender, reply) => {
   if (message?.type === "pair") pair(String(message.code || "")).then(reply);
+  else if (message?.type === "stop") stop().then(reply);
   else if (message?.type === "disconnect") chrome.storage.local.remove(["credential", "status"]).then(() => reply({}));
   else return false;
   return true;

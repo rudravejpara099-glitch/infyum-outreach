@@ -9,6 +9,8 @@ import { POST as pair } from "@/app/api/connector/pair/route";
 import { POST as poll } from "@/app/api/connector/poll/route";
 import { POST as result } from "@/app/api/connector/result/route";
 import { POST as callback } from "@/app/api/connector/callback/route";
+import { POST as kill } from "@/app/api/connector/kill/route";
+import { killSwitchOn, setKillSwitch } from "@/lib/services/kill-switch";
 const state = vi.hoisted(() => ({ identity: null as Db | null, workspaces: new Map<string, Db>(), getWorkspaceDb: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/workspaces/storage", () => ({ getIdentityDb: () => state.identity, getWorkspaceDb: (id: string) => state.getWorkspaceDb(id) }));
@@ -147,4 +149,16 @@ it("rejects oversized or non-JSON device bodies with a generic bounded response"
   const rejected = await poll(oversized); expect(rejected.status).toBe(400); expect(JSON.stringify(await rejected.json()).length).toBeLessThan(200);
   const form = new Request("https://outreach.example/api/connector/poll", { method: "POST", headers: { authorization: `Bearer ${device.token}`, "content-type": "text/plain" }, body: "{}" });
   expect((await poll(form)).status).toBe(400);
+});
+
+it("the extension's Stop button switches everything off, and a running task is told to stop", async () => {
+  const command = task();
+  expect(commandMayContinue(db, command)).toBe(true);
+  expect((await kill(request("kill", device.token))).status).toBe(200);
+  expect(killSwitchOn(db)).toBe(true);
+  expect(commandMayContinue(db, command)).toBe(false);
+  expect(await (await poll(request("poll", device.token))).json()).toEqual({ command: null, killed: true });
+  expect((await kill(request("kill"))).status).toBe(401);
+  setKillSwitch(db, false, "owner");
+  expect(killSwitchOn(db)).toBe(false);
 });
