@@ -225,4 +225,12 @@ CREATE INDEX device_commands_pending ON device_commands(device_id,status,expires
 CREATE UNIQUE INDEX device_commands_one_active ON device_commands(job_id,kind) WHERE status IN ('queued','running');
 `,
   },
+  {
+    id: 8,
+    name: "lead_fit_score",
+    sql: `
+ALTER TABLE leads ADD COLUMN fit_score INTEGER;
+ALTER TABLE leads ADD COLUMN fit_reason TEXT NOT NULL DEFAULT '';
+`,
+  },
 ];

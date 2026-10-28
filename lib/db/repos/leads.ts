@@ -9,7 +9,7 @@ const map = (r: Record<string, unknown>): Lead => ({
   country: r.country as string | null, source: r.source as string, stage: r.stage as Stage,
   skipReason: r.skip_reason as string, campaignId: r.campaign_id as number | null, accountId: r.account_id as number | null,
   followupsSent: r.followups_sent as number, nextFollowupAt: r.next_followup_at as string | null,
-  notes: r.notes as string, createdAt: r.created_at as string, updatedAt: r.updated_at as string,
+  notes: r.notes as string, fitScore: (r.fit_score as number | null) ?? null, fitReason: (r.fit_reason as string) ?? "", createdAt: r.created_at as string, updatedAt: r.updated_at as string,
 });
 
 export type NewLead = {
@@ -74,6 +74,9 @@ export function assignLead(db: Db, leadId: number, campaignId: number | null, ac
 export function updateFacts(db: Db, leadId: number, facts: { followers?: number; country?: string | null; niche?: string }): void {
   db.prepare("UPDATE leads SET followers = COALESCE(?, followers), country = COALESCE(?, country), niche = COALESCE(?, niche), updated_at = datetime('now') WHERE id = ?")
     .run(facts.followers ?? null, facts.country ?? null, facts.niche ?? null, leadId);
+}
+export function setFit(db: Db, leadId: number, score: number, reason: string): void {
+  db.prepare("UPDATE leads SET fit_score = ?, fit_reason = ?, updated_at = datetime('now') WHERE id = ?").run(score, reason.slice(0, 300), leadId);
 }
 export function setNotes(db: Db, leadId: number, notes: string): void {
   db.prepare("UPDATE leads SET notes = ?, updated_at = datetime('now') WHERE id = ?").run(notes, leadId);

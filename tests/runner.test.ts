@@ -82,6 +82,21 @@ describe("worker pipeline", () => {
     expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").get(lead.id)).toEqual({ status: "queued" });
   });
 
+  it("skips a lead whose fit score is below the threshold set in Settings, and keeps a good one", async () => {
+    const { acct, camp } = setup(true);
+    db.prepare("INSERT INTO settings (key,value) VALUES ('prospect_filters', ?)").run(JSON.stringify({ fitThreshold: 60 }));
+    for (const h of ["weak-fit", "strong-fit"]) addLead(db, { handle: h, campaignId: camp.id }, "t");
+    db.prepare("UPDATE leads SET account_id=?").run(acct.id);
+    deps.engine = { async complete({ system, prompt }) {
+      if (system.includes("judge whether")) return prompt.includes("@weak-fit") ? '{"score": 25, "reason": "No offer"}' : '{"score": 85, "reason": "Sells coaching"}';
+      return dm;
+    } };
+    for (let i = 0; i < 3; i++) { planWork(deps); await runOne(deps); } // qualify one, the inbox check, qualify the other
+    const weak = getLead(db, 1)!, strong = getLead(db, 2)!;
+    expect(weak.stage).toBe("skipped"); expect(weak.skipReason).toContain("Fit score 25"); expect(weak.fitScore).toBe(25);
+    expect(strong.stage).toBe("qualified"); expect(strong.fitScore).toBe(85);
+  });
+
   it("does not repeat a warm-up after crash recovery held it for review", () => {
     const { acct, camp } = setup(true);
     const { lead } = addLead(db, { handle: "interrupted-warmup", campaignId: camp.id, stage: "qualified" }, "t");
