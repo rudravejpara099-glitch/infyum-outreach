@@ -122,7 +122,7 @@ const RANGES_MS: Record<DelayKind, [number, number]> = {
   typeKey: [60, 210],
   beforeSend: [800, 2_500],
   betweenParts: [6_000, 22_000],        // time between the three DMs, like a person typing the next one
-  betweenPieces: [8_000, 30_000],       // from one post to the next
+  betweenPieces: [8_000, 12_000],       // from one post to the next (build plan: 8 to 12 seconds, plus the occasional longer pause below)
   betweenChecks: [20_000, 70_000],
   betweenLeads: [90_000, 300_000],      // after a full warm-up
   betweenDms: [180_000, 540_000],       // after a DM

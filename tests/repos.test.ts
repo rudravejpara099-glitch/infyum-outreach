@@ -92,9 +92,10 @@ describe("sending flow", () => {
     afterSent(db, m.id, new Date("2026-10-20T10:00:00Z"));
     const l = getLead(db, lead.id)!;
     expect(l.stage).toBe("dm_sent");
-    expect(l.nextFollowupAt).toBe("2026-10-22 10:00:00");
+    expect(l.nextFollowupAt).toBe("2026-10-23 10:00:00");
     expect(sentTodayForAccount(db, acct.id, "2026-10-20")).toBe(1);
-    expect(dueFollowups(db, "2026-10-22 10:00:01")).toHaveLength(1);
+    expect(dueFollowups(db, "2026-10-22 10:00:01")).toHaveLength(0);
+    expect(dueFollowups(db, "2026-10-23 10:00:01")).toHaveLength(1);
   });
   it("counts the team's local day across UTC midnight and daylight-saving changes", () => {
     const { acct, camp } = seed(false);

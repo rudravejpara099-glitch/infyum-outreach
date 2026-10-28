@@ -118,3 +118,17 @@ describe("human delays", () => {
     expect(mean).toBeLessThan(6_500);
   });
 });
+
+describe("build plan timing", () => {
+  it("pauses 8 to 12 seconds between posts, with an occasional longer break", () => {
+    const calm = () => 0.5;
+    const ms = humanDelayMs("betweenPieces", calm);
+    expect(ms).toBeGreaterThanOrEqual(8_000);
+    expect(ms).toBeLessThanOrEqual(12_000);
+    let longest = 0;
+    let seed = 1;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 500; i++) longest = Math.max(longest, humanDelayMs("betweenPieces", random));
+    expect(longest).toBeGreaterThan(12_000);
+  });
+});
