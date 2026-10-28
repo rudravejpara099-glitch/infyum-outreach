@@ -1,4 +1,6 @@
 import { readFactsInPage } from "./page-scripts.js";
+import { warmUp } from "./actions.js";
+import { InstagramBlockedError, InstagramWarmupUncertainError } from "./warmup.js";
 
 const HANDLE = /^[A-Za-z0-9_.]{1,30}$/;
 const setStatus = (status) => chrome.storage.local.set({ status });
@@ -91,8 +93,47 @@ async function readProfileNotes(handle) {
   return [`Profile header:\n${page.text}`, page.alts.length ? `Recent posts (image descriptions):\n- ${page.alts.join("\n- ")}` : ""].filter(Boolean).join("\n\n");
 }
 
-/** Read-only first: writes stay in the Node connector until the extension can send safely. */
-async function run(command) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * While a write task runs, Outreach is asked once a second whether it may carry on. If it says no, or cannot be reached
+ * for five seconds, every step stops (this is how the kill switch reaches a task that is already running).
+ */
+function watchTask(credential, command) {
+  const state = { allowedAt: Date.now(), stopped: false, watching: true, response: command.callbackResponse };
+  const refresh = async () => {
+    const reply = await post(credential, "/api/connector/poll", { commandId: command.id });
+    if (reply.continue !== true || reply.command?.id !== command.id) { state.stopped = true; state.allowedAt = 0; return; }
+    state.allowedAt = Date.now(); state.response = reply.command.callbackResponse;
+  };
+  const monitor = (async () => { while (state.watching) { await sleep(1000); if (!state.watching) break; try { await refresh(); } catch { state.allowedAt = 0; } } })();
+  const mayContinue = () => !state.stopped && Date.now() - state.allowedAt < 5000;
+  return {
+    mayContinue,
+    /** Outreach writes the comment (Claude), so it can follow the saved prompt and the repeat rules. */
+    async comment(context) {
+      if (!mayContinue()) throw new Error("Connection lost. Preparation stopped.");
+      const callbackId = crypto.randomUUID();
+      await post(credential, "/api/connector/callback", { id: command.id, callbackId, context });
+      const deadline = Date.now() + 120_000;
+      while (mayContinue() && Date.now() < deadline) {
+        if (state.response?.id === callbackId) {
+          if (typeof state.response.response === "string") return state.response.response;
+          throw new Error("Writing is unavailable. Connect a writing provider in Outreach before preparation.");
+        }
+        await sleep(100);
+      }
+      throw new Error("Writing did not complete. Preparation stopped.");
+    },
+    async finish() { state.watching = false; await monitor; },
+  };
+}
+
+async function run(command, credential) {
+  if (command.kind === "warmUp") {
+    const gate = watchTask(credential, command);
+    try { return await warmUp(command, gate); } finally { await gate.finish(); }
+  }
   const handle = command.args?.handle;
   if (command.kind === "readFacts" && HANDLE.test(handle)) return readFacts(handle);
   if (command.kind === "readProfileNotes" && HANDLE.test(handle)) return readProfileNotes(handle);
@@ -123,11 +164,13 @@ async function tick() {
     const check = await post(credential, "/api/connector/poll", { commandId: command.id });
     if (check.continue !== true) return;
     try {
-      const result = await run(command);
+      const result = await run(command, credential);
       await post(credential, "/api/connector/result", { id: command.id, result });
       await setStatus("Finished. Check Outreach for the result.");
     } catch (error) {
-      await post(credential, "/api/connector/result", { id: command.id, error: error.message || "The action did not finish.", blockedByInstagram: error.blocked === true });
+      const writes = command.kind === "warmUp" || command.kind === "sendMessages";
+      const blocked = error.blocked === true || error instanceof InstagramBlockedError || (error instanceof InstagramWarmupUncertainError && error.blockedByInstagram);
+      await post(credential, "/api/connector/result", { id: command.id, error: writes ? "The operation did not finish. Review it in Outreach before retrying." : (error.message || "The action did not finish."), uncertain: writes, blockedByInstagram: blocked });
       await setStatus("That action did not finish. See Outreach.");
     }
   } catch (error) {

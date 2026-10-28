@@ -83,8 +83,7 @@ export class ConnectorRuntime {
       case "readProfileNotes": return await this.driver.readProfileNotes(account, handle());
       case "readInbox": return await this.driver.readInbox(account);
       case "warmUp": {
-        if (args.pieces !== 10) throw new Error("Preparation requires ten posts.");
-        return await this.driver.warmUp(account, handle(), 10, context => this.comment(context), this.mayContinue);
+        return await this.driver.warmUp(account, handle(), args.pieces as number, context => this.comment(context), this.mayContinue);
       }
       case "sendMessages": {
         if (!Array.isArray(args.parts) || args.parts.length < 1 || args.parts.length > 3 || args.parts.some(part => typeof part !== "string" || !part.trim() || part.length > 5000)) throw new Error("The approved message is invalid.");
