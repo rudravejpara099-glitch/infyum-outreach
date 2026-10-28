@@ -50,6 +50,8 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <span className={`badge ${STAGE_BADGE[lead.stage]}`} title={stageCopy[lead.stage].description}>{stageCopy[lead.stage].label}</span>
         {lead.skipReason && <span className="text-muted">{lead.skipReason}</span>}
+        {lead.fitScore !== null && <span className={`badge ${lead.fitScore >= 60 ? "badge-ok" : lead.fitScore >= 40 ? "badge-warn" : "badge-bad"}`} title={lead.fitReason || undefined}>Fit {lead.fitScore}/100</span>}
+        {lead.fitScore !== null && lead.fitReason && <span className="text-muted">{lead.fitReason}</span>}
         {campaign && <Link href={`/campaigns/${campaign.id}`} className="text-accent">{campaign.name}</Link>}
         {isDnc(db, lead.handle) && <span className="badge badge-bad">Do not contact</span>}
         {lead.nextFollowupAt && <span className="text-muted">Next follow-up {lead.nextFollowupAt.slice(0, 10)}</span>}
