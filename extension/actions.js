@@ -125,7 +125,7 @@ export async function warmUp(command, gate) {
     const result = await runChromeWarmup(browser, profileUrl, pieces, gate.comment, gate.mayContinue);
     return { likes: result.likes, comments: result.comments, followed: result.followed };
   } catch (error) {
-    if (diag && error && typeof error === "object") error.reason = `${error.reason || error.message} [${diag}]`.slice(0, 190);
+    if (diag && error && typeof error === "object") error.reason = `[${diag}] ${error.reason || error.message}`.slice(0, 190);
     throw error;
   } finally {
     await input.detach();
