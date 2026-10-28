@@ -1,6 +1,6 @@
 # Phase 1 lock (build plan step 1)
 
-Build plan step 1 from the Architecture and Build Plan: run real profiles by hand, then make the filters, prompts and sheet columns final so Phase 2 can reuse them. This is that lock. Run on 27 and 28 Oct 2026, one Instagram account (@timelessmoments.al), Claude in Chrome as the hands.
+Build plan step 1 from the Architecture and Build Plan: run real profiles by hand, then make the filters, prompts and sheet columns final so Phase 2 can reuse them. This is that lock. Run on 27 and 28 Oct 2026, one Instagram account, Claude in Chrome as the hands.
 
 ## What we ran
 
@@ -9,9 +9,9 @@ Build plan step 1 from the Architecture and Build Plan: run real profiles by han
 | Outcome | Count | Notes |
 | --- | --- | --- |
 | Full sequence and first DM sent | 13 | Story like where there was one, 10 posts liked and commented, follow, DM built from their bio link |
-| Engaged, no DM possible | 2 | `dt_over700` and `lexempo_consulting_`: no Message button |
-| Skipped before engaging | 2 | `robthecreditguy` (a teammate had already engaged him), `carlotacorderoccd` (followed by `akash_infyum`, so connected to Infyum) |
-| Real replies so far | 0 | One auto-reply from a comment-bot funnel (`officialdomique`), which is not a real reply |
+| Engaged, no DM possible | 2 | two accounts with no Message button |
+| Skipped before engaging | 2 | one prospect a teammate had already engaged, and one followed by a team account (so connected to Infyum) |
+| Real replies so far | 0 | One auto-reply from a comment-bot funnel (a coach's account), which is not a real reply |
 
 Followers of the prospects ran from about 5,000 to 44,000. Reply tracking is still unproven.
 
