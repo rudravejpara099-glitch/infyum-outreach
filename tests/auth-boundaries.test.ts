@@ -106,3 +106,10 @@ describe("protected app authentication boundaries", () => {
     }
   });
 });
+
+it("lets every device-authenticated connector route through the sign-in gate", () => {
+  const gate = readFileSync("proxy.ts", "utf8");
+  for (const route of providerAuthenticatedRoutes) {
+    if (route.startsWith("api/connector/")) expect(gate, route).toContain(`"/${route.replace("/route.ts", "")}"`);
+  }
+});
