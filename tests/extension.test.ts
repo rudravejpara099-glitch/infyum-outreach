@@ -30,3 +30,13 @@ it("bundles the shared warm-up logic and keeps the stop checks in the action cod
   const actions = readFileSync("extension/actions.js", "utf8");
   expect(actions).toContain("gate.mayContinue");
 });
+
+it("sends messages only with the stop check before each step, the already-contacted check and a sent-text receipt", () => {
+  const actions = readFileSync("extension/actions.js", "utf8");
+  const send = actions.slice(actions.indexOf("export async function sendMessages"));
+  expect(send).toContain("Message sending was stopped.");
+  expect(send).toContain("was already messaged by us on Instagram before");
+  expect(send).toContain("did not appear in the conversation");
+  expect(send.match(/stop\(\)/g)?.length).toBeGreaterThanOrEqual(5);
+  expect(readFileSync("extension/background.js", "utf8")).toContain('command.kind === "sendMessages"');
+});

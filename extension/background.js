@@ -1,5 +1,5 @@
 import { readFactsInPage } from "./page-scripts.js";
-import { warmUp } from "./actions.js";
+import { warmUp, sendMessages } from "./actions.js";
 import { InstagramBlockedError, InstagramWarmupUncertainError } from "./warmup.js";
 
 const HANDLE = /^[A-Za-z0-9_.]{1,30}$/;
@@ -132,9 +132,9 @@ function watchTask(credential, command) {
 }
 
 async function run(command, credential) {
-  if (command.kind === "warmUp") {
+  if (command.kind === "warmUp" || command.kind === "sendMessages") {
     const gate = watchTask(credential, command);
-    try { return await warmUp(command, gate); } finally { await gate.finish(); }
+    try { return await (command.kind === "warmUp" ? warmUp(command, gate) : sendMessages(command, gate)); } finally { await gate.finish(); }
   }
   const handle = command.args?.handle;
   if (command.kind === "readFacts" && HANDLE.test(handle)) return readFacts(handle);

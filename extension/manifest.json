@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Infyum Outreach",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Lets your Outreach workspace read Instagram pages in your own signed-in Chrome.",
   "permissions": [
     "alarms",

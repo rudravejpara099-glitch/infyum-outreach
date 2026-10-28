@@ -132,3 +132,89 @@ export async function warmUp(command, gate) {
     chrome.windows.remove(windowId).catch(() => {});
   }
 }
+
+const BLOCKED = /action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i;
+
+/** Page-side helpers for sending. Each is self-contained because it runs inside the Instagram page. */
+function pageState(ownerPath) {
+  const text = document.body?.innerText ?? "";
+  const ownerSignedIn = Array.from(document.querySelectorAll("a[href]")).some((a) => (a.getAttribute("href") || "").toLowerCase() === ownerPath);
+  return { host: location.hostname, path: location.pathname, text: text.slice(0, 4000), ownerSignedIn, hasMessageButton: Array.from(document.querySelectorAll("button,[role=button]")).some((e) => (e.getAttribute("aria-label") || e.innerText || "").trim() === "Message") };
+}
+function chatState() {
+  const box = document.querySelector('[contenteditable="true"][role="textbox"], textarea[placeholder*="essage" i]');
+  let area = box;
+  for (let level = 0; area && level < 16 && (area.innerText || "").length < 300; level++) area = area.parentElement;
+  return { found: Boolean(box), ours: /infyum|portfolio\.infyum\.com/i.test(area?.innerText || "") };
+}
+function focusChatBox() {
+  const box = document.querySelector('[contenteditable="true"][role="textbox"], textarea[placeholder*="essage" i]');
+  if (!box) return null;
+  box.scrollIntoView({ block: "center" }); box.focus();
+  const r = box.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+}
+function bodyText() { return document.body?.innerText ?? ""; }
+
+/**
+ * Sends the approved first message (up to three parts) to one profile, in a real chat, one part at a time.
+ * Never starts if our name or link is already in the conversation, and confirms each part appears before the next.
+ */
+export async function sendMessages(command, gate) {
+  const handle = command.args?.handle, parts = command.args?.parts, owner = command.account?.handle;
+  if (!HANDLE.test(handle) || !HANDLE.test(owner) || !Array.isArray(parts) || parts.length < 1 || parts.length > 3 || parts.some((p) => typeof p !== "string" || !p.trim() || p.length > 2000)) throw new Error("This message request is not valid.");
+  const stop = () => { if (!gate.mayContinue()) throw new Error("Message sending was stopped."); };
+  stop();
+  const { windowId, tabId } = await openWorkWindow(instagramUrl(`https://www.instagram.com/${handle}/`));
+  const input = inputFor(tabId);
+  let attempted = false;
+  try {
+    await loaded(tabId);
+    await input.attach();
+    // The signed-in account must be the saved one, and the Message button must show (up to about 15 seconds).
+    let state = null;
+    for (let look = 0; look < 10; look++) {
+      state = await exec(tabId, pageState, [`/${owner.toLowerCase()}/`]);
+      if (state?.ownerSignedIn && state.hasMessageButton) break;
+      stop(); await sleep(1500);
+    }
+    if (!state || state.host !== "www.instagram.com") throw new Error("Chrome left the expected Instagram page.");
+    if (BLOCKED.test(state.text)) { const e = new Error("Instagram showed a warning or human check. Review the account in Chrome."); e.blocked = true; throw e; }
+    if (!state.ownerSignedIn) { const e = new Error("The saved Instagram account is not signed in in Chrome."); e.blocked = true; throw e; }
+    if (!state.hasMessageButton) throw new Error(`@${handle} has no Message button (messages may be closed).`);
+    stop();
+    const button = await exec(tabId, rectOfNamed, ["Message"]);
+    if (!button) throw new Error("Instagram did not show a Message button.");
+    if (button.covered) throw new Error(`The Message button was covered by ${button.covered}.`);
+    await input.click(button.x, button.y);
+    // The chat opens a moment after the click; wait for its message box (up to about 15 seconds).
+    let chat = null;
+    for (let look = 0; look < 10 && !chat?.found; look++) { await sleep(1500); stop(); chat = await exec(tabId, chatState); }
+    if (!chat?.found) throw new Error(`Chat with @${handle} did not open.`);
+    if (chat.ours) throw new Error(`@${handle} was already messaged by us on Instagram before; the message was not sent.`);
+    for (const [index, part] of parts.entries()) {
+      stop();
+      const box = await exec(tabId, focusChatBox);
+      if (!box) throw new Error("Instagram did not show a message box.");
+      await input.click(box.x, box.y);
+      await input.type(part);
+      await sleep(humanDelayMs("beforeSend", Math.random));
+      stop();
+      attempted = true;
+      await input.enter();
+      // Give the sent text a few seconds to appear in the conversation before deciding it was sent.
+      const probe = part.slice(0, Math.min(30, part.length));
+      let seen = false, text = "";
+      for (let look = 0; look < 20 && !seen; look++) { await sleep(400); text = await exec(tabId, bodyText); seen = text.includes(probe); }
+      if (BLOCKED.test(text)) { const e = new Error("Instagram showed a warning or human check. Review the account in Chrome."); e.blocked = true; throw e; }
+      if (!seen) throw new Error(`The message to @${handle} did not appear in the conversation.`);
+      if (index < parts.length - 1) await sleep(humanDelayMs("betweenParts", Math.random));
+    }
+    return null;
+  } catch (error) {
+    if (attempted && error && typeof error === "object") error.reason = `${error.message}`.slice(0, 190);
+    throw error;
+  } finally {
+    await input.detach();
+    chrome.windows.remove(windowId).catch(() => {});
+  }
+}
