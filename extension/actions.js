@@ -88,6 +88,7 @@ export async function warmUp(command, gate) {
   const profileUrl = instagramUrl(`https://www.instagram.com/${handle}/`);
   const { windowId, tabId } = await openWorkWindow(profileUrl);
   const input = inputFor(tabId);
+  let diag = "";
   try {
     await loaded(tabId);
     await input.attach();
@@ -108,6 +109,9 @@ export async function warmUp(command, gate) {
         if (!spot) throw new Error(`Instagram did not show a ${name} button.`);
         if (spot.covered) throw new Error(`The ${name} button was covered by ${spot.covered}.`);
         await input.click(spot.x, spot.y);
+        await sleep(400);
+        const state = await exec(tabId, () => ({ visible: document.visibilityState, focused: document.hasFocus(), w: innerWidth, h: innerHeight, under: (() => { const e = document.elementFromPoint(0, 0); return e?.tagName; })() })).catch(() => null);
+        diag = `${name} clicked at ${Math.round(spot.x)},${Math.round(spot.y)}; page ${state ? `${state.visible}, focused=${state.focused}, ${state.w}x${state.h}` : "unreadable"}`;
       },
       comment: async (text) => {
         const spot = await exec(tabId, rectOfCommentBox);
@@ -120,6 +124,9 @@ export async function warmUp(command, gate) {
     };
     const result = await runChromeWarmup(browser, profileUrl, pieces, gate.comment, gate.mayContinue);
     return { likes: result.likes, comments: result.comments, followed: result.followed };
+  } catch (error) {
+    if (diag && error && typeof error === "object") error.reason = `${error.reason || error.message} [${diag}]`.slice(0, 190);
+    throw error;
   } finally {
     await input.detach();
     chrome.windows.remove(windowId).catch(() => {});
