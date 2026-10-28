@@ -155,9 +155,16 @@ async function tick() {
   if (!credential) return;
   busy = true;
   try {
-    const { command, killed } = await post(credential, "/api/connector/poll", {});
-    if (killed) { await setStatus("Stopped. Resume in Outreach."); return; }
-    if (!command) { await setStatus("Connected. Waiting for work from Outreach."); return; }
+    // Chrome wakes this only every 30 seconds, but Outreach counts a device as online for 30 seconds after it last asked.
+    // So keep asking every 5 seconds for most of the gap; that way the device never looks offline between wake-ups.
+    let command = null;
+    for (let look = 0; look < 6 && !command; look++) {
+      const reply = await post(credential, "/api/connector/poll", {});
+      if (reply.killed) { await setStatus("Stopped. Resume in Outreach."); return; }
+      command = reply.command;
+      if (!command) { await setStatus("Connected. Waiting for work from Outreach."); if (look < 5) await sleep(5000); }
+    }
+    if (!command) return;
     if (command.expiresAt <= Date.now()) return;
     await setStatus(`Working: ${command.kind}…`);
     // The server confirms the task is still allowed before anything touches Instagram.
@@ -188,3 +195,5 @@ chrome.runtime.onMessage.addListener((message, _sender, reply) => {
 chrome.alarms.create("poll", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => { if (alarm.name === "poll") tick(); });
 chrome.runtime.onStartup.addListener(tick);
+chrome.runtime.onInstalled.addListener(tick);
+tick();
