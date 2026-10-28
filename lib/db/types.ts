@@ -14,6 +14,9 @@ export type Lead = {
   followupsSent: number;
   nextFollowupAt: string | null;
   notes: string;
+  /** 0 to 100 from the fit score, or null when the lead has not been scored. */
+  fitScore: number | null;
+  fitReason: string;
   createdAt: string;
   updatedAt: string;
 };

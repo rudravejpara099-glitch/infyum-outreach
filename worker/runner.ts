@@ -5,6 +5,8 @@ import type { InstagramDriver } from "./driver";
 import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError } from "./driver";
 import { draftWarmupComment } from "@/lib/services/comment-writing";
 import { qualify } from "@/lib/domain/qualify";
+import { parseProspectFilters } from "@/lib/domain/prospect-filters";
+import { scoreFit } from "@/lib/services/fit-score";
 import { remainingToday } from "@/lib/domain/limits";
 import { getAccount, leastLoadedAccount, listAccounts, setAccountStatus } from "@/lib/db/repos/accounts";
 import { campaignAccountIds, getCampaign, listCampaigns } from "@/lib/db/repos/campaigns";
@@ -13,7 +15,7 @@ import { isChromeUnreachable } from "@/lib/domain/chrome-connection-failure";
 import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, resolveSupersededInboxJobs, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { canMove } from "@/lib/domain/stages";
-import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setNotes, updateFacts } from "@/lib/db/repos/leads";
+import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setFit, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
@@ -256,8 +258,20 @@ async function process(deps: Deps, job: Job): Promise<void> {
       const verdict = qualify({
         ...facts, alreadyContacted: hasOutgoing(db, lead.id, "dm", ["sent"]), onDoNotContact: isDnc(db, lead.handle),
       }, { minFollowers: campaign.minFollowers, maxFollowers: campaign.maxFollowers, country: campaign.country });
-      if (verdict.ok) moveStage(db, lead.id, "qualified", "worker");
-      else moveStage(db, lead.id, "skipped", "worker", verdict.reason);
+      if (!verdict.ok) { moveStage(db, lead.id, "skipped", "worker", verdict.reason); return; }
+      // Optional gate from Settings: score how well the prospect fits, and skip the weak ones.
+      const threshold = parseProspectFilters(getSetting(db, "prospect_filters")).fitThreshold;
+      if (threshold > 0) {
+        const notes = await driver.readProfileNotes(account, lead.handle);
+        const fit = await scoreFit(engine, { handle: lead.handle, followers: facts.followers, niche: lead.niche, notes });
+        if (fit) {
+          setFit(db, lead.id, fit.score, fit.reason);
+          if (fit.score < threshold) { moveStage(db, lead.id, "skipped", "worker", `Fit score ${fit.score} (min ${threshold}): ${fit.reason}`); return; }
+        } else {
+          logActivity(db, "worker", "fit.unscored", { leadId: lead.id, accountId: account.id, detail: "The writer's score could not be read, so the lead was not blocked." });
+        }
+      }
+      moveStage(db, lead.id, "qualified", "worker");
       return;
     }
 
