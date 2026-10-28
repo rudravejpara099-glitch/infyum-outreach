@@ -51,6 +51,12 @@ it("authenticates before opening company data and rejects cross-origin or revoke
   expect((await poll(request("poll", device.token))).status).toBe(401);
   expect(state.getWorkspaceDb).not.toHaveBeenCalled();
 });
+it("accepts the Outreach Chrome extension origin but only with a valid device token", async () => {
+  const extension = "chrome-extension://" + "a".repeat(32);
+  expect((await poll(request("poll", device.token, {}, extension))).status).toBe(200);
+  expect((await poll(request("poll", undefined, {}, extension))).status).toBe(401);
+  expect((await poll(request("poll", device.token, {}, "chrome-extension://short"))).status).toBe(403);
+});
 it("pairs one time without opening operational data and rejects expired or replayed codes", async () => {
   const code = createPairing(identity, owner, workspace);
   const response = await pair(request("pair", undefined, { code, label: "New device" }));

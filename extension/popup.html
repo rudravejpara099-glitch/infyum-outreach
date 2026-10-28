@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  body { font: 14px system-ui, sans-serif; width: 320px; margin: 12px; }
+  textarea { width: 100%; height: 70px; box-sizing: border-box; }
+  button { margin-top: 8px; padding: 6px 12px; }
+  #status { margin-top: 10px; color: #444; }
+</style>
+<h3 style="margin:0 0 8px">Infyum Outreach</h3>
+<div id="pair">
+  <p>Paste the connection code from Accounts in Outreach.</p>
+  <textarea id="code"></textarea>
+  <button id="connect">Connect</button>
+</div>
+<div id="connected" hidden>
+  <button id="disconnect">Disconnect</button>
+</div>
+<div id="status"></div>
+<script type="module" src="popup.js"></script>
