@@ -8,12 +8,14 @@ import { isDnc } from "@/lib/db/repos/dnc";
 import { getSetting } from "@/lib/db/repos/settings";
 import { canSendAtStage } from "@/lib/domain/stages";
 import { remainingToday } from "@/lib/domain/limits";
+import { killSwitchOn } from "@/lib/services/kill-switch";
 import { withDmCap } from "@/lib/services/safety";
 import { dateInTimeZone } from "@/lib/domain/time-zone";
 import { connectorKindAllowed, connectorWrites } from "@/lib/domain/connector";
 
 /** Recheck the worker's authority when the remote device actually receives a task. */
 export function commandMayContinue(db: Db, command: Command, now = new Date()): boolean {
+  if (killSwitchOn(db)) return false;
   if (command.expiresAt <= now.getTime() || !["queued", "running"].includes(command.status)) return false;
   const job = db.prepare("SELECT type,lead_id,account_id,payload,attempts FROM jobs WHERE id=? AND status='running'").get(command.jobId) as { type: string; lead_id: number | null; account_id: number; payload: string; attempts: number } | undefined;
   const binding = db.prepare("SELECT device_id FROM account_devices WHERE account_id=?").get(command.accountId) as { device_id: string } | undefined;

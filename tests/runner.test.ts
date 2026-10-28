@@ -8,6 +8,7 @@ import { enqueue, requeueStuck } from "@/lib/db/repos/jobs";
 import { AlreadyContactedError, InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError, type InstagramDriver } from "@/worker/driver";
 import { planWork, runLanesUntilIdle, runOne, runUntilIdle, type Deps } from "@/worker/runner";
 import { handleIncoming } from "@/lib/services/outreach";
+import { setKillSwitch } from "@/lib/services/kill-switch";
 
 const LINK = "https://portfolio.infyum.com/sales-funnel";
 const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudra at Infyum, a small team in India. ${LINK}`, "Which link do most callers use?"] });
@@ -129,6 +130,21 @@ describe("worker pipeline", () => {
     await runOne(deps);
     expect(driver.warmups).toBe(1);
     expect(db.prepare("SELECT count(*) n FROM activity WHERE action='warmup.limit_reached'").get()).toEqual({ n: 1 });
+  });
+
+  it("does nothing while the kill switch is on, and carries on when it is off", async () => {
+    const { acct, camp } = setup(true);
+    const { lead } = addLead(db, { handle: "kill-one", campaignId: camp.id, stage: "qualified" }, "t");
+    db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
+    enqueue(db, { type: "warmup", leadId: lead.id, accountId: acct.id });
+    setKillSwitch(db, true, "t");
+    expect(await runOne(deps)).toBe(false);
+    planWork(deps);
+    expect(driver.warmups).toBe(0);
+    expect(db.prepare("SELECT status FROM jobs WHERE type='warmup' AND lead_id=?").get(lead.id)).toEqual({ status: "queued" });
+    setKillSwitch(db, false, "t");
+    await runUntilIdle(deps);
+    expect(driver.warmups).toBe(1);
   });
 
   it("shrinks a warm-up to the week-one ramp on a new account", async () => {
