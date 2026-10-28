@@ -1,0 +1,2 @@
+# One Instagram username per line (no @). Claude never engages or messages these.
+# Add competitors, agencies, people who asked to be left alone, and your own team's accounts.
