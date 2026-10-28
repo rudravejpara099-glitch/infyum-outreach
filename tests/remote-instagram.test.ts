@@ -112,6 +112,19 @@ describe("customer-device Instagram driver", () => {
     expect(getDeviceCommand(db, id)?.callbackResponse?.response).toEqual({ error: "Comment preparation failed. Review this lead before retrying." });
     expect(JSON.stringify(getDeviceCommand(db, id))).not.toContain("provider secret");
   });
+  it("tells the device to give the post a like only when the writer cannot make a valid comment", async () => {
+    running("warmup"); let id = "", ticks = 0;
+    const browser = driver(() => {
+      if (++ticks === 1) { const cmd = claimDeviceCommand(db, device, now)!; id = cmd.id; requestDeviceCallback(db, device, id, "piece_1", "An oak table", now); }
+      else {
+        expect(getDeviceCommand(db, id)?.callbackResponse?.response).toEqual({ error: "Comment writing did not return valid text" });
+        expect(getDeviceCommand(db, id)?.status).toBe("running");
+        completeDeviceCommand(db, device, id, { likes: 1, comments: 0, followed: true }, undefined, now);
+      }
+    });
+    const failing = async () => { throw new Error("Comment writing did not return valid text after 3 attempts. Comments need 3 to 8 words."); };
+    await expect(browser.warmUp(account, "prospect", 1, failing)).resolves.toEqual({ likes: 1, comments: 0, followed: true });
+  });
   it("retries a failed read only after the worker advances its attempt", async () => {
     const jobId = running("check_inbox");
     const first = driver(() => {

@@ -119,6 +119,8 @@ function watchTask(credential, command) {
       while (mayContinue() && Date.now() < deadline) {
         if (state.response?.id === callbackId) {
           if (typeof state.response.response === "string") return state.response.response;
+          // The writer could not make a valid comment: let the warm-up give this post a like only.
+          if (/^Comment writing did not return valid text/.test(state.response.response?.error || "")) throw new Error("Comment writing did not return valid text");
           throw new Error("Writing is unavailable. Connect a writing provider in Outreach before preparation.");
         }
         await sleep(100);
