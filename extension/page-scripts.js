@@ -186,6 +186,149 @@ export const storyLikeInPage = (argStory) => (async () => {
     while (!heart('Unlike') && Date.now() < doneBy) await sleep(200);
     return { hadStory: true, liked: Boolean(heart('Unlike')) && location.pathname.toLowerCase().startsWith(storyPath) };
   })();
+export const inboxListInPage = (argOwner) => (async () => {
+    const path = location.pathname.replace(/\/$/, '').toLowerCase();
+    let isInbox = path === '/direct/inbox';
+    const isThread = /^\/direct\/t\/[A-Za-z0-9_-]+\/?$/i.test(location.pathname);
+    const allowed = location.protocol === 'https:' &&
+      (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && (isInbox || isThread);
+    if (!allowed) return { allowed: false, ownerMatches: false, isInbox: false, blocked: false, indices: [] };
+    const ownerMatches = () => Array.from(document.querySelectorAll('a[href]')).some((a) => {
+      try { return new URL(a.href).pathname.toLowerCase() === argOwner; } catch { return false; }
+    });
+    const ownerDeadline = Date.now() + 20000;
+    while (!ownerMatches() && Date.now() < ownerDeadline) await new Promise((resolve) => setTimeout(resolve, 250));
+    if (!ownerMatches()) {
+      const hasProfileLink = Array.from(document.querySelectorAll('a[href]')).some((a) => {
+        try {
+          const segment = new URL(a.href).pathname.toLowerCase().replace(/^\//, '').replace(/\/$/, '');
+          return /^[a-z0-9._]{1,30}$/.test(segment) && !/^(about|accounts|direct|explore|reels|stories|privacy|legal|developer|emails|challenge|api)$/.test(segment);
+        } catch { return false; }
+      });
+      const loading = document.readyState !== 'complete' || !hasProfileLink;
+      return { allowed: true, ownerMatches: false, isInbox, loading, indices: [] };
+    }
+    if (!isInbox) {
+      const inboxLink = Array.from(document.querySelectorAll('a[href]')).find((link) => {
+        try { const url = new URL(link.href); return url.protocol === 'https:' && (url.hostname === 'www.instagram.com' || url.hostname === 'instagram.com') && url.pathname.replace(/\/$/, '') === '/direct/inbox'; } catch { return false; }
+      });
+      if (!inboxLink || typeof inboxLink.click !== 'function') return { allowed: true, ownerMatches: true, isInbox: false, blocked: false, loggedOut: false, indices: [] };
+      inboxLink.click();
+      const inboxDeadline = Date.now() + 6000;
+      while (location.pathname.replace(/\/$/, '') !== '/direct/inbox' && Date.now() < inboxDeadline) await new Promise((resolve) => setTimeout(resolve, 250));
+      isInbox = location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') && location.pathname.replace(/\/$/, '') === '/direct/inbox';
+      if (!isInbox || !ownerMatches()) return { allowed: isInbox, ownerMatches: false, isInbox: false, blocked: false, loggedOut: false, indices: [] };
+    }
+    const text = document.body?.innerText ?? '';
+    if (/action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(text)) return { allowed: true, ownerMatches: true, isInbox, blocked: true, indices: [] };
+    if (/log in to continue|you need to log in to continue/i.test(text)) return { allowed: true, ownerMatches: true, isInbox, loggedOut: true, indices: [] };
+    const listDeadline = Date.now() + 12000;
+    let list = document.querySelector('[aria-label="Thread list"]');
+    while (!list && Date.now() < listDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      list = document.querySelector('[aria-label="Thread list"]');
+    }
+    if (!list) return { allowed: true, ownerMatches: true, isInbox: true, listReady: false, blocked: false, loggedOut: false, indices: [] };
+    // Conversations render a second or two after the empty list; reading at once would report no replies.
+    const rowsDeadline = Date.now() + 8000;
+    let seen = -1, settled = 0;
+    while (Date.now() < rowsDeadline) {
+      const count = list.querySelectorAll('div[role="button"]').length;
+      settled = count > 0 && count === seen ? settled + 1 : 0;
+      if (settled >= 3) break;
+      seen = count;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    
+    const isUsableThreadRow = (row) => {
+      const text = typeof row.innerText === 'string' ? row.innerText.replace(/\s+/g, ' ').trim() : '';
+      const label = typeof row.getAttribute === 'function' ? row.getAttribute('aria-label') ?? '' : '';
+      const loading = new RegExp("^loading(?:\\b|[.!…])", 'i');
+      return text.length > 0 && !loading.test(text) && !loading.test(label);
+    };
+    const rows = Array.from(list?.querySelectorAll('div[role="button"]') ?? [])
+      .filter((row) => !row.closest('li') && row.querySelector('img') && isUsableThreadRow(row));
+
+    return { allowed: true, ownerMatches: true, isInbox: true, listReady: true, blocked: false, loggedOut: false, indices: rows.slice(0, 15).map((_, index) => index) };
+  })();
+export const inboxOpenInPage = (argOwner, argIndex) => (async () => {
+    const allowed = location.protocol === 'https:' &&
+      (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
+      location.pathname.replace(/\/$/, '').toLowerCase() === '/direct/inbox';
+    if (!allowed) return { allowed: false, ownerMatches: false, opened: false, path: '' };
+    const ownerMatches = Array.from(document.querySelectorAll('a[href]')).some((a) => {
+      try { return new URL(a.href).pathname.toLowerCase() === argOwner; } catch { return false; }
+    });
+    if (!ownerMatches) return { allowed: true, ownerMatches: false, opened: false, path: '' };
+    const text = document.body?.innerText ?? '';
+    if (/action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(text)) return { allowed: true, ownerMatches: true, blocked: true, opened: false, path: '' };
+    if (/log in to continue|you need to log in to continue/i.test(text)) return { allowed: true, ownerMatches: true, loggedOut: true, opened: false, path: '' };
+    const list = document.querySelector('[aria-label="Thread list"]');
+    
+    const isUsableThreadRow = (row) => {
+      const text = typeof row.innerText === 'string' ? row.innerText.replace(/\s+/g, ' ').trim() : '';
+      const label = typeof row.getAttribute === 'function' ? row.getAttribute('aria-label') ?? '' : '';
+      const loading = new RegExp("^loading(?:\\b|[.!…])", 'i');
+      return text.length > 0 && !loading.test(text) && !loading.test(label);
+    };
+    const rows = Array.from(list?.querySelectorAll('div[role="button"]') ?? [])
+      .filter((row) => !row.closest('li') && row.querySelector('img') && isUsableThreadRow(row));
+
+    const row = rows[argIndex];
+    if (!row) return { allowed: true, ownerMatches: true, loading: true, opened: false, path: '' };
+    if (typeof row.click !== 'function') return { allowed: true, ownerMatches: true, opened: false, path: '' };
+    const rowText = typeof row.innerText === 'string' ? row.innerText.replace(/\s+/g, ' ').trim() : '';
+    const ariaLabel = typeof row.getAttribute === 'function' ? row.getAttribute('aria-label') ?? '' : '';
+    const loading = new RegExp("^loading(?:\\b|[.!…])", 'i');
+    if (loading.test(rowText) || loading.test(ariaLabel)) return { allowed: true, ownerMatches: true, loading: true, opened: false, path: '' };
+    row.click();
+    const deadline = Date.now() + 6000;
+    while (!/^\/direct\/t\/[A-Za-z0-9_-]+\/?$/i.test(location.pathname) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
+    const path = location.pathname;
+    const opened = /^\/direct\/t\/[A-Za-z0-9_-]+\/?$/i.test(path);
+    return { allowed: true, ownerMatches: true, opened, path: opened ? path : '' };
+  })();
+export const inboxThreadInPage = (argOwner, argThread) => (async () => {
+    const allowed = location.protocol === 'https:' &&
+      (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
+      location.pathname.replace(/\/$/, '').toLowerCase() === argThread;
+    if (!allowed) return { allowed: false, ownerMatches: false, blocked: false };
+    const ownerMatches = () => Array.from(document.querySelectorAll('a[href]')).some((a) => {
+      try { return new URL(a.href).pathname.toLowerCase() === argOwner; } catch { return false; }
+    });
+    const deadline = Date.now() + 6000;
+    while (!ownerMatches() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
+    if (!ownerMatches()) return { allowed: true, ownerMatches: false, blocked: false };
+    const body = document.body?.innerText ?? '';
+    const blocked = /action blocked|try again later|we restrict certain activity|confirm you'?re (a )?human|suspicious (activity|login)|account has been (disabled|suspended|temporarily locked)|help us confirm/i.test(body) || /\/(challenge|accounts\/suspended)\//i.test(location.pathname);
+    if (blocked) return { allowed: true, ownerMatches: true, blocked: true };
+    if (/log in to continue|you need to log in to continue/i.test(body)) return { allowed: true, ownerMatches: true, loggedOut: true };
+    const threadDeadline = Date.now() + 6000;
+    while (!document.querySelector('main a[aria-label^="Open the profile page"]') && Date.now() < threadDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    const partnerLink = document.querySelector('main a[aria-label^="Open the profile page"]');
+    if (!partnerLink) return { allowed: true, ownerMatches: true, blocked: false, loggedOut: false, threadReady: false };
+    let handle = '';
+    try {
+      const partnerPath = new URL(partnerLink?.href ?? '').pathname;
+      if (/^\/[A-Za-z0-9._]{1,30}\/$/.test(partnerPath) && partnerPath.toLowerCase() !== argOwner) handle = partnerPath.slice(1, -1);
+    } catch { /* no verified partner profile link */ }
+    if (!handle) return { allowed, ownerMatches: true, blocked: false, loggedOut: false, handle: '', message: '' };
+    const messagesDeadline = Date.now() + 6000;
+    while (!document.querySelector('main [role="article"][aria-roledescription="message"]') && Date.now() < messagesDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    const articles = Array.from(document.querySelectorAll('main [role="article"][aria-roledescription="message"]'));
+    if (articles.length === 0) return { allowed: true, ownerMatches: true, blocked: false, loggedOut: false, threadReady: false };
+    const incoming = articles.filter((article) => {
+      const wrapper = article.parentElement?.parentElement;
+      return wrapper && getComputedStyle(wrapper).justifyContent === 'flex-start';
+    });
+    const latest = incoming[incoming.length - 1];
+    const message = (latest?.innerText ?? latest?.textContent ?? '').trim().slice(0, 2000);
+    return { allowed, ownerMatches: true, blocked: false, loggedOut: false, handle, message };
+  })();
 export const tagPostLikeInPage = () => {
     const root = document.querySelector('article') ?? document.querySelector('main');
     let row = root?.querySelector('svg[aria-label="Comment"]');

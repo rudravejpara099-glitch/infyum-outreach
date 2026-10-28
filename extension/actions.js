@@ -1,6 +1,6 @@
 // Actions that change things on Instagram. The warm-up rules (what to like, when to skip a comment, how to confirm)
 // come from the same code the Node connector uses (warmup.js, built from worker/chrome-warmup.ts).
-import { warmupInPage, storyLikeInPage, tagPostLikeInPage } from "./page-scripts.js";
+import { warmupInPage, storyLikeInPage, tagPostLikeInPage, inboxListInPage, inboxOpenInPage, inboxThreadInPage } from "./page-scripts.js";
 import { runChromeWarmup, humanDelayMs } from "./warmup.js";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -215,6 +215,66 @@ export async function sendMessages(command, gate) {
     throw error;
   } finally {
     await input.detach();
+    chrome.windows.remove(windowId).catch(() => {});
+  }
+}
+
+const THREAD_PATH = /^\/direct\/t\/[A-Za-z0-9_-]+\/?$/;
+const blockedError = (message) => { const e = new Error(message); e.blocked = true; return e; };
+
+/** Turns the inbox page's answer into the conversation rows to read, or says why not. Same rules as the Node connector. */
+function inboxRows(parsed) {
+  if (!parsed || parsed.allowed !== true) throw new Error("Chrome is not showing an allowed Instagram inbox page.");
+  if (parsed.blocked === true) throw blockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+  if (parsed.loggedOut === true) throw blockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
+  if (parsed.loading === true || (parsed.ownerMatches === true && parsed.isInbox === true && parsed.listReady !== true)) { const e = new Error("Instagram is still loading the inbox."); e.loading = true; throw e; }
+  if (parsed.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before reading replies.");
+  if (parsed.isInbox !== true || parsed.listReady !== true || !Array.isArray(parsed.indices)) throw new Error("Instagram's conversation list is not open.");
+  return [...new Set(parsed.indices.filter((i) => Number.isSafeInteger(i) && i >= 0 && i < 15))].slice(0, 15);
+}
+
+/**
+ * Reads the latest incoming message of each recent conversation, without changing anything. Read-only:
+ * nothing is typed, sent or marked. Returns [{ handle, text }] for Outreach to match against its leads.
+ */
+export async function readInbox(command, gate) {
+  const owner = command.account?.handle;
+  if (!HANDLE.test(owner)) throw new Error("This inbox request is not valid.");
+  const stop = () => { if (!gate.mayContinue()) throw new Error("Reading replies was stopped."); };
+  stop();
+  const { windowId, tabId } = await openWorkWindow("https://www.instagram.com/direct/inbox/");
+  const ownerPath = `/${owner.toLowerCase()}/`;
+  try {
+    await loaded(tabId);
+    let rows;
+    try { rows = inboxRows(await exec(tabId, inboxListInPage, [ownerPath])); }
+    catch (error) {
+      // One calm retry after a refresh when Instagram is still swapping the page; never more.
+      if (!error.loading) throw error;
+      await chrome.tabs.reload(tabId, { bypassCache: true }); await sleep(500); await loaded(tabId);
+      rows = inboxRows(await exec(tabId, inboxListInPage, [ownerPath]));
+    }
+    const items = [];
+    for (const [position, index] of rows.entries()) {
+      stop();
+      const opened = await exec(tabId, inboxOpenInPage, [ownerPath, index]);
+      if (!opened || opened.allowed !== true || opened.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before opening replies.");
+      if (opened.blocked === true) throw blockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+      if (opened.loggedOut === true) throw blockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
+      if (opened.loading === true) continue;
+      if (opened.opened !== true || !THREAD_PATH.test(opened.path || "")) throw new Error("Instagram did not open a verifiable conversation.");
+      const thread = await exec(tabId, inboxThreadInPage, [ownerPath, opened.path.toLowerCase().replace(/\/$/, "")]);
+      if (!thread || thread.allowed !== true || thread.ownerMatches !== true) throw new Error("The saved Instagram account could not be confirmed before reading this conversation.");
+      if (thread.blocked === true) throw blockedError("Instagram showed a warning or human check. Review the account in Chrome.");
+      if (thread.loggedOut === true) throw blockedError("Instagram sign-in is not confirmed for this account. Sign in in Chrome and try again.");
+      if (thread.threadReady === false) throw new Error("Instagram's conversation is still loading; replies were not verified.");
+      if (typeof thread.handle === "string" && HANDLE.test(thread.handle) && typeof thread.message === "string" && thread.message.trim()) {
+        items.push({ handle: thread.handle.toLowerCase(), text: thread.message.trim().slice(0, 2000) });
+      }
+      if (position < rows.length - 1) { await chrome.tabs.goBack(tabId); await sleep(800 + Math.random() * 700); await loaded(tabId); }
+    }
+    return items;
+  } finally {
     chrome.windows.remove(windowId).catch(() => {});
   }
 }

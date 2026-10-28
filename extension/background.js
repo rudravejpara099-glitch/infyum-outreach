@@ -1,5 +1,5 @@
 import { readFactsInPage } from "./page-scripts.js";
-import { warmUp, sendMessages } from "./actions.js";
+import { warmUp, sendMessages, readInbox } from "./actions.js";
 import { InstagramBlockedError, InstagramWarmupUncertainError } from "./warmup.js";
 
 const HANDLE = /^[A-Za-z0-9_.]{1,30}$/;
@@ -16,8 +16,9 @@ function parseCode(value) {
 }
 
 async function post(credential, path, body) {
+  // A call that never answers (for example while the app restarts) must not freeze the extension: give up after 20 seconds.
   const response = await fetch(`${credential.origin}${path}`, {
-    method: "POST", redirect: "error",
+    method: "POST", redirect: "error", signal: AbortSignal.timeout(20_000),
     headers: { "content-type": "application/json", authorization: `Bearer ${credential.token}` },
     body: JSON.stringify(body),
   });
@@ -132,9 +133,10 @@ function watchTask(credential, command) {
 }
 
 async function run(command, credential) {
-  if (command.kind === "warmUp" || command.kind === "sendMessages") {
+  if (command.kind === "warmUp" || command.kind === "sendMessages" || command.kind === "readInbox") {
     const gate = watchTask(credential, command);
-    try { return await (command.kind === "warmUp" ? warmUp(command, gate) : sendMessages(command, gate)); } finally { await gate.finish(); }
+    const action = command.kind === "warmUp" ? warmUp : command.kind === "sendMessages" ? sendMessages : readInbox;
+    try { return await action(command, gate); } finally { await gate.finish(); }
   }
   const handle = command.args?.handle;
   if (command.kind === "readFacts" && HANDLE.test(handle)) return readFacts(handle);
@@ -150,12 +152,15 @@ async function stop() {
   catch { return { error: "Could not reach Outreach. Close this Chrome window to stop actions." }; }
 }
 
-let busy = false;
+let busy = false, busySince = 0;
 async function tick() {
+  // A task can legitimately run for several minutes, but a check-in loop never takes more than about 40 seconds.
+  // If it has been "busy" for 10 minutes something is stuck, so start fresh.
+  if (busy && Date.now() - busySince > 10 * 60_000) busy = false;
   if (busy) return;
   const { credential } = await chrome.storage.local.get("credential");
   if (!credential) return;
-  busy = true;
+  busy = true; busySince = Date.now();
   try {
     // Chrome wakes this only every 30 seconds, but Outreach counts a device as online for 30 seconds after it last asked.
     // So keep asking every 5 seconds for most of the gap; that way the device never looks offline between wake-ups.
