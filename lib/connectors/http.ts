@@ -22,9 +22,13 @@ export async function connectorBody(request: Request): Promise<Record<string, un
   if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Invalid request.");
   return data as Record<string, unknown>;
 }
-export function connectorContext(request: Request) {
+/** Same-site pages and the Outreach Chrome extension may call the connector; the device token still gates all data. */
+export function connectorOriginAllowed(request: Request): boolean {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return connectorJson({ error: "Origin denied." }, 403);
+  return !origin || origin === new URL(request.url).origin || /^chrome-extension:\/\/[a-p]{32}$/.test(origin);
+}
+export function connectorContext(request: Request) {
+  if (!connectorOriginAllowed(request)) return connectorJson({ error: "Origin denied." }, 403);
   const match = request.headers.get("authorization")?.match(/^Bearer ([A-Za-z0-9_-]{43})$/);
   if (!match) return connectorJson({ error: "Reconnect this device in Accounts." }, 401);
   const identity = getIdentityDb(), device = authenticateDevice(identity, match[1]);

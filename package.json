@@ -14,7 +14,8 @@
     "backup": "tsx scripts/backup.ts",
     "import": "tsx scripts/import-csv.ts",
     "smoke:ui": "tsx scripts/ui-smoke.ts",
-    "smoke:billing": "tsx scripts/billing-smoke.ts"
+    "smoke:billing": "tsx scripts/billing-smoke.ts",
+    "extension:build": "tsx scripts/build-extension.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
