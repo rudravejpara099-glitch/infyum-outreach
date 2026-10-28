@@ -18,6 +18,8 @@ import { canMove } from "@/lib/domain/stages";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setFit, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
+import { safetySettings, withDmCap } from "@/lib/services/safety";
+import { actionsToday, recordActions } from "@/lib/db/repos/daily-actions";
 import { parseWritingSettings } from "@/lib/domain/writing-settings";
 import { logActivity } from "@/lib/db/repos/activity";
 import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
@@ -227,7 +229,8 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
   // Human pace: only jobs that act on Instagram are paced. Drafting with the AI is not.
   if (deps.humanPace && account && PACED.has(job.type)) {
-    const cfg = { ...DEFAULT_PACING, tz: getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz, ...deps.humanPace.cfg };
+    const hours = safetySettings(db);
+    const cfg = { ...DEFAULT_PACING, tz: getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz, dayStartHour: hours.dayStartHour, dayEndHour: hours.dayEndHour, ...deps.humanPace.cfg };
     const g = gate(deps.now(), account.id, loadPace(db, account.id), cfg, deps.humanPace.rng ?? Math.random);
     savePace(db, account.id, g.state);
     if (!g.ok) {
@@ -286,6 +289,15 @@ async function process(deps: Deps, job: Job): Promise<void> {
         db, userId: campaignPayer, operationId: `ai:${job.id}:warmup-comment:${call}`,
         source: { campaignId: campaign.id, accountId: account.id, leadId: lead.id, jobId: job.id }, maxOutputTokens: 160,
       } : undefined;
+      // Daily caps per action (Settings): wait for tomorrow rather than start a warm-up that would go over.
+      const dayCaps = safetySettings(db).caps, capDay = teamDate(db, deps.now());
+      if (actionsToday(db, account.id, capDay, "like") + WARMUP_PIECES > dayCaps.likes
+        || actionsToday(db, account.id, capDay, "comment") + WARMUP_PIECES > dayCaps.comments
+        || actionsToday(db, account.id, capDay, "follow") + 1 > dayCaps.follows) {
+        deferJob(db, job, 120);
+        logActivity(db, "worker", "warmup.limit_reached", { accountId: account.id, leadId: lead.id });
+        return;
+      }
       // Never like/follow a post before discovering writing/billing is disconnected.
       try {
         await engine.assertReady?.(meteringFor(1));
@@ -321,6 +333,9 @@ async function process(deps: Deps, job: Job): Promise<void> {
       try {
         db.transaction(() => {
           logActivity(db, "worker", "lead.warmed_up", { leadId: lead.id, accountId: account.id, detail: `${result.likes} likes, ${result.comments} comments, followed: ${result.followed}` });
+          recordActions(db, account.id, capDay, "like", result.likes);
+          recordActions(db, account.id, capDay, "comment", result.comments);
+          recordActions(db, account.id, capDay, "follow", result.followed ? 1 : 0);
           moveStage(db, lead.id, "warmed", "worker");
         }).immediate();
       } catch { throw new InstagramWarmupUncertainError(); }
@@ -350,7 +365,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
       if (!campaign || campaign.status !== "active" || !campaignAccountIds(db, campaign.id).includes(account.id)) return;
       if (message.kind !== "reply") {
         const today = teamDate(db, deps.now());
-        const left = remainingToday(account, today, sentTodayForAccount(db, account.id, today, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz));
+        const left = remainingToday(withDmCap(db, account), today, sentTodayForAccount(db, account.id, today, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz));
         if (left <= 0) { deferJob(db, job, 120); logActivity(db, "worker", "send.limit_reached", { accountId: account.id }); return; }
       }
       if (isDnc(db, lead.handle)) { markFailed(db, message.id, "Handle is on the do-not-contact list"); return; }
@@ -365,7 +380,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
         || !freshCampaign || freshCampaign.status !== "active" || !campaignAccountIds(db, freshCampaign.id).includes(account.id)
         || isDnc(db, freshLead.handle)) return;
       const freshToday = teamDate(db, deps.now());
-      if (remainingToday(freshAccount, freshToday, sentTodayForAccount(db, account.id, freshToday, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz)) <= 0) {
+      if (remainingToday(withDmCap(db, freshAccount), freshToday, sentTodayForAccount(db, account.id, freshToday, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz)) <= 0) {
         deferJob(db, job, 120);
         return;
       }

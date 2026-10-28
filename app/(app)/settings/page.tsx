@@ -6,9 +6,10 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
-import { blockHandle, saveApifyCap, saveProspectFilters, saveTimeZone, saveWriting, unblockHandle } from "./actions";
+import { blockHandle, saveApifyCap, saveProspectFilters, saveSafety, saveTimeZone, saveWriting, unblockHandle } from "./actions";
 import { parseProspectFilters } from "@/lib/domain/prospect-filters";
 import { getWritingReadiness } from "@/lib/services/writing-readiness";
+import { parseSafetySettings } from "@/lib/domain/safety-settings";
 import { parseWritingSettings } from "@/lib/domain/writing-settings";
 import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
@@ -24,6 +25,7 @@ export default async function Settings() {
   const zone = getSetting(db, "team_timezone") ?? "America/New_York";
   const zones = [...new Set([...supportedTimeZones(), zone])].sort();
   const filters = parseProspectFilters(getSetting(db, "prospect_filters"));
+  const safety = parseSafetySettings(getSetting(db, "safety_settings"));
   const writingSettings = parseWritingSettings(getSetting(db, "writing_settings"));
   return (
     <>
@@ -85,8 +87,24 @@ export default async function Settings() {
         </section>
 
         <section className="card p-5">
+          <h2 className="text-base font-semibold">Daily caps and active hours</h2>
+          <p className="mb-3 mt-1 text-muted">Accounts only act between the start and end hour in the team time zone below, with breaks. Start and finish times vary slightly by account. The caps are the most each account does in a day; the slow week-one start-up still applies on top, and a cap of 0 switches that action off.</p>
+          <ActionForm action={saveSafety} className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><label className="label" htmlFor="dayStartHour">Start hour (0 to 23)</label><input id="dayStartHour" name="dayStartHour" type="number" min={0} max={23} defaultValue={safety.dayStartHour} className="input" /></div>
+              <div><label className="label" htmlFor="dayEndHour">End hour (1 to 24)</label><input id="dayEndHour" name="dayEndHour" type="number" min={1} max={24} defaultValue={safety.dayEndHour} className="input" /></div>
+              <div><label className="label" htmlFor="followsCap">Follows per day</label><input id="followsCap" name="followsCap" type="number" min={0} max={1000} defaultValue={safety.caps.follows} className="input" /></div>
+              <div><label className="label" htmlFor="likesCap">Likes per day</label><input id="likesCap" name="likesCap" type="number" min={0} max={1000} defaultValue={safety.caps.likes} className="input" /></div>
+              <div><label className="label" htmlFor="commentsCap">Comments per day</label><input id="commentsCap" name="commentsCap" type="number" min={0} max={1000} defaultValue={safety.caps.comments} className="input" /></div>
+              <div><label className="label" htmlFor="dmsCap">DMs per day</label><input id="dmsCap" name="dmsCap" type="number" min={0} max={1000} defaultValue={safety.caps.dms} className="input" /></div>
+            </div>
+            <button className="btn w-fit">Save caps and hours</button>
+          </ActionForm>
+        </section>
+
+        <section className="card p-5">
           <h2 className="text-base font-semibold">Team time zone</h2>
-          <p className="mb-3 mt-1 text-muted">Accounts only work 9:00 to 21:00 in this time zone, with breaks. Start and finish times vary slightly by account.</p>
+          <p className="mb-3 mt-1 text-muted">The active hours above are read in this time zone.</p>
           <ActionForm action={saveTimeZone}>
             <label className="label" htmlFor="timeZone">Time zone</label>
             <input id="timeZone" name="timeZone" list="team-time-zones" defaultValue={zone} className="input" required autoComplete="off" />

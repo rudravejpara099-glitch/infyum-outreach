@@ -233,4 +233,17 @@ ALTER TABLE leads ADD COLUMN fit_score INTEGER;
 ALTER TABLE leads ADD COLUMN fit_reason TEXT NOT NULL DEFAULT '';
 `,
   },
+  {
+    id: 9,
+    name: "daily_actions",
+    sql: `
+CREATE TABLE daily_actions (
+  account_id INTEGER NOT NULL REFERENCES ig_accounts(id) ON DELETE CASCADE,
+  day TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK(kind IN ('follow','like','comment')),
+  n INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (account_id, day, kind)
+);
+`,
+  },
 ];
