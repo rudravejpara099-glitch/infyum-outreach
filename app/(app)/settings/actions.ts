@@ -11,6 +11,7 @@ import { logActivity } from "@/lib/db/repos/activity";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { handleSchema, validCap, validTimeZone } from "./validation";
 import { filtersFromForm } from "@/lib/domain/prospect-filters";
+import { writingFromForm } from "@/lib/domain/writing-settings";
 
 function commitAtomically(db: Awaited<ReturnType<typeof getDb>>, write: () => void): boolean {
   try { db.transaction(write).immediate(); return true; }
@@ -83,4 +84,19 @@ export async function saveProspectFilters(form: FormData): Promise<ActionResult>
   })) return { error: "Couldn’t save this change. Try again shortly." };
   revalidatePath("/settings");
   return { message: "Prospect filters saved. New searches and checks use them." };
+}
+
+export async function saveWriting(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const values: Record<string, string> = {};
+  for (const key of ["senderName", "company", "location", "offer", "dmPrompt", "commentPrompt"]) values[key] = String(form.get(key) ?? "");
+  const parsed = writingFromForm(values);
+  if ("error" in parsed) return { error: parsed.error.message, field: parsed.error.field };
+  const db = (await getDb(form));
+  if (!commitAtomically(db, () => {
+    setSetting(db, "writing_settings", JSON.stringify(parsed.writing));
+    logActivity(db, user.email, "settings.writing", { detail: `${parsed.writing.senderName} at ${parsed.writing.company}` });
+  })) return { error: "Couldn’t save this change. Try again shortly." };
+  revalidatePath("/settings");
+  return { message: "Sender details and prompts saved. The next messages and comments use them." };
 }

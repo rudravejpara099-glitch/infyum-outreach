@@ -6,9 +6,10 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
-import { blockHandle, saveApifyCap, saveProspectFilters, saveTimeZone, unblockHandle } from "./actions";
+import { blockHandle, saveApifyCap, saveProspectFilters, saveTimeZone, saveWriting, unblockHandle } from "./actions";
 import { parseProspectFilters } from "@/lib/domain/prospect-filters";
 import { getWritingReadiness } from "@/lib/services/writing-readiness";
+import { parseWritingSettings } from "@/lib/domain/writing-settings";
 import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function Settings() {
   const zone = getSetting(db, "team_timezone") ?? "America/New_York";
   const zones = [...new Set([...supportedTimeZones(), zone])].sort();
   const filters = parseProspectFilters(getSetting(db, "prospect_filters"));
+  const writingSettings = parseWritingSettings(getSetting(db, "writing_settings"));
   return (
     <>
       <PageHeader title="Settings" />
@@ -37,6 +39,22 @@ export default async function Settings() {
           <p className="mb-3 mt-1 text-muted">The app includes this link in the second part of every first-contact message. This setting is managed for the whole team.</p>
           <a className="text-link break-all" href={portfolioLink} target="_blank" rel="noreferrer">{portfolioLink}</a>
         </section>
+        <section className="card p-5">
+          <h2 className="text-base font-semibold">Sender details and prompts</h2>
+          <p className="mb-3 mt-1 text-sm text-muted">Who the messages come from, and the instructions the writer follows. The word and emoji limits for comments and the three-message shape of a first DM are checked by the app whatever you write here. In the DM prompt, {"{sender}"} {"{company}"} {"{location}"} {"{offer}"} and {"{link}"} are filled in for you. Leave a box empty to go back to the standard wording.</p>
+          <ActionForm action={saveWriting} className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><label className="label" htmlFor="senderName">Sender name</label><input id="senderName" name="senderName" maxLength={60} defaultValue={writingSettings.senderName} className="input" /></div>
+              <div><label className="label" htmlFor="company">Company</label><input id="company" name="company" maxLength={80} defaultValue={writingSettings.company} className="input" /></div>
+              <div><label className="label" htmlFor="location">Where you are based</label><input id="location" name="location" maxLength={80} defaultValue={writingSettings.location} className="input" /></div>
+              <div><label className="label" htmlFor="offer">What you do</label><input id="offer" name="offer" maxLength={200} defaultValue={writingSettings.offer} className="input" /></div>
+            </div>
+            <div><label className="label" htmlFor="dmPrompt">First DM prompt</label><textarea id="dmPrompt" name="dmPrompt" rows={9} defaultValue={writingSettings.dmPrompt} className="input" /></div>
+            <div><label className="label" htmlFor="commentPrompt">Comment prompt</label><textarea id="commentPrompt" name="commentPrompt" rows={4} defaultValue={writingSettings.commentPrompt} className="input" /></div>
+            <button className="btn w-fit">Save sender details and prompts</button>
+          </ActionForm>
+        </section>
+
         <section className="card p-5">
           <h2 className="text-base font-semibold">Prospect filters</h2>
           <p className="mb-3 mt-1 text-sm text-muted">A prospect must pass every rule before any engagement happens. Rules that need data we do not have yet, such as recent posts or engagement, are only applied when that data is known.</p>

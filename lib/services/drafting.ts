@@ -1,6 +1,7 @@
 import type { Db } from "@/lib/db/core";
 import type { AiEngine } from "@/lib/engine/types";
-import { firstDmPrompt, followupPrompt, PORTFOLIO_LINK, SYSTEM } from "@/lib/engine/prompts";
+import { firstDmPrompt, followupPrompt, PORTFOLIO_LINK, systemPrompt } from "@/lib/engine/prompts";
+import { parseWritingSettings } from "@/lib/domain/writing-settings";
 import { checkDraft, parseParts } from "@/lib/engine/validate";
 import { checkAgainstRecent } from "@/lib/domain/similarity";
 import { getCampaign } from "@/lib/db/repos/campaigns";
@@ -27,7 +28,7 @@ async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: 
       db, userId: payer, operationId: `ai:${jobId ?? `lead-${leadId}`}:${kind}:${attempt}`,
       source: { campaignId, accountId: lead.accountId, leadId, ...(jobId ? { jobId } : {}) }, maxOutputTokens: 1200,
     } : undefined;
-    const raw = await engine.complete({ system: SYSTEM, prompt: prompt + feedback, format: kind, metering });
+    const raw = await engine.complete({ system: systemPrompt(parseWritingSettings(getSetting(db, "writing_settings"))), prompt: prompt + feedback, format: kind, metering });
     let problem: string | null = null;
     let parts: string[] = [];
     try {
@@ -61,6 +62,7 @@ export async function draftFirstDm(db: Db, engine: AiEngine, leadId: number, pro
     handle: lead.handle, niche: lead.niche, followers: lead.followers, profileNotes,
     audienceText: campaign?.audienceText ?? "", recentOpenings: openings,
     portfolioLink: getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK,
+    writing: parseWritingSettings(getSetting(db, "writing_settings")),
   }), leadId, jobId);
   return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "dm", parts, campaign: campaign ?? fallbackCampaign }, actor);
 }

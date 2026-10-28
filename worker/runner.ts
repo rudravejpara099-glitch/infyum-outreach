@@ -18,6 +18,7 @@ import { canMove } from "@/lib/domain/stages";
 import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setFit, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
+import { parseWritingSettings } from "@/lib/domain/writing-settings";
 import { logActivity } from "@/lib/db/repos/activity";
 import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
 import { afterSent, handleIncoming } from "@/lib/services/outreach";
@@ -311,7 +312,7 @@ async function process(deps: Deps, job: Job): Promise<void> {
       const result = await driver.warmUp(account, lead.handle, WARMUP_PIECES, async (context) => {
         commentCall += 1;
         const metering = meteringFor(commentCall);
-        const comment = await draftWarmupComment(engine, context, metering, usedComments);
+        const comment = await draftWarmupComment(engine, context, metering, usedComments, parseWritingSettings(getSetting(db, "writing_settings")).commentPrompt);
         usedComments.push(comment);
         logActivity(db, "worker", "warmup.comment", { leadId: lead.id, accountId: account.id, detail: `@${lead.handle} :: ${comment}` });
         return comment;
