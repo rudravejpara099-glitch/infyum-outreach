@@ -28,7 +28,7 @@ and follow it exactly. Guide me step by step, do the work for me, and ask me bef
 
 **3. Answer a few quick questions**
 
-Claude asks eight short questions in one message, each with a recommended answer. Say **"yes"** to accept them all, or change what you like. Then Claude finds your first prospects and shows you a short list to approve.
+Claude first asks whether you're using this for the **INFYUM team** (everything is pre-filled for you) or for **your own business** (it asks about your company, your link and who you want to reach). Then a few short questions in one message, each with a recommended answer. Say **"yes"** to accept them all, or change what you like. Then Claude finds your first prospects and shows you a short list to approve.
 
 That's it. From then on, you just talk to it.
 
@@ -86,7 +86,7 @@ Liking, commenting, following and messaging automatically can go against Instagr
 
 | Path | What it is |
 |---|---|
-| [`phase1/`](phase1/) | **The kit above.** The guide your Claude follows, the files it fills in for you, and the optional Apify search tool. |
+| [`phase1/`](phase1/) | **The kit above.** The guide your Claude follows, the INFYUM preset, the files it fills in for you, and the optional Apify search tool. |
 | [`docs/PHASE-1-LOCK.md`](docs/PHASE-1-LOCK.md) | The locked rules from the hand runs: filters, comment rules, first message, lead columns. |
 | [`docs/APP-SETUP.md`](docs/APP-SETUP.md) | Phase 2: the web app that automates the same process, for people running it on their own computer. |
 | [`docs/BUILD-PLAN-AUDIT.md`](docs/BUILD-PLAN-AUDIT.md) | How far the Phase 2 app is from the build plan. |

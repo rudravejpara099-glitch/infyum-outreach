@@ -50,6 +50,10 @@ Do this when `~/INFYUM-Phase1/settings.md` does not exist (or, with no file acce
 4. Ask (in the questions round) whether it is a **spare/new** account or an **established** one. Recommend a spare account: automated-style activity can get any account restricted, and the user should not risk their main one. Be honest about this in one sentence; do not lecture.
 
 ### 2.3 The questions round (one message; recommended answer under each; "yes" accepts all)
+**First, one question that decides the rest: "Is this for the INFYUM team, or for your own business?"**
+- **INFYUM team:** read `presets/infyum.md` (from this kit's `phase1/presets/`, or `https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/presets/infyum.md`). Those values replace questions 2, 4 and 5 and the "where you're based" part of question 3. Show them in plain words and ask only for the rest (their first name, time zone, accounts to avoid, pace, how to find prospects), and apply the team rules in the preset.
+- **Their own business:** ask all of the questions below.
+
 Ask exactly these, with defaults filled in from what you already know:
 1. **Your first name** (used to sign the messages).
 2. **Company name** and **what you do in one line** (example: "a small team that builds sales funnels and booking pages").
