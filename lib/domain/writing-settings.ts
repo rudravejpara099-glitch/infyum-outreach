@@ -15,7 +15,7 @@ Message 2: introduce yourself by name as {sender} at {company}, {offer} based in
 Message 3: one curious question about their funnel or business. Nothing else.
 Rules: each message under 380 characters. Different wording and shape from the recent openings below. Match their language if their audience is not English. No other links.`;
 
-export const DEFAULT_COMMENT_PROMPT = `Write one short Instagram comment on this post. 3 to 8 words, 1 to 3 emojis, specific to the post, warm, no dashes, no hashtags, no questions about business. Never start with "Love this", "Great" or "Nice". Name one concrete detail from the post's own text. Answer with only the comment text.`;
+export const DEFAULT_COMMENT_PROMPT = `Write one short Instagram comment on this post. Use only 4 to 6 words (never more than 8), then 1 to 2 emojis. Specific to the post, warm, no dashes, no hashtags, no questions about business. Never start with "Love this", "Great" or "Nice". Name one concrete detail from the post's own text. Length example only, never reuse its words: "That checklist idea is smart 🙌". Answer with only the comment text.`;
 
 export const DEFAULT_WRITING: WritingSettings = {
   senderName: "Rudra",
