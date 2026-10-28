@@ -74,14 +74,23 @@ describe("metered Apify search", () => {
     expect(c.starts()).toBe(0);
   });
 
-  it("stops if the provider usage cycle does not align with the app's UTC cap month", async () => {
+  it("accepts a provider billing cycle that starts mid-month, and stops on one that is not current", async () => {
     const { db, campaign } = fixture();
     const c = fakeClient();
     const date = new Date();
-    vi.spyOn(c, "monthlyUsageSnapshot").mockResolvedValue({ monthlyUsageMicros: 0, observedAt: date.toISOString(), cycleStartAt: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 2)).toISOString() });
-    await expect(findLeadsForCampaign(db, c, campaign.id, 1)).rejects.toThrow(/does not match this app/);
+    vi.spyOn(c, "monthlyUsageSnapshot").mockResolvedValue({ monthlyUsageMicros: 0, observedAt: date.toISOString(), cycleStartAt: new Date(date.getTime() - 90 * 86_400_000).toISOString() });
+    await expect(findLeadsForCampaign(db, c, campaign.id, 1)).rejects.toThrow(/could not be verified/);
     expect(c.starts()).toBe(0);
     expect(db.prepare("SELECT count(*) n FROM billing_reservations").get()).toEqual({ n: 0 });
+  });
+
+  it("runs when the provider billing cycle started a few days ago", async () => {
+    const { db, campaign } = fixture();
+    const c = fakeClient();
+    const date = new Date();
+    vi.spyOn(c, "monthlyUsageSnapshot").mockResolvedValue({ monthlyUsageMicros: 0, observedAt: date.toISOString(), cycleStartAt: new Date(date.getTime() - 3 * 86_400_000).toISOString() });
+    await findLeadsForCampaign(db, c, campaign.id, 1);
+    expect(c.starts()).toBeGreaterThan(0);
   });
 
   it("requires campaign payer, billing review and a saved monthly cap", async () => {

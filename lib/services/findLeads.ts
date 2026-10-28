@@ -51,9 +51,10 @@ async function runTerm(db: Db, client: ApifySearchClient, campaignId: number, pa
   } else {
     const usage = await client.monthlyUsageSnapshot();
     const now = new Date().toISOString();
-    const cycleStart = new Date(usage.cycleStartAt);
-    const monthStart = new Date(`${now.slice(0, 7)}-01T00:00:00.000Z`);
-    if (!Number.isFinite(cycleStart.getTime()) || cycleStart.toISOString() !== monthStart.toISOString()) throw new ApifyOffError("Apify’s monthly usage cycle does not match this app’s calendar-month limit. Lead search is paused to avoid undercounting spend.");
+    // The limit is checked against Apify's own billing cycle, whatever day it starts on (a new account's cycle starts on its sign-up day).
+    const cycleStart = new Date(usage.cycleStartAt).getTime();
+    const ageDays = (Date.parse(now) - cycleStart) / 86_400_000;
+    if (!Number.isFinite(cycleStart) || ageDays < 0 || ageDays > 32) throw new ApifyOffError("Apify’s billing period could not be verified. Lead search is paused to avoid undercounting spend.");
     const hold = reserveUsage(db, {
       userId: payerId, operationId, provider: "apify", maxCostMicros: MAX_APIFY_RUN_MICROS, source,
       now, apifyMonthlyUsageMicros: usage.monthlyUsageMicros, apifyUsageObservedAt: usage.observedAt,
