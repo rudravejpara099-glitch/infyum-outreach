@@ -1,6 +1,6 @@
 # Build slabs: the road from here to launch
 
-Source of truth for what is left to build and how each piece is proven. It follows Sunil's "Architecture and Build Plan". `docs/BUILD-PLAN-AUDIT.md` holds the original line-by-line gap list; this file is the current status and the work order.
+**Scope decision, 2026-10-29: the whole system stops after the first DM.** A human takes over from there, so follow-ups, reply reading and every stage after "DM sent" are out of scope (slabs 2 and 3 below are replaced accordingly). Source of truth for what is left to build and how each piece is proven. It follows Sunil's "Architecture and Build Plan". `docs/BUILD-PLAN-AUDIT.md` holds the original line-by-line gap list; this file is the current status and the work order.
 
 **How we work.** One slab at a time. A slab is finished only when every acceptance line is true and its proof has been run, not when the code exists. Each slab ends on `main` green (`npx vitest run`, `npx tsc --noEmit`, `npm run lint`) and is logged in `docs/COLLAB.md`. Anything that needs the owner is listed under **Needs**, up front.
 
@@ -17,9 +17,9 @@ Status key: ✅ done and proven · 🟡 built, not fully proven · ⬜ not start
 | Four action buttons | ✅ | Overview page; default "buttons" mode |
 | Apify lead search | ✅ | Proven live; spend limit follows Apify's billing cycle |
 | Chrome extension: pair, poll, read, like, comment, follow, story like, DM, human pacing, kill switch | ✅ | Warm-up and DM proven live on real Instagram |
-| Chrome extension: read replies | 🟡 | Built; not yet verified against the real inbox (slab 1) |
-| Reply tracking | 🟡 | The document says manual in the MVP; automatic reading is built but not wired and proven (slab 2) |
-| Follow-ups day 3 and day 7 | 🟡 | Rules done; not yet run through the extension (slab 3) |
+| Chrome extension: read replies | ⛔ out of scope | Built but not needed: the system stops after the first DM. Stays dormant. |
+| Reply tracking, follow-ups day 3 and day 7 | ⛔ out of scope | A human manages everything after the first DM (replaced by slab 2, the hand-off) |
+| Warm-up and first DM as in Dhrumit's process and the Phase 1 kit | ⬜ | The Phase 1 kit was updated 2026-10-29; the app's writer and warm-up still use the older rules (slab 3) |
 | Daily caps, warm-up ramp, active hours, kill switch | ✅ | Caps per action, ramp on every action |
 | Google sign-in | ⬜ | OAuth client exists; app still uses email and password (slab 4) |
 | Google Sheet as the only store, five tabs, locked header, Stage dropdown, one module | ⬜ | App still uses SQLite (slabs 5 and 6) |
@@ -34,29 +34,31 @@ Status key: ✅ done and proven · 🟡 built, not fully proven · ⬜ not start
 **Proof.** Done 2026-10-29: 657 tests, types, lint and the full browser smoke test (screens, themes, phone layouts) all pass. The smoke test was failing because the owner's saved Claude key leaked into it; it now isolates itself. A second "Save" button in Settings was renamed "Save mode" so the test can tell the buttons apart.
 
 ### Slab 1: Extension live and verified
-**Goal.** The extension stays connected and reads replies correctly.
+**Goal.** The extension stays connected and does warm-up and first DMs reliably.
 **Acceptance.**
 1. After an app restart the extension is back online within 60 seconds with no manual action.
-2. For the 5 most recent conversations, the extension's inbox read returns exactly the latest incoming message Instagram shows (or none).
-3. Reading replies sends, types and changes nothing (read-only, checked in the activity log and the page).
-**Proof.** A recorded run comparing the extension's output with screenshots of the inbox.
+2. It ships with the timeout fix (no network call can hang it) and updates itself.
+3. A warm-up and a first DM still complete on the test account.
+**Proof.** A restart test and one complete warm-up and DM on the test account.
 **Needs.** One reload click on the extension (it froze before the timeout fix).
 
-### Slab 2: Reply tracking, end to end
-**Goal.** When a prospect really replies, the lead moves to Replied by itself and the user is told.
+### Slab 2: The hand-off after "DM sent" (replaces reply tracking)
+**Goal.** Once the first DM is sent, the system never touches that person again.
 **Acceptance.**
-1. The worker's inbox check goes through the extension for connected accounts.
-2. A real human reply sets the stage to Replied and shows on the Replies page; an auto-reply ("thanks for contacting us") does not.
-3. A reply about price, contract or an upset tone is flagged for a human.
-4. No message is ever sent in response.
-**Proof.** Unit tests with a fake driver for 1 to 4, plus one live reply from the owner's second account to the test message.
-**Needs.** The owner sends one reply from their account.
+1. After a lead reaches DM sent, no job of any kind (like, comment, follow, message, inbox read) is ever planned or run for it, in either run mode.
+2. The Follow up button, the automatic reply checks and follow-up drafting are removed from the app; the Replies page and any "replied" wording are removed or hidden.
+3. The Overview and the Sheet show DM sent as the end of the line, with a plain "handed over" label.
+**Proof.** Tests that no job is created for a DM-sent lead; the browser smoke test updated; a look at the Overview.
+**Needs.** Nothing.
 
-### Slab 3: Follow-ups through the extension
-**Goal.** Day-3 and day-7 follow-ups are drafted, approved and sent through the extension.
-**Acceptance.** A due follow-up is drafted once, shown for approval, sent as one message with no link, counted as one DM against the cap, and never sent if a real reply exists. Two follow-ups maximum; then the lead is marked Dead.
-**Proof.** Tests with a controlled clock; one live follow-up to the owner's test account.
-**Needs.** Owner approval of the live send.
+### Slab 3: The app matches Dhrumit's process and the new first DM
+**Goal.** The web app's warm-up and first message follow the same rules as the Phase 1 kit.
+**Acceptance.**
+1. Warm-up: follow, pinned-post comment, story like (reaction and poll as settings), question-based comments on reels, within the daily limits.
+2. First DM: three separate messages from a one-line funnel note, soft or professional style (free-sample offer off by default), a fresh hook per person, and a check against the last 10 sent first messages; no invented company facts.
+3. Prompts and settings are editable, as before.
+**Proof.** Tests for the prompt and the variety check; five sample first messages for five different profiles read by the owner.
+**Needs.** The owner reads the five samples.
 
 ### Slab 4: Google sign-in 🟡 (built and tested; live sign-in waiting on the owner)
 **Goal.** People sign in with Google, as the document specifies.
@@ -98,6 +100,6 @@ Status key: ✅ done and proven · 🟡 built, not fully proven · ⬜ not start
 
 ## Work order and dependencies
 
-`0 → 1 → 2 → 3` (extension track) and `0 → 4 → 5 → 6` (Google track) can run in either order; slab 7 can slot in whenever the owner adds credit; slab 8 comes last and needs 1 to 6.
+`0 → 1 → 2 → 3` (extension and rules track) and `0 → 4 → 5 → 6` (Google track) can run in either order; slab 7 can slot in whenever the owner adds credit; slab 8 comes last and needs 1 to 6.
 
-Recommended order: **0, 4, 1, 2, 5, 3, 6, 7, 8.** Slab 4 first because it needs no extension and unblocks the Sheet; slab 1 as soon as the reload click is done.
+Recommended order: **0, 4 (built, awaiting the owner's sign-in), 2, 1, 3, 5, 6, 7, 8.** Slab 2 next because it needs nothing from the owner and removes work that is no longer wanted.
