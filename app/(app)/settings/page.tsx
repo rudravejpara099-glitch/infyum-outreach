@@ -95,7 +95,7 @@ export default async function Settings() {
           <ActionForm action={saveRunMode} className="flex flex-wrap items-end gap-3">
             <div><label className="label" htmlFor="runMode">Mode</label>
               <select id="runMode" name="runMode" defaultValue={mode} className="input"><option value="buttons">Action buttons (I press each step)</option><option value="automatic">Automatic (all steps on their own)</option></select></div>
-            <button className="btn">Save</button>
+            <button className="btn">Save mode</button>
           </ActionForm>
         </section>
 
