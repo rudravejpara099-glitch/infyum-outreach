@@ -1,4 +1,7 @@
 # Start here
+
+> **Not here to build the app?** If the user wants to *use* the Instagram outreach, stop reading this file and follow `phase1/GUIDE-FOR-CLAUDE.md` instead (see `CLAUDE.md`). Everything below is for people and agents working on the Phase 2 web app.
+
 Read `HANDOFF.md` first: product rules, decisions, what is built, what is untested, and the next tasks.
 Then read `docs/DESIGN.md` before touching any screen.
 
