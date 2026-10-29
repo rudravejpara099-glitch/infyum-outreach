@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 const appRoot = join(process.cwd(), "app");
 const publicPages = new Set(["login/page.tsx", "setup/page.tsx", "register/page.tsx", "join/page.tsx"]);
 const publicActions = new Set(["login/actions.ts:login", "login/actions.ts:setup", "register/actions.ts:register", "join/actions.ts:join"]);
-const providerAuthenticatedRoutes = new Set(["api/billing/webhook/route.ts", "api/connector/pair/route.ts", "api/connector/poll/route.ts", "api/connector/result/route.ts", "api/connector/callback/route.ts", "api/connector/kill/route.ts"]);
+const providerAuthenticatedRoutes = new Set(["api/billing/webhook/route.ts", "api/connector/pair/route.ts", "api/connector/poll/route.ts", "api/connector/result/route.ts", "api/connector/callback/route.ts", "api/connector/kill/route.ts", "api/auth/google/start/route.ts", "api/auth/google/callback/route.ts"]);
 
 type FunctionBody = { name: string; body: ts.Block };
 
@@ -110,6 +110,6 @@ describe("protected app authentication boundaries", () => {
 it("lets every device-authenticated connector route through the sign-in gate", () => {
   const gate = readFileSync("proxy.ts", "utf8");
   for (const route of providerAuthenticatedRoutes) {
-    if (route.startsWith("api/connector/")) expect(gate, route).toContain(`"/${route.replace("/route.ts", "")}"`);
+    if (route.startsWith("api/connector/") || route.startsWith("api/auth/google/")) expect(gate, route).toContain(`"/${route.replace("/route.ts", "")}"`);
   }
 });

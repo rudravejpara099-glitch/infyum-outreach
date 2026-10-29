@@ -246,4 +246,16 @@ CREATE TABLE daily_actions (
 );
 `,
   },
+  {
+    id: 10,
+    name: "user_google",
+    sql: `
+CREATE TABLE user_google (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  sub TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL DEFAULT '',
+  linked_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+`,
+  },
 ];

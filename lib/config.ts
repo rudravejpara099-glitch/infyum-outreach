@@ -16,4 +16,11 @@ export const config = {
   defaultCountry: "United States",
   /** Hard stop: the worker never sends more than this per run, whatever the settings say. */
   absoluteDailyCeiling: 60,
+  /** Google sign-in. The secret stays on the server; sign-in is offered only when both values are set. */
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    /** Public address of this app (for example https://outreach.example.com). Falls back to the address of the request. */
+    appUrl: process.env.APP_URL ?? "",
+  },
 };
