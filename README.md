@@ -1,36 +1,40 @@
 # INFYUM Instagram Outreach
 
-**Let your own Claude find the right prospects on Instagram, warm them up, and send a first message. You approve, Claude does the clicking. It stops when they reply.**
+**Paste this repo into your Claude. It guides you through a 5-minute setup, then finds the right prospects on Instagram, warms them up like a real person, and sends a first message. You approve, Claude does the clicking. It stops at their first reply.**
 
-No app to install. No account to create with us. No permission to ask for. Everything runs through your own Claude and your own Chrome. Your lead list and settings are saved only on your computer.
+Nothing to install. No files to download. No account to create with us, and no permission to ask for. Claude does it all from its own tools.
 
 ---
 
-## Start in 3 steps (about 5 minutes, once)
+## Start
 
-**1. Get your two accounts ready**
+**1. Have these ready** (Claude will remind you and help with each one):
 
-| You need | Why | Cost |
+| What | Why | Cost |
 |---|---|---|
-| **Claude** with the **Claude in Chrome** extension | Claude uses it to see and click in your Chrome. Add it from the Chrome Web Store (publisher Anthropic, listed as "Claude") and sign in. It needs a paid Claude plan. [Safety notes from Anthropic](https://support.claude.com/en/articles/12012173-using-claude-in-chrome-safely) | Your Claude plan |
+| **Claude** (desktop app) with the **Claude in Chrome** extension | Claude uses it to see and click in your Chrome, like a person would. Add it from the Chrome Web Store (publisher Anthropic) and sign in. It needs a paid Claude plan. [Anthropic's safety notes](https://support.claude.com/en/articles/12012173-using-claude-in-chrome-safely) | Your Claude plan |
 | **An Instagram account, signed in in that Chrome** | The account the messages come from. A spare account is the safe choice. You sign in yourself; Claude never sees your password. | Free |
-| *(Optional)* **A free Apify account** | Lets Claude search Instagram for prospects automatically. Without it, Claude searches by hand in Chrome, which is slower. | Free plan, about $5 of credit a month. Every search is capped at 10 cents. |
 
 **2. Paste this into Claude**
 
 ```
 Set me up with the INFYUM Instagram outreach kit (Phase 1). Read
 https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/GUIDE-FOR-CLAUDE.md
-and follow it exactly. Guide me step by step, do the work for me, and ask me before anything is sent or posted.
+and follow it exactly. Tell me up front what I need to do, guide me step by step, do the work for me, and ask me before anything is sent or posted.
 ```
 
-*Using Claude Code? Open the `phase1` folder of this repository in it and type `start`.*
+**3. Follow Claude.** It tells you everything you'll do before you do it:
 
-**3. Answer a few quick questions**
+| You | Claude |
+|---|---|
+| **Sign in to Instagram** in Chrome | Checks it worked, asks a few quick questions (each with a recommended answer; say "yes" to accept) |
+| **Connect Apify** (optional): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
+| **Connect Google Drive** (optional): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
+| Say **"yes"** to a short list of prospects | Checks each one against your rules, then engages and writes the first messages |
+| Say **"yes"** to a message | Sends it, one part at a time, like a person |
+| Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps going every day within your limits |
 
-Claude first asks whether you're using this for the **INFYUM team** (everything is pre-filled for you) or for **your own business** (it asks about your company, your link and who you want to reach). Then a few short questions in one message, each with a recommended answer. Say **"yes"** to accept them all, or change what you like. Then Claude finds your first prospects and shows you a short list to approve.
-
-That's it. From then on, you just talk to it.
+It is a few minutes the first time. After that you just talk to it.
 
 ---
 
@@ -38,19 +42,19 @@ That's it. From then on, you just talk to it.
 
 | You say | Claude does |
 |---|---|
-| **"Find 10 prospects"** | Searches, checks each one against your rules, shows you a short list with a reason for each |
+| **"Find 10 prospects"** | Searches, checks each one against your rules, shows a short list with a reason for each |
 | **"Go"** | Takes the next approved prospect: shows you the comments it plans to post, then likes their story (when they have one), likes and comments on their latest posts (each comment written about that specific post), and follows them |
-| **"Send"** | Shows you the three-part first message for approval, then sends it one part at a time, like a person |
+| **"Send"** | Shows you the three-part first message for approval, then sends it one part at a time |
 | **"Follow up"** | Writes the day-3 and day-7 follow-ups for people who haven't answered |
 | **"Check replies"** | Reads your inbox, tells you who really replied, and hands the conversation to you |
-| **"Status"** | Today's counts against your limits, and where every prospect stands |
-| **"Stop"** | Stops immediately |
+| **"Schedule"** | Creates a daily schedule in Claude's scheduled tasks. It only does what you've already approved, inside your limits. |
+| **"Status"** / **"Stop"** | Shows today's counts and where everyone stands / stops immediately |
 
-Claude works on **one prospect at a time**, tells you what it did in two lines, and asks before it sends anything.
+**About scheduling.** Claude's [scheduled tasks](https://support.claude.com/en/articles/13854387-schedule-recurring-tasks-in-claude-cowork) that use Chrome run on your computer: it needs to be awake, with Claude Desktop and Chrome open. Claude tells you this before it sets anything up.
 
 ## What the rules are
 
-Claude follows the same rules we learned by running 17 real prospects by hand. The short version:
+Claude follows the rules we learned by running 17 real prospects by hand:
 
 - **Who it picks:** public accounts, 2,000 to 70,000 followers, posting recently, coaches and consultants selling programs online, in English-speaking markets. Never agencies, big brands, competitors, private accounts, or anyone you've told it to skip.
 - **Who it skips:** anyone whose DMs are closed, anyone connected to your team, anyone already messaged by you or a teammate.
@@ -59,13 +63,14 @@ Claude follows the same rules we learned by running 17 real prospects by hand. T
 - **Pace:** slow and human. **5 of each action a day in week one** (5 likes, 5 comments, 5 follows, 5 messages), rising to a steady daily limit by week four, only during your active hours, with pauses between everything.
 - **Safety:** at any Instagram warning, Claude stops and tells you. It never keeps clicking.
 
-Everything is written out in [`phase1/GUIDE-FOR-CLAUDE.md`](phase1/GUIDE-FOR-CLAUDE.md), the file your Claude reads. You never have to.
+It's all written out in [`phase1/GUIDE-FOR-CLAUDE.md`](phase1/GUIDE-FOR-CLAUDE.md), the file your Claude reads. You never have to.
 
 ## Your data stays yours
 
-- Your settings, your lead list and the activity log live in a folder on **your** computer: `~/INFYUM-Phase1/`. (What you type to Claude goes to Anthropic as usual, and searches go to Apify.)
-- **Passwords and tokens are never typed into the chat.** You sign in to Instagram yourself in Chrome. If you use Apify, you save its key into a file yourself; the small search tool reads it to run a capped search.
+- Your lead list lives in **your** Google Sheet in **your** Drive (or, if you skip Google, in your chat). We never see it.
+- **Passwords and keys are never typed into the chat.** You sign in to Instagram, Apify and Google yourself, in your own browser.
 - This repository is **read-only reference material**: nothing here needs editing, and Claude never edits it.
+- What you type to Claude goes to Anthropic as usual, and searches go to Apify.
 
 ## Worth knowing
 
@@ -74,11 +79,12 @@ Liking, commenting, following and messaging automatically can go against Instagr
 ## Questions
 
 **Do I have to be technical?** No. Claude does the clicking and the typing; you approve.
-**Do I need Apify?** No. It saves time and is free to start.
+**Is anything installed on my computer?** Only the Claude in Chrome extension, which you add yourself. The kit itself installs nothing.
+**Do I need Apify or Google Drive?** No, both are optional. Without Apify, Claude searches by hand in Chrome (slower). Without Google, your list stays in the chat.
 **Do I need an Anthropic API key or to pay for anything else?** No.
 **What if Instagram shows a warning?** Claude stops and tells you exactly what it saw. Nothing more happens until you say it's clear.
 **Where does it stop?** At the prospect's first real reply. Booking calls and everything after belong to you.
-**Can my team use it?** Yes. Each person uses their own Claude, Chrome and Instagram account. Give teammates' accounts to each other as "avoid" lists so nobody is contacted twice.
+**Can my team use it?** Yes. Each person uses their own Claude, Chrome and Instagram account. Pick "INFYUM team" at the start and the team's rules (never contact someone a teammate has already worked) are built in. Put everyone's leads in one shared Sheet.
 
 ---
 
@@ -86,7 +92,7 @@ Liking, commenting, following and messaging automatically can go against Instagr
 
 | Path | What it is |
 |---|---|
-| [`phase1/`](phase1/) | **The kit above.** The guide your Claude follows, the INFYUM preset, the files it fills in for you, and the optional Apify search tool. |
+| [`phase1/`](phase1/) | **The kit above.** One file: the guide your Claude follows, including the INFYUM team preset. |
 | [`docs/PHASE-1-LOCK.md`](docs/PHASE-1-LOCK.md) | The locked rules from the hand runs: filters, comment rules, first message, lead columns. |
 | [`docs/APP-SETUP.md`](docs/APP-SETUP.md) | Phase 2: the web app that automates the same process, for people running it on their own computer. |
 | [`docs/BUILD-PLAN-AUDIT.md`](docs/BUILD-PLAN-AUDIT.md) | How far the Phase 2 app is from the build plan. |
