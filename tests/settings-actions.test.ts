@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({ db: null as Db | null }));
 vi.mock("@/lib/db", () => ({ getDb: () => state.db }));
 vi.mock("@/lib/auth/dal", () => ({ requireUser: vi.fn(async () => ({ id: 1, email: "owner@example.test" })) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("server-only", () => ({}));
 
 import { saveTimeZone } from "@/app/(app)/settings/actions";
 

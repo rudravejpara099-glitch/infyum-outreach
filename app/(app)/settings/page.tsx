@@ -6,9 +6,12 @@ import { getSetting } from "@/lib/db/repos/settings";
 import { ActionForm } from "@/components/action-form";
 import { supportedTimeZones } from "./validation";
 import { PageHeader } from "@/components/ui";
+import { GOOGLE_MESSAGES, googleEnabled as googleOn, passwordSignInOff } from "@/lib/auth/google-config";
+import { googleLinkOf } from "@/lib/auth/google-signin";
+import { getIdentityDb } from "@/lib/workspaces/storage";
 import { runMode } from "@/lib/services/run-steps";
 import { saveRunMode } from "../step-actions";
-import { blockHandle, saveApifyCap, saveProspectFilters, saveSafety, saveTimeZone, saveWriting, unblockHandle } from "./actions";
+import { blockHandle, disconnectGoogle, saveApifyCap, savePasswordSignIn, saveProspectFilters, saveSafety, saveTimeZone, saveWriting, unblockHandle } from "./actions";
 import { parseProspectFilters } from "@/lib/domain/prospect-filters";
 import { getWritingReadiness } from "@/lib/services/writing-readiness";
 import { parseSafetySettings } from "@/lib/domain/safety-settings";
@@ -17,8 +20,10 @@ import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
 
-export default async function Settings() {
+export default async function Settings({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
   const user = await requireUser();
+  const { google: googleNote } = await searchParams;
+  const googleLink = googleLinkOf(getIdentityDb(), user.id), googleReady = googleOn(), passwordOff = passwordSignInOff();
   const db = (await getDb());
   const writing = await getWritingReadiness(user.hostChromeAllowed);
   const dnc = listDnc(db);
@@ -87,6 +92,28 @@ export default async function Settings() {
             <div className="w-40"><label className="label" htmlFor="cap">Monthly limit (USD)</label><input id="cap" name="cap" type="number" min={0} step="0.000001" defaultValue={cap ?? ""} className="input" /></div>
             <button className="btn">Save</button>
           </ActionForm>
+        </section>
+
+        <section className="card p-5" id="sign-in">
+          <h2 className="text-base font-semibold">Sign-in</h2>
+          {googleNote && GOOGLE_MESSAGES[googleNote] ? <p role="status" className="mt-2 rounded-xl border border-line bg-bg p-3 text-sm">{GOOGLE_MESSAGES[googleNote]}</p> : null}
+          {!googleReady ? <p className="mt-2 text-sm text-muted">Google sign-in is not set up on this server. The owner adds the Google client details to the server settings to turn it on.</p> : googleLink ? (
+            <div className="mt-2 grid gap-3">
+              <p className="text-sm">Google is connected: <strong>{googleLink.email || "your Google account"}</strong>. You can use <em>Continue with Google</em> on the sign-in page.</p>
+              <ActionForm action={disconnectGoogle}><button className="btn w-fit">Disconnect Google</button></ActionForm>
+              {user.workspaceRole === "owner" && (
+                <ActionForm action={savePasswordSignIn} className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="passwordOff" defaultChecked={passwordOff} /> Turn off email and password sign-in (everyone uses Google)</label>
+                  <button className="btn">Save sign-in</button>
+                </ActionForm>
+              )}
+            </div>
+          ) : (
+            <div className="mt-2 grid gap-2">
+              <p className="text-sm text-muted">Connect your Google account once, while you are signed in here, and you can sign in with one click from then on. Only connected Google accounts can get in; nobody can create an account by signing in with Google.</p>
+              <a href="/api/auth/google/start?intent=link" className="btn btn-primary w-fit">Connect Google</a>
+            </div>
+          )}
         </section>
 
         <section className="card p-5">

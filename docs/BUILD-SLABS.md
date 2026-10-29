@@ -58,11 +58,11 @@ Status key: ✅ done and proven · 🟡 built, not fully proven · ⬜ not start
 **Proof.** Tests with a controlled clock; one live follow-up to the owner's test account.
 **Needs.** Owner approval of the live send.
 
-### Slab 4: Google sign-in
+### Slab 4: Google sign-in 🟡 (built and tested; live sign-in waiting on the owner)
 **Goal.** People sign in with Google, as the document specifies.
 **Acceptance.**
 1. "Sign in with Google" works on the local app; the sign-in screen no longer asks for a password for Google users.
-2. Only Google accounts on the team's allowed list can get in; any other account is refused with a clear message.
+2. Only Google accounts that a team member has connected to their own account from inside the app can get in; any other account is refused with a clear message. (It never matches by email: registration is open and emails are not verified, so email matching would let someone pre-register a victim's address.)
 3. Existing data and workspaces are untouched; the old email-and-password login stays as a break-glass option, switchable off in Settings.
 4. The Google client secret never reaches the browser.
 **Proof.** Tests for the allow-list and the callback (state check, code exchange mocked); one live sign-in with the owner's Google account; one refused sign-in.

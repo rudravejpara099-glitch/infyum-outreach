@@ -11,6 +11,9 @@ import { logActivity } from "@/lib/db/repos/activity";
 import type { ActionResult } from "@/lib/ui/action-result";
 import { handleSchema, validCap, validTimeZone } from "./validation";
 import { filtersFromForm } from "@/lib/domain/prospect-filters";
+import { googleLinkOf, unlinkGoogle } from "@/lib/auth/google-signin";
+import { googleEnabled, passwordSignInOff } from "@/lib/auth/google-config";
+import { getIdentityDb } from "@/lib/workspaces/storage";
 import { safetyFromForm } from "@/lib/domain/safety-settings";
 import { writingFromForm } from "@/lib/domain/writing-settings";
 
@@ -115,4 +118,24 @@ export async function saveSafety(form: FormData): Promise<ActionResult> {
   })) return { error: "Couldn’t save this change. Try again shortly." };
   revalidatePath("/settings");
   return { message: "Daily caps and active hours saved. The worker uses them from its next job." };
+}
+
+export async function disconnectGoogle(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  if (passwordSignInOff()) return { error: "Turn password sign-in back on before disconnecting Google, or you would be locked out." };
+  void form;
+  unlinkGoogle(getIdentityDb(), user.id);
+  revalidatePath("/settings");
+  return { message: "Google disconnected." };
+}
+export async function savePasswordSignIn(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  if (user.workspaceRole !== "owner") return { error: "Only the workspace owner can change how people sign in." };
+  const off = form.get("passwordOff") === "on", identity = getIdentityDb();
+  // Never allow a lock-out: password sign-in can only be turned off when Google works and this person has used it.
+  if (off && !(googleEnabled() && googleLinkOf(identity, user.id))) return { error: "Connect your Google account first, so you can still sign in." };
+  setSetting(identity, "password_sign_in_off", off ? "1" : "0");
+  logActivity(await getDb(form), user.email, "settings.password_sign_in", { detail: off ? "off" : "on" });
+  revalidatePath("/settings");
+  return { message: off ? "Password sign-in is off. People sign in with Google." : "Password sign-in is on." };
 }

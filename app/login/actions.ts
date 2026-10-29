@@ -10,12 +10,14 @@ import { createFirstUser } from "@/lib/auth/first-user";
 import { consumeLoginAttempt, clearLoginAttempts } from "@/lib/auth/login-throttle";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { requireUser } from "@/lib/auth/dal";
+import { passwordSignInOff } from "@/lib/auth/google-config";
 
 type State = { error?: string } | undefined;
 const loginSchema = z.object({ email: z.string().trim().toLowerCase().max(254).email(), password: z.string().min(1).max(256) });
 const setupSchema = z.object({ name: z.string().trim().min(1, "Enter your name.").max(100), email: z.string().trim().toLowerCase().max(254).email(), password: z.string().min(8, "Use at least 8 characters.").max(256) });
 
 export async function login(_: State, form: FormData): Promise<State> {
+  if (passwordSignInOff()) return { error: "Password sign-in is turned off. Use Continue with Google." };
   const parsed = loginSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: "Enter your email and password." };
   const db = getIdentityDb(), attempt = consumeLoginAttempt(db, parsed.data.email);
