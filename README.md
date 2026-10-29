@@ -13,7 +13,7 @@ Nothing to install. No files to download. No account to create with us, and no p
 | What | Why | Cost |
 |---|---|---|
 | **Claude** (desktop app) with the **Claude in Chrome** extension | Claude uses it to see and click in your Chrome, like a person would. Add it from the Chrome Web Store (publisher Anthropic) and sign in. It needs a paid Claude plan. [Anthropic's safety notes](https://support.claude.com/en/articles/12012173-using-claude-in-chrome-safely) | Your Claude plan |
-| **An Instagram account, signed in in that Chrome** | The account the messages come from. A spare account is the safe choice. You sign in yourself; Claude never sees your password. | Free |
+| **An Instagram account, signed in in that Chrome** | The account the messages come from. A spare account is the safe choice. You sign in yourself, **in the Chrome profile that Claude in Chrome is connected to**; Claude never sees your password. | Free |
 
 **2. Paste this into Claude**
 
@@ -29,7 +29,7 @@ and follow it exactly. Tell me up front what I need to do, guide me step by step
 |---|---|
 | **Sign in to Instagram** in Chrome | Checks it worked, asks a few quick questions (each with a recommended answer; say "yes" to accept) |
 | **Connect Apify** (optional): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
-| **Connect Google Drive** (optional): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
+| **Connect Google Sheets** (optional): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
 | Say **"yes"** to a short list of prospects | Checks each one against your rules, then engages and writes the first messages |
 | Say **"yes"** to a message | Sends it, one part at a time, like a person |
 | Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps going every day within your limits |
@@ -80,7 +80,7 @@ Liking, commenting, following and messaging automatically can go against Instagr
 
 **Do I have to be technical?** No. Claude does the clicking and the typing; you approve.
 **Is anything installed on my computer?** Only the Claude in Chrome extension, which you add yourself. The kit itself installs nothing.
-**Do I need Apify or Google Drive?** No, both are optional. Without Apify, Claude searches by hand in Chrome (slower). Without Google, your list stays in the chat.
+**Do I need Apify or Google Sheets?** No, both are optional. Without Apify, Claude searches by hand in Chrome (slower). Without Google, your list stays in the chat.
 **Do I need an Anthropic API key or to pay for anything else?** No.
 **What if Instagram shows a warning?** Claude stops and tells you exactly what it saw. Nothing more happens until you say it's clear.
 **Where does it stop?** At the prospect's first real reply. Booking calls and everything after belong to you.

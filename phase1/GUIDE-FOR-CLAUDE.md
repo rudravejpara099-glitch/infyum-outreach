@@ -34,8 +34,10 @@ You need **browser control of the user's own Chrome** (the Claude in Chrome exte
 - Some setups load the Chrome tools only on demand: check that first and enable the Chrome integration if your app has one.
 
 Then note, without asking, which of these you have (each one only makes things nicer; none is required to start):
-- **An Apify connector** (find prospects automatically). If not, you find prospects in the browser (4.1b).
-- **A way to keep the lead list**: the Google Drive/Sheets connector (best), or file access, or neither (then keep it in this chat; see 2.5).
+- **Apify tools** (find prospects automatically).
+- **Google Sheets tools** (keep the lead list; best), or file access, or neither (then keep it in this chat; see 2.5).
+
+**Not having a tool does NOT mean it is unavailable. It usually means it is not connected yet.** Never conclude "no Apify here" or "no Sheets here" and move on. Offer to connect it, and make it a button: search the connector directory with whatever connector-search tool you have and show the user its **Connect** card; if you have no such tool, send them to **Settings → Connectors**. They sign in to the service in their own browser, click Allow, and tell you "connected". Then check the tools appeared (load them if they are deferred). Note that **Google Drive and Google Sheets are separate connectors**: Drive can create a file but cannot edit it afterwards, so for the lead list you need **Google Sheets**.
 - **Scheduled tasks** (Claude's built-in feature for recurring work). If not, the user simply says "go" each day.
 - **A clock.** If you cannot tell the real date and time, ask the user at the start of every session.
 - **Web access to read this kit's other pages.** If you cannot fetch a link, open it in Chrome and read it there.
@@ -55,16 +57,16 @@ Do this when you cannot find the user's outreach Sheet or settings (section 2.5)
 > Everything else I do. Shall we start?"
 
 ### 2.2 Instagram sign-in (the user does this part)
-1. Open `https://www.instagram.com/` in Chrome.
-2. If you see a login page, tell the user: "Please sign in to the Instagram account you want to use for outreach. I won't see or touch your password. Say 'done' when you're in." Wait.
-3. When signed in, read which account it is (the profile link in the left menu). Confirm: "I see you're signed in as @name. Use this account for outreach?"
+1. Open `https://www.instagram.com/` in the Chrome window you control.
+2. If you see a login page, tell the user: "Please sign in to the Instagram account you want to use for outreach, **in the Chrome window I just opened** (it is the one I can control). I won't see or touch your password. Say 'done' when you're in." If they say they are already signed in somewhere else, they are in a **different Chrome profile**: you can only use the profile where Claude in Chrome is connected. Offer the two ways forward and let them pick: sign in to Instagram in the connected profile (quickest), or install Claude in Chrome in the other profile, sign in to it with the same Claude account, keep that window open, and you reconnect. Check which browsers you can reach with your browser-list tool before you ask them to do anything.
+3. When signed in, open the account's own profile page and **read the username from the address (`instagram.com/<username>/`), not from small text on the page**: small text is easy to misread. Confirm: "I see you're signed in as @name. Use this account for outreach?"
 
 ### 2.3 The questions round (one message; recommended answer under each; "yes" accepts all)
 **First, one question that decides the rest: "Is this for the INFYUM team, or for your own business?"**
 - **INFYUM team:** use Appendix A. Those values replace questions 2, 4, 5 and 6 and the "where you're based" part of question 3. Show them in plain words and ask only for the rest (questions 1, the time zone, 7 to 11), and apply the team rules in the appendix.
 - **Their own business:** ask all of the questions below.
 
-Ask in one message, grouped under three headings, with defaults filled in from what you already know:
+Ask in one message, grouped under three headings, with defaults filled in from what you already know. Say at the top: "Type your first name; for everything else, 'yes' accepts my recommendation." (Question 1 has no default, so 'yes' alone cannot answer it. If they answer 'yes' to everything, ask for the name on its own.)
 
 **About you**
 1. **Your first name** (used to sign the messages).
@@ -81,19 +83,18 @@ Ask in one message, grouped under three headings, with defaults filled in from w
 8. **Is the Instagram account you signed in with a spare/new one, or an established one?** Recommended: spare. Say honestly, in one sentence, that automated-style activity can get any account restricted, so the main account is better left out. Do not lecture.
 9. **Pace.** Recommended: the start-up pace from today (section 6). If the account is established and the user wants to go faster, you may start at week 2 (10 of each action a day) but never above the limits in section 6.
 10. **Comments.** Recommended: "Show me the comments I plan to post (a batch per prospect) and wait for your OK" (the alternative, needed for fully unattended scheduled runs: post comments that follow the rules without asking; first messages are always shown first).
-11. **How to find prospects.** Recommended: Apify (section 2.4); otherwise from seed accounts or hashtags the user names, or "you choose from my niche".
+11. **How to find prospects.** Recommended: **connect Apify now** (section 2.4; one sign-in, I'll show you a button). The alternative is searching by hand in Chrome from seed accounts or hashtags they name, or from their niche. Slower.
 
-### 2.4 Apify (optional, strongly recommended: finds prospects for you)
-Say it in one line: "Apify is a free service that searches Instagram for me; you just sign in to it once, and the free plan includes about $5 of credit a month, which is plenty."
-If you do not already have Apify tools, guide the user (it is their account, they do the sign-in):
-1. In Claude, open **Settings → Connectors**, find **Apify** (or add a custom connector with the address `https://mcp.apify.com?tools=apify/instagram-search-scraper`), and click **Connect**.
-2. A browser window opens for Apify. They sign in (or create a free account) and click **Allow**. There is no key to copy.
-3. Test with one tiny search: "business coach", 5 results. If it works you will get usernames, follower counts and bios. Follower counts may be empty; check them on the profile.
-If the connector is not available in their Claude, or they decline, that is fine: use 4.1b.
+### 2.4 Apify (strongly recommended: finds prospects for you; always ask, never skip)
+Ask this as its own step, whatever tools you currently have: "Want me to find prospects automatically? It uses Apify, a free service (about $5 of free credit a month, which is plenty). You sign in to it once; there is no key to copy. Connect it now?" Recommended answer: yes.
+- **If yes, and you already have Apify tools:** go straight to the test below.
+- **If yes, and you do not have them (the usual case):** show the **Connect** card for Apify (see section 1; if there is no card, the address to add as a custom connector is `https://mcp.apify.com?tools=apify/instagram-search-scraper`, under **Settings → Connectors**). The user signs in to Apify (or makes a free account) in their browser and clicks **Allow**. Wait for "connected", then load the tools.
+- **Test with one tiny search:** "business coach", 5 results. If it works you get usernames, follower counts and bios (follower counts may be empty; check them on the profile).
+- **If no, or it will not connect after one honest try:** fine. Say "No problem, I'll search by hand in Chrome (slower)" and use 4.1b. You can offer Apify again later.
 
 ### 2.5 Where you keep the lead list (one place, so nothing is lost)
 Pick the first that works and tell the user in one line where it lives:
-1. **A Google Sheet** (best; also lets a team share one list). If you have the Google Drive/Sheets connector, create a Sheet named **"INFYUM Outreach"** in the user's Drive with the tabs and columns in section 5, fill the **Settings** tab from the answers, and tell the user where it is. If they do not have the connector, offer to guide them to connect it (**Settings → Connectors → Google Drive**), or use option 2.
+1. **A Google Sheet** (best; also lets a team share one list). If you have Google **Sheets** tools (not only Drive), create a Sheet named **"INFYUM Outreach"** in the user's Drive with the tabs and columns in section 5, fill the **Settings** tab from the answers, and tell the user where it is (link it). If you do not have them, **offer to connect Google Sheets as a button** (section 1: show its Connect card) before falling back. Only use option 2 if they decline or it will not connect.
 2. **One file** in a folder the user chooses (for example `leads.csv` plus a short settings note), if you have file access. Ask which folder; do not create anything elsewhere.
 3. **This chat only.** Say plainly: "I can't save anything outside this chat, so at the start of each new session paste my last summary back to me." Scheduling is not possible this way. **If you do not know today's counts against the limits (new chat, no summary), do not engage or send: find and qualify only.**
 Every session, read the Sheet (or file) first, silently: Settings, Leads, Do-not-contact, and the last lines of the Activity Log.
