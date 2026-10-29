@@ -31,10 +31,10 @@ and follow it exactly. Tell me up front what I need to do, guide me step by step
 | **Connect Apify** (optional): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
 | **Connect Google Sheets** (optional): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
 | Say **"yes"** to a short list of prospects | Checks each one against your rules, then engages and writes the first messages |
-| Say **"yes"** to a message | Sends it, one part at a time, like a person |
+| Say **"yes"** to the batch of messages | Sends them, one part at a time, like a person |
 | Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps going every day within your limits |
 
-It is a few minutes the first time. After that you just talk to it.
+It is a few minutes the first time. After that you just talk to it. **Claude only asks you about the things that matter**: the list of prospects, and the first messages, in batches. It never asks about each like or comment.
 
 ---
 
@@ -43,8 +43,8 @@ It is a few minutes the first time. After that you just talk to it.
 | You say | Claude does |
 |---|---|
 | **"Find 10 prospects"** | Searches, checks each one against your rules, shows a short list with a reason for each |
-| **"Go"** | Takes the next approved prospect: shows you the comments it plans to post, then likes their story (when they have one), likes and comments on their latest posts (each comment written about that specific post), and follows them |
-| **"Send"** | Shows you the three-part first message for approval, then sends it one part at a time |
+| **"Go"** | Takes the next approved prospect and does the whole engagement without asking: likes their story (when they have one), likes and comments on their latest posts (each comment written about that specific post), and follows them. You see the first prospect's comments once, to check the style. |
+| **"Send"** | Shows you every first message in one table. You say yes (or edit or skip), and it sends them, one part at a time like a person |
 | **"Follow up"** | Writes the day-3 and day-7 follow-ups for people who haven't answered |
 | **"Check replies"** | Reads your inbox, tells you who really replied, and hands the conversation to you |
 | **"Schedule"** | Creates a daily schedule in Claude's scheduled tasks. It only does what you've already approved, inside your limits. |
