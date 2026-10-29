@@ -51,7 +51,7 @@ let serverOutput = "";
 const startServer = (build: IsolatedNextBuild, apifyToken = "") => {
   serverOutput = "";
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], {
-    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
+    env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, APIFY_TOKEN: apifyToken, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4000); };

@@ -1,3 +1,5 @@
+> **Status note, 2026-10-29:** this is the original line-by-line gap list from 2026-10-28. Current status and the work order live in [`BUILD-SLABS.md`](BUILD-SLABS.md).
+
 # Build plan audit
 
 Each line of "INFYUM Instagram Outreach: Architecture and Build Plan" (Sunil, 27 Oct 2026) checked against the code. "Matches" means the code was read and a test covers it. "Not run live" means it exists but has never been run against real Instagram or a real Apify token.
