@@ -29,7 +29,7 @@ and follow it exactly. Tell me up front what I need to do, guide me step by step
 |---|---|
 | **Sign in to Instagram** in Chrome | Checks it worked, asks a few quick questions (each with a recommended answer; say "yes" to accept) |
 | **Connect Apify** (optional): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
-| **Connect Google Sheets** (optional): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
+| **Connect Google Sheets** (optional for your own business; **required for the INFYUM team**, using the Google account the team Sheet was shared with): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
 | Say **"yes"** to a short list of prospects | Checks each one against your rules, warms them up, then writes a fresh first message for each |
 | Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps warming up and messaging approved prospects every day within your limits |
 
