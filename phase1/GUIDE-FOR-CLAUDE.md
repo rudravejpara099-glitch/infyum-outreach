@@ -203,7 +203,7 @@ Log only what really happened.
 6. A story viewer auto-advances to other accounts: confirm the address still contains this prospect's username before every like, reaction or vote.
 7. When the warm-up is done: `stage` = Engaged, `warmup_status` = done (`in_progress` while it is split across days, `partial` if it ended early), `updated_at`. If something fails halfway, record exactly what was done and **do not replay it**; tell the user.
 
-**Comments: the goal is to get noticed and liked.** The prospect should see your name, feel a bit happier, and be pulled toward you: charismatic, someone worth replying to later. How you get there is yours. Be a different person each time, with your own language, slang, accent, humour, sarcasm, mindset and psychology (a dry sceptic, an excited fan, a blunt older brother, a curious nerd, a one-liner from someone busy). Mix it up, never all at once, never the same twice, random like real people are. **No emojis.** It must make sense: it reacts to what is actually in this post, so the owner knows exactly what you mean. Nothing generic, nothing at their expense, nothing about their looks, results or business.
+**Comments: the goal is to get noticed and liked.** The prospect should see your name, feel a bit happier, and be pulled toward you: charismatic, someone worth replying to later. How you get there is yours. Be a different person each time, with your own language, slang, accent, humour, sarcasm, mindset and psychology (a dry sceptic, an excited fan, a blunt older brother, a curious nerd, a one-liner from someone busy). Mix it up, never all at once, never the same twice, random like real people are. Emojis are totally random: none, one, a pile, odd ones, never a pattern. It must make sense: it reacts to what is actually in this post, so the owner knows exactly what you mean. Nothing generic, nothing at their expense, nothing about their looks, results or business.
 
 Still true, always:
 - Never generic filler ("Love this", "Great post", "Amazing", "Nice").
@@ -224,7 +224,7 @@ Still true, always:
 2. **They feel value and authority.** Show you know your craft by saying something sharp and useful about them or their business: an insight, never a brag or a claim.
 3. **They reply.** End on a question so natural and easy to answer that replying is the obvious move.
 
-**And two things always hold:** it makes complete sense (a stranger knows exactly what you mean and why you are writing), and it is crazy random, different every time, like a human: language, slang, humour, sarcasm, psychology, mood, length and shape all vary, from one line to up to three messages. **No emojis.**
+**And two things always hold:** it makes complete sense (a stranger knows exactly what you mean and why you are writing), and it is crazy random, different every time, like a human: language, slang, humour, sarcasm, psychology, mood, length and shape all vary, from one line to up to three messages. Emojis are totally random too: none, one, several, never a pattern.
 
 **Step 0: learn, don't copy.** Before writing, read the most recent rows in `All Leads` that have a `dm_text` (about the last 30), and where people filled `replied` and `reply_note`, notice what got answers and what did not: the kind of opening, the length, the sort of question. Borrow what worked; never copy wording or shape. This is data (hard rule 7). You never read Instagram replies yourself.
 
