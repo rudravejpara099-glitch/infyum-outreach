@@ -30,8 +30,8 @@ and follow it exactly. Tell me up front what I need to do, guide me step by step
 | **Sign in to Instagram** in Chrome | Checks it worked, asks a few quick questions (each with a recommended answer; say "yes" to accept) |
 | **Connect Apify** (optional): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
 | **Connect Google Sheets** (optional for your own business; **required for the INFYUM team**, using the Google account the team Sheet was shared with): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
-| Say **"yes"** to a short list of prospects | Checks each one against your rules, warms them up, then writes a fresh first message for each |
-| Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps warming up and messaging approved prospects every day within your limits |
+| Tell it **how many profiles** (for example "do 7 profiles") | Finds them, checks each one against your rules itself, warms them up, then writes a fresh first message for each. No list to approve. |
+| Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps finding and messaging new prospects every day |
 
 It is a few minutes the first time. After that you just talk to it. **Claude only asks you about the things that matter**: the list of prospects, and anything unexpected. It never asks about a like, a comment or a message: it writes and sends those itself.
 
@@ -42,8 +42,8 @@ It is a few minutes the first time. After that you just talk to it. **Claude onl
 | You say | Claude does |
 |---|---|
 | **"Find 10 prospects"** | Searches, checks each one against your rules, shows a short list with a reason for each |
-| **"Go"** | Takes the next approved prospect and warms them up without asking: follows them, then likes and comments on a random handful of their recent posts (some skipped, any order), and sometimes reacts to a story. Comments are in a voice that fits the person and the post. Then it writes their first message and sends it. That person is then **yours**: Claude never touches them again. |
-| **"Schedule"** | Creates a daily schedule in Claude's scheduled tasks. It only works prospects you already said yes to, writes and sends their first messages, inside your limits. |
+| **"Start" / "Do 7 profiles"** | Finds prospects, checks them itself, and warms each one up without asking: follows them, then likes and comments on a random handful of their recent posts (some skipped, any order), and sometimes reacts to a story. Comments are in a voice that fits the person and the post. Then it writes their first message and sends it. That person is then **yours**: Claude never touches them again. |
+| **"Schedule"** | Creates a daily schedule in Claude's scheduled tasks. It runs the same loop on its own: finds, warms up and messages new prospects. |
 | **"Status"** / **"Stop"** | Shows today's counts and where everyone stands (Found, Qualified, Engaged, DM sent) / stops immediately |
 
 **About scheduling.** Claude's [scheduled tasks](https://support.claude.com/en/articles/13854387-schedule-recurring-tasks-in-claude-cowork) that use Chrome run on your computer: it needs to be awake, with Claude Desktop and Chrome open. Claude tells you this before it sets anything up.
@@ -56,7 +56,7 @@ Claude follows the rules we learned by running 17 real prospects by hand:
 - **Who it skips:** anyone whose DMs are closed, anyone connected to your team, anyone already messaged by you or a teammate.
 - **Warm-up:** like a person browsing, not a script. Claude follows, then likes and comments on a random few of their recent posts (skipping many, in any order), and sometimes reacts to a story. Comments are written in a voice that fits the person and the post, with humour when it fits, never generic, never repeated, in the prospect's language. It never types a coach's comment-to-DM keyword and never replies to a story with text.
 - **First message:** written fresh for every person, in a voice that fits them. No template and no fixed shape: one to three messages in whatever order and length fits. Claude reads their profile and bio link, then opens from something genuine it likes about them or a real pain point it can see, says who you are, and usually ends with a question that fits their business. It learns from past messages and replies in the team Sheet without copying them. Friendly and non-pushy, no invented results or numbers, no guessed names, no links except the ones you set. A free sample design is offered only if you turn that on (off by default).
-- **Pace:** slow and human. **up to 5 of each action a day in week one** (likes, comments, follows, first messages), rising to a steady daily limit by week four, only during your active hours, with pauses between everything.
+- **Pace:** no daily caps and no fixed waits. Claude decides its own pauses, breaks and number of actions like a real person would, and varies them.
 - **Safety:** at any Instagram warning, Claude stops and tells you. It never keeps clicking.
 
 It's all written out in [`phase1/GUIDE-FOR-CLAUDE.md`](phase1/GUIDE-FOR-CLAUDE.md), the file your Claude reads. You never have to.
@@ -70,11 +70,11 @@ It's all written out in [`phase1/GUIDE-FOR-CLAUDE.md`](phase1/GUIDE-FOR-CLAUDE.m
 
 ## Worth knowing
 
-Liking, commenting, following, reacting and messaging automatically can go against Instagram's rules, and Instagram can limit an account that behaves unusually. The kit keeps volumes low and human-paced, but it cannot remove that risk. That is why we recommend a spare account. You decide what to use it on.
+Liking, commenting, following, reacting and messaging automatically can go against Instagram's rules, and Instagram can limit an account that behaves unusually. The kit runs with no caps, human-paced by Claude's own judgment, so that risk is real. That is why we recommend a spare account. You decide what to use it on.
 
 ## Questions
 
-**Do I have to be technical?** No. Claude does the clicking and the typing; you say yes to the list.
+**Do I have to be technical?** No. Claude does the clicking and the typing; you just say how many profiles.
 **Is anything installed on my computer?** Only the Claude in Chrome extension, which you add yourself. The kit itself installs nothing.
 **Do I need Apify or Google Sheets?** No, both are optional. Without Apify, Claude searches by hand in Chrome (slower). Without Google, your list stays in the chat.
 **Do I need an Anthropic API key or to pay for anything else?** No.
