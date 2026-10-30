@@ -30,11 +30,11 @@ These are the rules the checklist did not have before.
 4. **Never type a comment keyword.** Many coaches run comment-to-DM bots ("Comment FUNDING"). Typing the keyword triggers their bot. Comment about the post instead.
 5. **Comment in their language.** Russian, Spanish and French accounts got comments in their own language.
 6. **Look at the post, not just the caption.** The picture, reel or carousel decides the comment. Caption-only comments came out generic.
-7. **Always comment.** Including faith, politics and sad posts, with a respectful tone. No like-only posts.
+7. **Comments are the person's own voice, not a quota (updated 29 Oct 2026).** Some posts get a comment, some only a like. On faith, politics, grief and sad posts: a like, or one plain line of warmth, and no joke.
 8. **Never repeat a comment.** No generic openers (Love this, Great, Nice), no repeated wording across a prospect's posts, and every comment is logged.
 9. **One real detail goes in the DM.** From their bio link (a Linktree, a form or a landing page) or their posts. Never "I reviewed your link". The link is now read first and summed up in a one line funnel note.
 10. **Check the chat before the first DM.** If our name or link is already in it, do not send.
-11. **The first contact is three messages, written fresh each time.** Never a single message, never a fixed template, and checked against the last 10 first DMs for shape, not only openings.
+11. **The first contact is written fresh each time, with no fixed shape (updated 29 Oct 2026).** It is one to three messages in a voice that fits the person, never a fixed template, and checked against the last 10 first DMs for shape, not only openings. The goal is a reply that leads to a booked call with our closer.
 
 ## Locked filters (Settings, Prospect filters)
 
@@ -54,40 +54,31 @@ Open points:
 - The team's outreach guide prefers 10,000 to 30,000 followers and allows 80,000 to 150,000. The kit keeps 2,000 to 70,000 as the hard filter, uses 10,000 to 30,000 only to order the shortlist, and offers up to 150,000 as a setting. The owner decides whether to change the hard range.
 - The guide's comments like "Well explained" are generic openers; the kit still requires a named detail.
 
-## Locked warm-up
+## Locked warm-up, comments and first DM (rewritten 29 Oct 2026: human, free-form, no approval)
 
-In order: follow; like and comment on the pinned post; the story (like, one emoji reaction, a poll vote if there is one; no text replies); comments and likes on the newest posts (up to 5); up to 3 extra likes. At most 1 follow, 12 likes, 6 comments per prospect, cut down to whatever room is left today. A story like, reaction or poll vote counts as a like. Reels may get a small question about the content, carousels a short remark that names the slide. Resharing on our story is not done by Claude. Goal: get noticed and become familiar before the first message.
+The earlier fixed sequence (follow, pinned post, story, newest 5 posts), the 3 to 8 word comment rule and the three-message first DM with worked examples and a hook formula are retired. They produced a recognisable pattern. The Phase 1 guide (`phase1/GUIDE-FOR-CLAUDE.md`, sections 4.3 and 4.4) describes goals and hard limits only; Claude chooses everything else per person, and nothing is shown to the user for approval except the prospect shortlist.
 
-## Locked comment rules
+**Warm-up.** Claude looks at the profile like a person, then decides freshly: whether and when to follow; which posts to touch (random picks from roughly the newest 12, any order, many skipped, the pinned post optional); like only, comment only, both or nothing per post (more likes than comments); the story sometimes (like, emoji or poll vote, never a text reply); uneven pauses; the number of actions varies from visit to visit and day to day, and a visit may be split across the day. Daily limits per action type still apply; if room is short it does less, never more.
 
-3 to 8 words plus 1 to 3 emojis. About something visible in this post. No dashes, hashtags, links or business questions (a small question about the content is allowed, at most two per prospect). Never start with a generic opener. Never reuse earlier wording. Their language. Always comment, except grief, death, elections and conflicts you cannot word safely (like only).
+**Comments.** A voice chosen per person and post (playful, dry, warm, nerdy, blunt, deadpan), humour welcome when the post invites it and never at the person's expense. Any length a real person would type, no emoji quota. Never generic filler, never repeated wording (checked against the Activity Log), their language, no links, hashtags, long dashes, pitching or business questions, and never a comment keyword. Grief, death, illness, elections and conflict: like only or one plain line of warmth. Posted without asking; the exact text is logged in the Activity Log before posting.
 
-## Locked first DM
+**First DM.** Written fresh by Claude's own judgment, one to three messages, any order, any length, no template. Claude first learns from recent rows in the Sheet (`dm_text`, and where people filled them `replied` and `reply_note`) and borrows what worked without copying wording. It opens from something genuine it appreciates about the person (a goal, a result, a cause) or a real pain point it can see, and usually ends with a question that fits their business. Required: one true specific detail, who we are in natural words (facts as in Settings), and a light reason to reply. Optional: our portfolio link, and one work sample near their niche when Settings has one (never more than two links, always as saved). One outcome question is allowed ("would more booked calls from Instagram be useful?") but never invented numbers, promised results or timeframes. Never a pitch, a call request, guilt, pressure, invented facts, a guessed name or any link not in Settings. Before sending, Claude silently asks whether a real person who looked at this account would send it, rewrites if not, and checks the last 10 first DMs so each reads as written by a different person. It checks the chat first (never message someone already contacted), writes the full text into `dm_text` and logs it before sending, and sends one part at a time with varied pauses. There is no approval step. The free sample design is offered only when `free_sample_offer` is on in Settings.
 
-Exactly three separate messages, written fresh for every person, never a template, sent one at a time with a pause, each confirmed in the chat before the next. Before drafting, the bio link is read (read only) and summed up in one line (`funnel_note`: what they sell, their offer, where the link leads).
+## Locked lead record (the team Sheet, updated 29 Oct 2026)
 
-1. We looked: one true, specific detail, tied to engagement they have already seen from us where true.
-2. Who we are in natural words (the sender's first name, Infyum, a funnel team from India), plus the one allowed link, once, exactly as saved.
-3. A light curiosity hook or low pressure question, written fresh for this person. The team's own hook works because the link is relevant to the reader's world and the line invites a click; the mechanism is copied, never the sentence.
+The team Sheet "INFYUM Outreach Database" is the single store for the team. Tabs: Start here, Today, All Leads (formula), Leads_<Name> (one per person), Activity Log (add-only), Team, plus hidden Settings and Leads_Template. There are no Claims, Do-not-contact, Waiting or Checks tabs.
 
-Styles: soft (default), or professional (specific praise, who we are, one free sample design). Professional is only for strong fits and only when the free sample offer is ON in Settings (default OFF). No company facts (years, team size) unless listed as approved in Settings.
+| Tab | Columns |
+| --- | --- |
+| Leads_<Name> | member, username, profile_url, niche, followers, fit, stage, skip_reason, source, warmup_status, dm_sent_at, dm_text, notes, updated_at, claimed_at, replied, reply_note |
+| Activity Log | date, time, member, username, action, result, detail |
+| Team | member, ig_username, status, start_date, time_zone, utc_offset_hours, then formulas: local_date, day_number, limits, used, left |
 
-Rules: each message under about 380 characters; no dashes, no hashtags; no invented results, prices, names or facts; never guess a first name; one link only; their language; at most one emoji in a whole first message and usually none; check the chat before sending; compare with the last 10 first DMs (structure, rhythm, sentence shapes, the hook, order of ideas) and rewrite if too close. The local writer's drafts were weak (for example "I reviewed your link"), so every DM is read and fixed before sending. The Phase 2 prompt wording in `lib/engine/prompts.ts` (and its configurable default text) has not been updated to this design: it only compares against recent openings, and it has no funnel note, no styles and no 10 message shape check.
+`replied` and `reply_note` are filled by people only; Claude never writes them and never reads Instagram replies. The one-line funnel note goes in `notes` as `funnel: …`.
 
-## Locked lead record (sheet columns)
+Duplicates: before acting, look the username up in All Leads; add my row first; look it up again; if it appears twice, the later claim (by `claimed_at`, then position in All Leads) backs off as Skipped with note `duplicate`. "Do not contact" is a Skipped row with that note.
 
-Same groups as the plan. The app stores these in its database today and the Sheet becomes the synced view in plan step 6.
-
-| Group | Fields | In the app now |
-| --- | --- | --- |
-| Identity | Username (unique key), name, profile URL, niche, followers | `leads.handle`, `niche`, `followers` |
-| Qualification | Engagement rate, last post date, bio link, fit score, source | `fit_score`, `fit_reason`, `source`; bio link and engagement still to capture |
-| Engagement | Actions done, comment text, date and time | Activity log (`warmup.comment`, `lead.warmed_up`) |
-| First message | Funnel note, DM style (soft or professional), DM text, date and time sent | `messages` (funnel note and style to add) |
-| Pipeline | Stage, notes | `stage`, `skip_reason`, `notes` |
-| New from the hand runs | DMs possible (yes or no), connected to Infyum (yes or no), bio link used in the DM | to add |
-
-Stages: Found, Qualified, Engaged (Warmed), DM sent. `DM sent` is the end of Phase 1. Skipped carries a reason. Reply status, follow-up and later stages were removed from Phase 1; the Phase 2 app still has fields for them, which Phase 1 does not use.
+Stages: Found, Qualified, Engaged, DM sent, Skipped. `DM sent` is the end of Phase 1. Reply status, follow-up and later stages are out of scope; the Phase 2 app still has fields for them, which Phase 1 does not use.
 
 ## Next: build plan step 2 (Foundation)
 
@@ -100,4 +91,4 @@ What each item needs, and who can do it.
 | Anthropic API key | Needed for metered Claude writing. Today the local writer is used and costs nothing | Owner |
 | Google service account and Sheet | Needed for the Sheet sync | Owner creates the account and shares the Sheet |
 | Google sign-in | Needed. The app has email and password login today | Owner creates the OAuth client |
-| Sheet template | Columns locked above | Can be built once the Google account exists |
+| Sheet template | Built: the team Sheet above | Done |
