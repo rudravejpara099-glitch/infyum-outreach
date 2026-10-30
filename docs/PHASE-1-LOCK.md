@@ -5,7 +5,7 @@ Build plan step 1 from the Architecture and Build Plan: run real profiles by han
 ## Scope and source (updated 29 Oct 2026)
 
 - **Phase 1 ends after the first DM.** A human takes over once the first message is sent. The kit does not read replies, follow up, or track replies, and it never touches a person again after the first message. Stages end at `DM sent`.
-- **Golden source for the process and the first message ideas:** the Google Doc "Outreach Process by Dhrumit Kumbhani" in INFYUM's Drive (nine steps: find, qualify, warm up, analyse the funnel, soft first message, professional alternative, free value, optional visibility, stay friendly). Where it differs from the hand-run rules below, the differences are listed under "Open points".
+- **Background only (not a procedure to follow):** the Google Doc "Outreach Process by Dhrumit Kumbhani" in INFYUM's Drive (nine steps: find, qualify, warm up, analyse the funnel, soft first message, professional alternative, free value, optional visibility, stay friendly). Where it differs from the hand-run rules below, the differences are listed under "Open points".
 
 ## What we ran
 
