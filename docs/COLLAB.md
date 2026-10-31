@@ -1579,3 +1579,10 @@ NOT verified: a live Instagram run; real output quality at volume; two teammates
 Decisions made: shortlist yes kept; no sheet URL in the public repo (Claude finds the Sheet by title); funnel note goes in `notes` as `funnel: …`; follows and likes are logged after confirmation, comments and DMs before.
 Needs from you: delete the two "TEST COPY - delete me" files in Drive; review the samples; merge to `main` only when ready.
 Next I will: nothing until told.
+
+### [2026-10-31] Claude #10: Phase 1 kit: Apify required, 35/day aim, INFYUM follower check, carousel rule
+Changed on branch `kit/no-limits-apify` (from `origin/main` at #94, not merged): `phase1/GUIDE-FOR-CLAUDE.md`, `README.md`, `docs/PHASE-1-LOCK.md`. Apify is now required (no hand search; 2.4, 4.1, section 1); the aim is 35 first messages a day per user, a target and not a cap (section 3 default N, section 6, scheduled prompt); new qualify step 11: skip anyone with "infyum" in their followers or following (search both lists) or a team account in "Followed by"; a carousel must be gone through slide by slide before liking, commenting or using it; after a warm-up wait a short human moment (a few minutes) before the DM, never hours or the next day; the one link is https://portfolio.infyum.com. Comment and DM sections (4.3, 4.4) left exactly as on `main`. The team Sheet's Settings `the_one_link` was changed to https://portfolio.infyum.com.
+Verified: the edits applied cleanly on `main`'s guide; no leftover limit, optional-Apify or by-hand wording found by grep.
+NOT verified: a live run with the new rules (a first test run on `timelessmoments.al` was stopped by the owner after one follow, two likes and one comment on `zac_spencer`, no DM; a second run has not started); Apify is not connected in this session, so the Apify-only search path is untested; the Sheet's Team limit columns and `dms_hard_ceiling_per_day` still exist but the guide ignores them. My earlier branch `human-voice-phase1` is superseded by #88 to #94 and was not used.
+Needs from you: merge when ready; connect Apify before the next run.
+Next I will: nothing until told.

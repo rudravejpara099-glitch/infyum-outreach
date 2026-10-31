@@ -48,6 +48,9 @@ These are the rules the checklist did not have before.
 | Fit score gate | Off by default, editable | Built in Phase 2 |
 | Exclusions | Private accounts, agencies and competitors, large brands, do-not-contact list, anyone already in the lead list | Plan, plus rules 1 to 3 above |
 | Market | English-speaking, ideally US, UK, Canada, Australia | Plan |
+| Not connected to INFYUM | No account with "infyum" in the prospect's followers or following (searched in both lists), and no team account in the "Followed by" line | Owner, 31 Oct 2026 |
+| Finding prospects | Apify only (required); Instagram in Chrome is for checking and warming up | Owner, 31 Oct 2026 |
+| Volume | No daily limits. The aim is 35 first messages a day per user, a target not a cap | Owner, 31 Oct 2026 |
 
 Open points:
 - The app's older default was 2,000 to 150,000 followers and a United States check. The plan says 2,000 to 70,000. The Settings default is now the plan's value.

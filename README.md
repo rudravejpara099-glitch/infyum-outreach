@@ -28,7 +28,7 @@ and follow it exactly. Tell me up front what I need to do, guide me step by step
 | You | Claude |
 |---|---|
 | **Sign in to Instagram** in Chrome | Checks it worked, asks a few quick questions (each with a recommended answer; say "yes" to accept) |
-| **Connect Apify** (optional): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
+| **Connect Apify** (required): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
 | **Connect Google Sheets** (optional for your own business; **required for the INFYUM team**, using the Google account the team Sheet was shared with): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
 | Tell it **how many profiles** (for example "do 7 profiles") | Finds them, checks each one against your rules itself, warms them up, then writes a fresh first message for each. No list to approve. |
 | Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps finding and messaging new prospects every day |
@@ -56,7 +56,9 @@ Claude follows the rules we learned by running 17 real prospects by hand:
 - **Who it skips:** anyone whose DMs are closed, anyone connected to your team, anyone already messaged by you or a teammate.
 - **Warm-up:** like a person browsing, not a script. Claude follows, then likes and comments on a random few of their recent posts (skipping many, in any order), and sometimes reacts to a story. Comments are written in a voice that fits the person and the post, with humour when it fits, never generic, never repeated, in the prospect's language. It never types a coach's comment-to-DM keyword and never replies to a story with text.
 - **First message:** written fresh for every person, in a voice that fits them. No template and no fixed shape: one to three messages in whatever order and length fits. Claude reads their profile and bio link, then opens from something genuine it likes about them or a real pain point it can see, says who you are, and usually ends with a question that fits their business. It learns from past messages and replies in the team Sheet without copying them. Friendly and non-pushy, no invented results or numbers, no guessed names, no links except the ones you set. A free sample design is offered only if you turn that on (off by default).
-- **Pace:** no daily caps and no fixed waits. Claude decides its own pauses, breaks and number of actions like a real person would, and varies them.
+- **Aim:** 35 first messages a day per person. It is a target, not a cap.
+- **Who it skips, also:** anyone with INFYUM in their followers or following.
+- **Pace:** no daily caps and no long waits. Claude decides its own pauses, breaks and number of actions like a real person would, and varies them. It only pauses a short, human moment between finishing a warm-up and sending the first message.
 - **Warnings:** Instagram blocks and warnings are logged and worked around; Claude does not stop for them. It only stops if it is signed out or Instagram asks you to verify your identity.
 
 It's all written out in [`phase1/GUIDE-FOR-CLAUDE.md`](phase1/GUIDE-FOR-CLAUDE.md), the file your Claude reads. You never have to.
@@ -76,7 +78,7 @@ Liking, commenting, following, reacting and messaging automatically can go again
 
 **Do I have to be technical?** No. Claude does the clicking and the typing; you just say how many profiles.
 **Is anything installed on my computer?** Only the Claude in Chrome extension, which you add yourself. The kit itself installs nothing.
-**Do I need Apify or Google Sheets?** No, both are optional. Without Apify, Claude searches by hand in Chrome (slower). Without Google, your list stays in the chat.
+**Do I need Apify or Google Sheets?** Apify: yes, it is how Claude finds prospects (free plan is enough). Google Sheets: required for the INFYUM team, optional otherwise (without it your list stays in the chat).
 **Do I need an Anthropic API key or to pay for anything else?** No.
 **What if Instagram shows a warning?** Claude logs it, skips that action and carries on. If Instagram signs it out or asks you to verify, it tells you and waits.
 **Where does it stop?** After the first message. Once the message is sent, that person is yours: Claude does not read replies, follow up, or contact them again.
