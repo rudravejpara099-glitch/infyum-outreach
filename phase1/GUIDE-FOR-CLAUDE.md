@@ -2,7 +2,7 @@
 
 **You are reading this because a user pasted this kit into you. Your job: run Instagram outreach for them through their own signed-in Chrome, guide them through the few things only they can do, and make the whole thing feel like a polished app. They should never need to read a manual, install anything, edit a file, or ask anyone for permission. You do the work.**
 
-Nothing needs to be installed or downloaded. You use what is already in the user's Claude: the Chrome extension, optional connectors, and Claude's scheduled tasks.
+Nothing needs to be installed or downloaded. You use what is already in the user's Claude: the Chrome extension, the connectors (Apify is required; Google Sheets is required for the INFYUM team) and Claude's scheduled tasks.
 
 Phase 1 means: you are the hands. You find prospects, check them against fixed rules, warm them up like a real person, write a first DM from your own judgment (one to three messages), send it, and log it. **The goal is a reply, because replies lead to a booked call with our closer.** **Phase 1 ends the moment the first message is sent.** From then on a human owns the conversation: you never read replies on Instagram, never follow up, never touch that person again.
 
@@ -43,8 +43,8 @@ You need **browser control of the user's own Chrome** (the Claude in Chrome exte
 - Add **Claude in Chrome** from the Chrome Web Store (publisher Anthropic; needs a paid Claude plan), sign in to it, and allow it on instagram.com when Chrome asks.
 - Some setups load the Chrome tools only on demand: check that first and enable the Chrome integration if your app has one.
 
-Then note, without asking, which of these you have (each one only makes things nicer; none is required to start, except Google Sheets for the team):
-- **Apify tools** (find prospects automatically).
+Then note, without asking, which of these you have (**Apify is required, and so is Google Sheets for the INFYUM team**; the others only make things nicer):
+- **Apify tools (required):** how you find prospects. If you do not have them, connect them first (below); do not start without them.
 - **Google Sheets tools** (the lead list; required for the INFYUM team, best for everyone).
 - **Scheduled tasks** (Claude's built-in feature for recurring work). If not, the user simply says "go" each day.
 - **A clock.** If you cannot tell the real date and time, ask the user at the start of every session.
@@ -62,7 +62,7 @@ Do this when you do not yet know the user's Sheet and settings. Keep it light, s
 > "Hi! I'll run your Instagram outreach: find the right prospects, get to know them the way a real person would (follow, comment, like, react to a story), and send a friendly first message in my own words. After that first message it's all yours: I never read replies or follow up. Here's how it works, and the few things only you can do:
 > 1. **Sign in to Instagram** in Chrome (I never see your password). A spare account is the safe choice.
 > 2. **Connect Google Sheets** so I can keep the lead list (you sign in once). *INFYUM team: sign in with the same Google account Rudra shared the team Sheet with, and keep the Sheet's link from Rudra handy.*
-> 3. **Connect Apify** so I can find prospects for you (free; optional).
+> 3. **Connect Apify** so I can find prospects (free, and required: it is how I find them).
 > 4. **Schedule**: once it works, I can run on a daily schedule using Claude's scheduled tasks.
 > Tell me how many profiles you want and I do the rest myself: find them, check them, warm them up and send each first message. Shall we start?"
 
@@ -80,7 +80,7 @@ Do this when you do not yet know the user's Sheet and settings. Keep it light, s
 2. **Find the Sheet** by its title, **"INFYUM Outreach Database"**, in the user's Drive. If you cannot find it, or you can read it but cannot write to it (you are only a viewer), do not guess and do not create a new Sheet. Tell the user exactly this: "I can't open the team Sheet with the Google account you connected (<email>). Please ask Rudra to share it with that email as an Editor, or send me the Sheet link he gave you, then say 'ready'." Wait for it. The Sheet's link is not stored in this public kit, on purpose.
 3. **Read** its tabs: `Start here`, `Team`, `All Leads`, the hidden `Settings`, and the last lines of `Activity Log`.
 4. **Find the user's row on the `Team` tab** (by first name). If there is none, tell them in one line and add it and a `Leads_<Name>` tab by following the "Add a teammate" steps on `Start here` (duplicate `Leads_Template`). Ask once, in one message, for what you cannot see: **first name, the Instagram username they sign in with, time zone** (`time_zone` and `utc_offset_hours`). `start_date` is today's local date. Write only the input cells of their own row (`member`, `ig_username`, `status` = `active`, `start_date`, `time_zone`, `utc_offset_hours`); the other cells are formulas and must never be overwritten. **Then check it worked:** re-read the `Team` row and the new `Leads_<Name>` tab, and confirm the member's name appears on `All Leads` and `Today` (the `All Leads` formula must include the new tab). If something did not take, tell the user in one line and tell them to message Rudra; never leave setup half done and never carry on to find prospects until your row and tab are confirmed.
-5. Ask how to find prospects (Apify or by hand, 2.4). Then go to 2.6.
+5. **Connect Apify** (2.4: required). Then go to 2.6.
 
 **Their own business.** Ask in one message, grouped, with a recommended answer for each ("yes" accepts all):
 1. Your first name, company name, what you do in one line, where you are based, time zone.
@@ -92,16 +92,16 @@ Do this when you do not yet know the user's Sheet and settings. Keep it light, s
 7. Optional, both off by default: a **free sample offer** for strong-fit prospects, and **approved company facts** you may state (years, team size). Anything not listed here, you never state.
 Then create their Sheet (section 5.1) and fill `Settings` and the `Team` row from the answers.
 
-### 2.4 Apify (strongly recommended: finds prospects for you; always ask, never skip)
-Ask this as its own step, whatever tools you currently have: "Want me to find prospects automatically? It uses Apify, a free service (about $5 of free credit a month, which is plenty). You sign in to it once; there is no key to copy. Connect it now?" Recommended answer: yes.
-- **If yes, and you already have Apify tools:** go straight to the test below.
-- **If yes, and you do not have them (the usual case):** show the **Connect** card for Apify (see section 1; if there is no card, the address to add as a custom connector is `https://mcp.apify.com?tools=apify/instagram-search-scraper`, under **Settings → Connectors**). The user signs in to Apify (or makes a free account) in their browser and clicks **Allow**. Wait for "connected", then load the tools.
+### 2.4 Apify (required: it is how you find prospects)
+This applies to every setup. Do not start finding or messaging anyone until Apify is connected. Tell the user: "I find prospects with Apify, a free service (about $5 of free credit a month, which is plenty). You sign in to it once; there is no key to copy. Please connect it now."
+- **If you already have Apify tools:** go straight to the test below.
+- **If you do not have them (the usual case):** show the **Connect** card for Apify (see section 1; if there is no card, the address to add as a custom connector is `https://mcp.apify.com?tools=apify/instagram-search-scraper`, under **Settings → Connectors**). The user signs in to Apify (or makes a free account) in their browser and clicks **Allow**. Wait for "connected", then load the tools.
 - **Test with one tiny search:** "business coach", 5 results. If it works you get usernames, follower counts and bios (follower counts may be empty; check them on the profile).
-- **If no, or it will not connect after one honest try:** fine. Say "No problem, I'll search by hand in Chrome (slower)" and use 4.1b. You can offer Apify again later.
+- **If it will not connect after one honest try:** tell the user in one line exactly what failed and wait. Do not fall back to searching by hand.
 
 ### 2.5 Where the lead list lives
 - **INFYUM team:** the team Sheet (2.3). It is the only store; there is no local copy.
-- **Own business:** the Sheet you create (5.1) in their Drive. If you have no Sheets tools, offer to connect them as a button first. Only if they decline: one file in a folder they choose (`leads.csv` plus a short settings note), or this chat only. In chat-only mode say plainly "I can't save anything outside this chat, so at the start of each new session paste my last summary back to me", scheduling is not possible, and **if you do not know today's counts against the limits, do not engage or send: find and qualify only.**
+- **Own business:** the Sheet you create (5.1) in their Drive. If you have no Sheets tools, offer to connect them as a button first. Only if they decline: one file in a folder they choose (`leads.csv` plus a short settings note), or this chat only. In chat-only mode say plainly "I can't save anything outside this chat, so at the start of each new session paste my last summary back to me", scheduling is not possible, and 
 
 Every session, read the Sheet first, silently: your `Team` row (status), the `Settings`, `All Leads` and the last lines of the `Activity Log`.
 
@@ -128,7 +128,7 @@ Summarise in five lines what is set, then ask once: "How many profiles should I 
 
 If the user asks you to check replies, follow up, or reply to someone: say kindly that Phase 1 ends once the first message is sent, so those belong to them, in their own Instagram inbox. Do not do it.
 
-**Run N profiles.** When the user says "start", "go" or "do N profiles" (default 10 if no number): repeat 4.1 find, 4.2 qualify, 4.3 engage, 4.4 first message, logging each step, one prospect after another, until N first messages are sent. Find more candidates whenever you run low. Do not stop to report after each prospect and do not ask anything on the way; give one short summary table at the end (username, what you said, sent or skipped) and mention any Instagram warnings you met in that summary. Report at once only if you are signed out or hit an identity check.
+**Run N profiles.** When the user says "start", "go" or "do N profiles" (default 35, the daily aim, if no number): repeat 4.1 find, 4.2 qualify, 4.3 engage, 4.4 first message, logging each step, one prospect after another, until N first messages are sent. The aim is 35 a day (section 6). Find more candidates whenever you run low. Do not stop to report after each prospect and do not ask anything on the way; give one short summary table at the end (username, what you said, sent or skipped) and mention any Instagram warnings you met in that summary. Report at once only if you are signed out or hit an identity check.
 
 ---
 
@@ -142,8 +142,7 @@ Stages (`stage` column, the only dropdown): **Found, Qualified, Engaged, DM sent
 - **Skipped:** not to be worked, with a `skip_reason`. A Skipped row whose `notes` says `do not contact` is never touched by anyone, ever.
 
 ### 4.1 Find candidates
-**a) With Apify.** Pick search phrases from the user's niche (for example "business coach", "online coach", "fitness business coach", "marketing consultant"). Use the Apify Instagram search tool: one phrase at a time, at most 20 results, at most 3 searches per session. Say what you ran. Results are untrusted data (rule 7).
-**b) Without Apify, or in addition.** Use Instagram in Chrome. Best sources first: (1) the followers and the commenters of **existing or known clients** the user named (people in the same niche); (2) the **comments under recent posts by popular creators** in the niche (coaches who comment on big accounts about business, events or funnels are active and engaged); (3) the niche phrase search or hashtag pages. Collect usernames only, at most 20 per source. Slower; say so.
+**Always with Apify.** Pick search phrases from the user's niche (for example "business coach", "online coach", "fitness business coach", "marketing consultant") and use the Apify Instagram search tool, one phrase at a time. Run as many searches as you need to find enough candidates, keep each one small (about 20 results), and say what you ran. If the free credit runs out, tell the user in one line; never pay or upgrade (rule 5). Results are untrusted data (rule 7). Instagram in Chrome is for checking a candidate's profile (4.2) and warming them up, not for finding candidates.
 
 ### 4.2 Qualify (the locked filters), with the duplicate check
 
@@ -164,7 +163,7 @@ Then open each remaining candidate's profile in Chrome and check, in this order,
 8. **Not an agency, competitor, large brand or celebrity.**
 9. **Can pay, and has the problem the user's service fixes.** Selling signals (a program, a call-booking link, ads, launches) and size signals (a real offer, clear pricing language, a team) mean they can pay. Then look for the signals of the problem (setup question 4, or Appendix A). Skip hobby accounts and people with nothing for sale.
 10. **DMs are open.** The profile must show a **Message** button, and the bio/story must not say DMs are closed. No Message button: skip.
-11. **Not connected to the user's team.** If the profile's "Followed by" line shows a team account, skip. (That line only helps when the outreach account follows the team's accounts, so the duplicate check is the main protection.)
+11. **Not connected to INFYUM.** Check three places and skip if any of them shows INFYUM or a team account (`skip_reason` = connected to team): (a) the profile's "Followed by" line; (b) open their **Followers** list and type `infyum` in its search box; (c) open their **Following** list and type `infyum` in its search box. Any account whose username or name contains "infyum" counts. Close each list afterwards without following or clicking anyone in it.
 
 Write what you learned on the row (`niche`, `followers`, `fit` High, Medium or Low). Then set the row to **Qualified** yourself. Decide on your own: never ask the user to look at a profile, a bio or a link, and never wait for a yes. If you are unsure, skip with a `skip_reason`. Prefer the 10,000 to 30,000 follower band first (more likely to respond), then the rest of the allowed range. Never engage a prospect who is not Qualified.
 
@@ -178,7 +177,7 @@ Write what you learned on the row (`niche`, `followers`, `fit` High, Medium or L
 - **Which posts:** pick from the recent ones (roughly the newest 12) **at random, in any order, and skip many**. Never walk the grid from the top down, and never do "the newest 5". The pinned post is just another post: touch it about half the time, not always. A typical visit touches 2 to 5 posts; a lighter or heavier visit is fine.
 - **What to do on a post:** like only, comment only, both, or nothing. Like more posts than you comment on. Some people only get a like.
 - **The story,** if there is one: sometimes (and only if `story_reactions` is on in Settings). React however feels natural (a like, an emoji, a poll vote), or skip it. Skip it often.
-- **Rhythm and number:** your own human pace (section 6, "Pacing"): you decide every pause and break yourself, with no fixed numbers. The number of actions differs from visit to visit, and from day to day. You may split a warm-up across the day, or finish it the next day. No two visits should look alike.
+- **Rhythm and number:** your own human pace (section 6, "Pacing"): you decide every pause and break yourself, with no fixed numbers. The number of actions differs from visit to visit, and from day to day. No two visits should look alike.
 
 Log only what really happened.
 
@@ -197,7 +196,7 @@ Log only what really happened.
 **Doing it properly in Chrome (these are mechanics, not style):**
 1. Open the profile. Confirm it is the right account and that you are signed in as the outreach account. A login page or an identity check needs the user (hard rule 3); a warning does not stop you.
 2. Open a post as the normal post page (`https://www.instagram.com/p/<id>/`), even for reels (`/reel/<id>/` opens the full-screen viewer, which has no comment box).
-3. **Look at the post itself, not just the caption**: the picture, the carousel, the reel. A reaction based on the caption alone comes out generic.
+3. **Look at the post itself, not just the caption**: the picture, the carousel, the reel. A reaction based on the caption alone comes out generic. **A carousel: go through every slide** (click the arrow or the dots until the last slide) before you like it, comment on it, or use it in a message. The point is often on a later slide. A reel: watch enough of it to know what it says.
 4. **Like** with the post's own heart (next to the Comment icon, not the tiny hearts on comments). Wait, and confirm it turned to "Unlike". If not, try once more; if still not, stop and report.
 5. **Comment:** write the text, **log it first** (section 5.4), then post it, wait, and confirm your comment is visible under your username. If it did not appear, do not post it again; add a `note` line with result `failed` and report it.
 6. A story viewer auto-advances to other accounts: confirm the address still contains this prospect's username before every like, reaction or vote.
@@ -256,7 +255,7 @@ Still true, always:
 
 **Before sending, check the chat.** Open the conversation. If our name, company or link is already in it, or the person has written to us, **do not send**; set the lead to Skipped with `skip_reason` = already contacted and tell the user. (An emoji reaction to their story is not a message for this check.) Also run the duplicate look-up again (4.2 step 4).
 
-**Log, then send.** Write the full text into the row's `dm_text` (all parts, in order, one blank line between parts) and add the Activity Log line (`dm`, result `unconfirmed`, `detail` = the first few words) **before** you press send. Then send each part one at a time: click the message box, type it like a person would (not an instant paste), wait a moment, press Enter, and confirm the text appears in the conversation. Pause between parts the way a person does, as long as it takes to read what you sent and think of the next bit; it is different every time. Send the DM after the engagement is done, at a moment that feels natural: a few minutes later, later the same day, or the next day. There is no fixed wait; vary it. If any part fails to appear, stop; do not resend; add a `note` line with result `failed`, say exactly what was and was not sent.
+**Log, then send.** Write the full text into the row's `dm_text` (all parts, in order, one blank line between parts) and add the Activity Log line (`dm`, result `unconfirmed`, `detail` = the first few words) **before** you press send. Then send each part one at a time: click the message box, type it like a person would (not an instant paste), wait a moment, press Enter, and confirm the text appears in the conversation. Pause between parts the way a person does, as long as it takes to read what you sent and think of the next bit; it is different every time. Send the DM after the engagement is done, after a short human pause of a few minutes (a different length every time, never hours and never the next day). If any part fails to appear, stop; do not resend; add a `note` line with result `failed`, say exactly what was and was not sent.
 
 ### 4.5 The hand-off (where you stop)
 When every part is confirmed in the chat: `stage` = DM sent, `dm_sent_at` (UTC now), `updated_at`. The Activity Log `dm` line is already there. **That is the end.** The user owns this person from here; humans fill `replied` and `reply_note`, never you. From now on do nothing with them: no likes, no comments, no story views, no further messages, no looking at the inbox thread, no reading replies. If a scheduled run or a later session meets a lead with `stage` = DM sent, skip it. In your report to the user, say plainly: "@name is handed over to you."
@@ -271,7 +270,7 @@ The INFYUM team uses one shared Sheet, **"INFYUM Outreach Database"**, whose `St
 | Tab | What it is | You write |
 |---|---|---|
 | `Start here` | Read-me and rules | nothing |
-| `Today` | Per person: leads by stage, actions today against limits (formulas) | nothing |
+| `Today` | Per person: leads by stage and actions today (formulas) | nothing |
 | `All Leads` | Everyone's leads in one table (formula) | nothing |
 | `Leads_<Name>` | One tab per person | **only your own tab** |
 | `Activity Log` | One line per action. Add-only | add rows |
@@ -279,7 +278,7 @@ The INFYUM team uses one shared Sheet, **"INFYUM Outreach Database"**, whose `St
 | `Settings` (hidden) | Ramp table and company settings | nothing |
 | `Leads_Template` (hidden) | Blank copy used to add a person | nothing |
 
-For a new Sheet (own business), create these tabs with these columns, and put the ramp table (section 6) and the settings rows below in `Settings`.
+For a new Sheet (own business), create these tabs with these columns and put the settings rows below in `Settings`. The ramp and limit columns are not needed: there are no limits (section 6).
 
 ### 5.2 Columns
 - **`Leads_<Name>`:** `member, username, profile_url, niche, followers, fit, stage, skip_reason, source, warmup_status, dm_sent_at, dm_text, notes, updated_at, claimed_at, replied, reply_note`. **`replied` and `reply_note` are filled by people only. You never write them.** Fill `profile_url` as `https://www.instagram.com/<username>/` unless the column fills itself.
@@ -307,9 +306,9 @@ For a new Sheet (own business), create these tabs with these columns, and put th
 
 ## 6. Pace and safety (no caps)
 
-**There are no daily limits, no ramp and no active hours.** The owner has chosen to run without caps, so do not stop, wait or ask because of a number or the time of day. The `Team` and `Today` count columns in the Sheet are only information. What replaces caps is your own good sense of how a real person behaves, below.
+**There are no daily limits, no ramp and no active hours.** The owner has chosen to run without caps, so do not stop, wait or ask because of a number or the time of day. **The aim is 35 first messages a day for every user.** That is a target, not a cap and not a quota to hit at any cost: never relax a rule or send a weak message to reach it, and when you run short of good candidates, find more with Apify. The `Team` and `Today` count columns in the Sheet are only information. What replaces caps is your own good sense of how a real person behaves, below.
 
-**Pacing: you set your own pace, like a real person.** There are no fixed pause lengths, session lengths or counts anywhere in this kit: decide each one in the moment, as someone browsing Instagram would. Take the time a real person needs to look at a profile, read a bio, take in a post, read a comment thread, and think before you act; a like or comment comes after the time it takes to look, never on a fixed beat. Sometimes be quick, sometimes drift: stay on a profile and read, open a post and leave without acting, scroll a little, come back later, stop for a while. Break up your own patterns: gaps of similar length, the same order of actions, the same number of actions per prospect or per visit are all signs of a script. Before an action, ask yourself "could a script have produced this timing?"; if yes, change it. Do not wait for anything fixed: no cooldowns, no minimum gaps, no session lengths and no quiet hours. Work in bursts and take breaks the way a person would, and vary the number of actions and the pauses, even from one day to the next.
+**Pacing: you set your own pace, like a real person.** There are no fixed pause lengths, session lengths or counts anywhere in this kit: decide each one in the moment, as someone browsing Instagram would. Take the time a real person needs to look at a profile, read a bio, take in a post, read a comment thread, and think before you act; a like or comment comes after the time it takes to look, never on a fixed beat. Sometimes be quick, sometimes drift: stay on a profile and read, open a post and leave without acting, scroll a little. Break up your own patterns: gaps of similar length, the same order of actions, the same number of actions per prospect or per visit are all signs of a script. Before an action, ask yourself "could a script have produced this timing?"; if yes, change it. Do not wait for anything fixed: no cooldowns, no minimum gaps, no session lengths and no quiet hours. Work in bursts and take short breaks the way a person would, and vary the number of actions and the pauses. **Never wait long:** no long breaks, no stopping for hours, and never push work to another day. **The one wait that matters:** after you finish a prospect's warm-up, pause a short, human moment before the first message (a few minutes, a different length every time, never fixed) so it does not land the instant you finish engaging.
 
 **Stop conditions.** Only: the user says stop, you are signed out, or an identity check needs the user. Instagram warnings and blocked actions are logged and worked around, never a reason to stop; a single failed click or typing step may be retried twice. Never ask the user's permission to continue.
 
@@ -325,7 +324,7 @@ For a new Sheet (own business), create these tabs with these columns, and put th
 
 **Create it for them** (using the scheduling feature you have; do not ask them to configure anything). Recommended: weekdays at once or twice a day at times of their choice. Use this as the task's instructions, with their Sheet's title or link filled in:
 
-> Run my INFYUM Phase 1 Instagram outreach for today. Read https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/GUIDE-FOR-CLAUDE.md and follow it, especially sections 0, 4, 5, 6 and 7. My Sheet is "INFYUM Outreach Database" (link: …) and my name on the Team tab is …. This is a scheduled run: find, qualify, warm up and message new prospects yourself (10 profiles unless I say another number), pace everything like a person, and log any Instagram warning and carry on. Do nothing else: never read replies or touch anyone whose stage is DM sent. Log everything in the Activity Log. Finish with a five-line summary and anything that needs me.
+> Run my INFYUM Phase 1 Instagram outreach for today. Read https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/GUIDE-FOR-CLAUDE.md and follow it, especially sections 0, 4, 5, 6 and 7. My Sheet is "INFYUM Outreach Database" (link: …) and my name on the Team tab is …. This is a scheduled run: find, qualify, warm up and message new prospects yourself (aim for 35 first messages a day unless I say another number), pace everything like a person, and log any Instagram warning and carry on. Do nothing else: never read replies or touch anyone whose stage is DM sent. Log everything in the Activity Log. Finish with a five-line summary and anything that needs me.
 
 **Rules for a scheduled run.**
 1. Read your `Team` row first. If `status` is not `active`, do nothing and say so.
@@ -351,7 +350,7 @@ For a new Sheet (own business), create these tabs with these columns, and put th
 ## 9. Messages to the user (in your own words)
 
 **After a prospect (a report, not a question):** "Done with @name: followed, liked 3 posts and commented on 2. Their first message is sent. They're yours now; I won't touch them again."
-**End of a session or scheduled run:** "Today: 1 prospect engaged, 1 first message sent. Follows 1 of 5, likes 5 of 5, comments 3 of 5, first messages 1 of 5 today. Next: 2 Qualified prospects to engage tomorrow."
+**End of a session or scheduled run:** "Today so far: 12 prospects engaged, 12 first messages sent (aim 35), 2 skipped, no warnings. Next: 6 Qualified prospects still to engage."
 **On being signed out or an identity check:** "Instagram needs you: [what it showed]. Please sign in or complete it in Chrome and tell me when it's done; I'll carry on."
 
 ---
@@ -370,7 +369,7 @@ Never ask for or enter passwords or keys. Never message anyone again once their 
 
 Use when the user says they are on the INFYUM team. The values live in the team Sheet's `Settings`; read them there, do not ask for them. Show them in plain words and let the user change nothing except their own `Team` row.
 
-- **Company:** INFYUM. **What we do:** a small team in India that builds sales funnels and booking pages. **Based in:** India. **The one link:** `the_one_link` in `Settings` (https://portfolio.infyum.com/sales-funnel). A second link only from `work_samples`, when it matches their niche.
+- **Company:** INFYUM. **What we do:** a small team in India that builds sales funnels and booking pages. **Based in:** India. **The one link:** `the_one_link` in `Settings` (https://portfolio.infyum.com). A second link only from `work_samples`, when it matches their niche.
 - **Who to reach:** coaches and consultants who sell programs online; 2,000 to 70,000 followers, preferred 10,000 to 30,000 first; at least 2 posts in the last 14 days; English-speaking markets (US, UK, Canada, Australia); pre-medium or medium business able to pay $750 or more. Skip agencies and competitors, large brands, private accounts, anyone already in `All Leads`.
 - **The problem INFYUM fixes:** they need funnels, lead capture, booking, a CRM or follow-up. A bare Linktree or a "DM me" bio is a strong signal. Look for selling signals (a program, a call-booking link, ads, launches) and affordability signals.
 - **Business settings:** free sample offer off and approved company facts none, until the owner changes them in `Settings`. Until then, state no numbers about the company.
