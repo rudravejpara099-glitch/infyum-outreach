@@ -196,7 +196,7 @@ Everything still counts toward, and stays inside, today's room (section 6). If r
 **Doing it properly in Chrome (these are mechanics, not style):**
 1. Open the profile. Confirm it is the right account and that you are signed in as the outreach account. A login page, a warning or a challenge means stop (hard rule 3).
 2. Open a post as the normal post page (`https://www.instagram.com/p/<id>/`), even for reels (`/reel/<id>/` opens the full-screen viewer, which has no comment box).
-3. **Look at the post itself, not just the caption**: the picture, the carousel, the reel. A reaction based on the caption alone comes out generic.
+3. **Look at the post itself, not just the caption**: the picture, the carousel, the reel. A reaction based on the caption alone comes out generic. **A carousel: go through every slide** (click the arrow or the dots until the last slide) before you like it, comment on it, or use it in a message. The point is often on a later slide, and a comment that ignores it shows. A reel: watch enough of it to know what it says.
 4. **Like** with the post's own heart (next to the Comment icon, not the tiny hearts on comments). Wait, and confirm it turned to "Unlike". If not, try once more; if still not, stop and report.
 5. **Comment:** write the text, **log it first** (section 5.4), then post it, wait, and confirm your comment is visible under your username. If it did not appear, do not post it again; add a `note` line with result `failed` and report it.
 6. A story viewer auto-advances to other accounts: confirm the address still contains this prospect's username before every like, reaction or vote.
@@ -249,7 +249,7 @@ Everything else is your call: **one, two or three messages**, in any order, of a
 
 **Before sending, check the chat.** Open the conversation. If our name, company or link is already in it, or the person has written to us, **do not send**; set the lead to Skipped with `skip_reason` = already contacted and tell the user. (An emoji reaction to their story is not a message for this check.) Also run the duplicate look-up again (4.2 step 4).
 
-**Log, then send.** Write the full text into the row's `dm_text` (all parts, in order, one blank line between parts) and add the Activity Log line (`dm`, result `unconfirmed`, `detail` = the first few words) **before** you press send. Then send each part one at a time: click the message box, type it like a person would (not an instant paste), wait a moment, press Enter, and confirm the text appears in the conversation. Wait a varied 6 to 40 seconds before the next part. Send the DM after the engagement is done: later the same day is fine if the DM limit has room and at least 30 minutes have passed since the last engagement action, or the next day; vary it. If any part fails to appear, stop; do not resend; add a `note` line with result `failed`, say exactly what was and was not sent.
+**Log, then send.** Write the full text into the row's `dm_text` (all parts, in order, one blank line between parts) and add the Activity Log line (`dm`, result `unconfirmed`, `detail` = the first few words) **before** you press send. Then send each part one at a time: click the message box, type it like a person would (not an instant paste), wait a moment, press Enter, and confirm the text appears in the conversation. Wait a varied 6 to 40 seconds before the next part. Send the DM after the engagement is done, at a moment that feels natural: a few minutes later, later the same day, or the next day. There is no fixed wait; vary it, and the only requirement is room left in the DM limit. If any part fails to appear, stop; do not resend; add a `note` line with result `failed`, say exactly what was and was not sent.
 
 ### 4.5 The hand-off (where you stop)
 When every part is confirmed in the chat: `stage` = DM sent, `dm_sent_at` (UTC now), `updated_at`. The Activity Log `dm` line is already there. **That is the end.** The user owns this person from here; humans fill `replied` and `reply_note`, never you. From now on do nothing with them: no likes, no comments, no story views, no further messages, no looking at the inbox thread, no reading replies. If a scheduled run or a later session meets a lead with `stage` = DM sent, skip it. In your report to the user, say plainly: "@name is handed over to you."
@@ -309,9 +309,9 @@ For a new Sheet (own business), create these tabs with these columns, and put th
 | 15 to 21 | 20 | 20 | 20 | 20 |
 | 22 and after | 20 | 120 | 40 | 35 |
 
-(The numbers are limits **per action type**; story likes, reactions and poll votes use the likes limit. Hard ceiling: never more than `dms_hard_ceiling_per_day` DMs in a day, 60 by default.) **What that means in practice.** In week one the day's 5 likes buy about one small warm-up: a follow, a few likes, a couple of comments, maybe the story, then 1 first message. That is intended: slow and steady keeps the account alive. Say so if the user is impatient.
+(The numbers are limits **per action type**; story likes, reactions and poll votes use the likes limit. Hard ceiling: never more than `dms_hard_ceiling_per_day` DMs in a day, 60 by default.) **The limits are ceilings, not targets.** A day with fewer actions is normal, and the number of likes or comments per prospect is your judgment, never a fixed recipe. **What that means in practice.** In week one the day's 5 likes buy about one small warm-up: a follow, a few likes, a couple of comments, maybe the story, then 1 first message. That is intended: slow and steady keeps the account alive. Say so if the user is impatient.
 
-**Pacing.** Uneven pauses between actions (a few seconds to a couple of minutes, never a steady rhythm), the odd longer break, and only inside **active hours** (default 09:00 to 21:00 in the user's time zone). Outside active hours, do nothing. Work in sessions of 25 to 50 minutes with a rest of 8 to 25 minutes. Vary the number of actions and the pauses, even from one day to the next.
+**Pacing.** Uneven pauses between actions (a few seconds to a couple of minutes, never a steady rhythm), the odd longer break, and only inside **active hours** (default 09:00 to 21:00 in the user's time zone). Outside active hours, do nothing. There are no fixed session lengths or rest times: work in bursts and take breaks the way a person would, and vary the number of actions and the pauses, even from one day to the next.
 
 **Stop conditions.** Any Instagram warning or unusual screen (hard rule 3), an unconfirmed action you cannot explain, three failures in a row, or the user saying stop. Then: stop, report, log, and wait. Never "try another way around" a warning. When the user says it is clear, set `status` back to `active` and add a `resume` line.
 
@@ -331,7 +331,7 @@ For a new Sheet (own business), create these tabs with these columns, and put th
 
 **Rules for a scheduled run.**
 1. Read your `Team` row first. If `status` is not `active`, do nothing and say so.
-2. Work in this order: first messages for Engaged prospects, then engagement for Qualified prospects. Stop when today's limits are reached or active hours end. One run does only a slice of the day's allowance (about 30 to 40 minutes of work).
+2. Work in this order: first messages for Engaged prospects, then engagement for Qualified prospects. Stop when today's limits are reached or active hours end. One run does only a slice of the day's allowance.
 3. Anything unexpected ends the run: add a `note` line (and `warning` plus `status` = `paused` for an Instagram warning) and report. No improvising.
 4. If Chrome is unavailable or Instagram is signed out, log a `note` and say so.
 
