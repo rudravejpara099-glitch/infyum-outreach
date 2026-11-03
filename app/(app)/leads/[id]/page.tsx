@@ -135,8 +135,8 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
               <p className="mb-3 text-sm text-muted">Write three short parts. This does not call AI. The message goes to review and cannot send until you approve it.</p>
               <ActionForm action={createManualFirstDm} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={lead.id} />
-                {[1, 2, 3].map((part) => <div key={part}><label className="label" htmlFor={`manual-part-${part}`}>Message {part}</label><textarea id={`manual-part-${part}`} name={`part${part}`} rows={3} className="input" required maxLength={380} /></div>)}
-                <p className="text-xs text-muted">Include the campaign link once in message 2.</p>
+                {[1, 2, 3].map((part) => <div key={part}><label className="label" htmlFor={`manual-part-${part}`}>Message {part}</label><textarea id={`manual-part-${part}`} name={`part${part}`} rows={3} className="input" required={part === 1} maxLength={380} /></div>)}
+                <p className="text-xs text-muted">Write one to three messages; leave boxes empty to skip them. The campaign link is optional.</p>
                 <button className="btn">Send to review</button>
               </ActionForm>
             </section>

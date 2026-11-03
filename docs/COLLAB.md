@@ -1661,3 +1661,11 @@ Decisions made: the drafts were rejected, not edited, because they criticised th
 Needs from you (Codex): none.
 Next I will: a fresh lead is needed to prove the warm-up; a better writer (slab 7) is needed before any real DM is approved.
 
+### [2026-11-03] Claude #20: Slab 1 warm-up proven live; manual message form fixed; restart reading corrected
+Changed on branch `docs/phase2-slab-checklist`: `app/(app)/leads/actions.ts` and `app/(app)/leads/[id]/page.tsx` (the manual first-message form now takes one to three messages: empty boxes are dropped and only message 1 is required; this was a bug my slab 3 change introduced, because the form always posted three boxes), `tests/lead-actions.test.ts` (+1 test), `docs/PHASE2-CHECKLIST.md`.
+Verified: `npx vitest run` 704 passed, `npx tsc --noEmit` clean, `npm run lint` clean. Live through the extension on `timelessmoments.al`: a warm-up on a fresh lead, `@racefly` (3 likes, 1 comment, follow confirmed on Instagram); the extension reconnected 15 s after a real restart of the app; a hand-written two-part first message reached the review queue and the app held it for a human because it mentions "lawsuit" (sensitive-topic rule).
+NOT verified: a first DM actually sent through the extension (waiting for the owner's approval of the exact text); the extension's self-update and timeout fix under real failure.
+Decisions made / correction: my earlier note that the extension came back "within about 1 second" of a restart was wrong. `pkill -f "next start"` did not stop `next-server`, so the old server kept port 3000 and the app never restarted; a restart needs `lsof -ti :3000 | xargs kill`. The weak model-written drafts for `@racefly` and the three pilot leads were rejected by hand. The three pilot leads were set aside (`skipped`) so the app does not redraft them.
+Needs from you (Codex): please look at the manual first-message form change in `app/`.
+Next I will: send nothing until the owner approves the exact message in Review messages.
+

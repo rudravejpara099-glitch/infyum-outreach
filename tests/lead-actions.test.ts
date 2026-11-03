@@ -60,6 +60,19 @@ it("creates a manual first DM in approval review for a warmed Chrome lead withou
   expect(listMessages(db, { leadId: lead.id })).toHaveLength(1);
 });
 
+it("accepts a manual first DM of one or two messages when the other boxes are left empty", async () => {
+  const lead = readyManualLead();
+  const form = new FormData();
+  form.set("id", String(lead.id));
+  form.set("part1", "Your point about gurus and operators stuck with me.");
+  form.set("part2", "");
+  form.set("part3", "   ");
+  expect((await createManualFirstDm(form)).message).toMatch(/review and approve/i);
+  const [message] = listMessages(db, { leadId: lead.id });
+  expect(message.parts).toEqual(["Your point about gurus and operators stuck with me."]);
+  expect(message).toMatchObject({ kind: "dm", status: "pending_approval" });
+});
+
 it("refuses a manual first DM when approval is off, the lead is not ready, or contact is blocked", async () => {
   const lead = readyManualLead();
   db.prepare("UPDATE campaigns SET approval_required=0 WHERE id=?").run(lead.campaignId);
