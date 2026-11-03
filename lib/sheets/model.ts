@@ -21,6 +21,23 @@ export const STAGE_TO_SHEET: Record<Stage, (typeof SHEET_STAGES)[number]> = {
   found: "Found", qualified: "Qualified", warmed: "Engaged", dm_sent: "DM sent", replied: "Replied", closed: "Closed", skipped: "Dead",
 };
 
+/** Stages only a person can set, after the hand-off. The sync never overwrites them. */
+export const HUMAN_ONLY_STAGES: readonly string[] = ["Follow-up due", "Call booked"];
+
+/** Sheet stage name to app stage, for edits made in the Sheet. "Dead" closes a lead the app has already messaged. */
+export function stageFromSheet(name: string, current: Stage): Stage[] | null {
+  switch (name) {
+    case "Found": return ["found"];
+    case "Qualified": return ["qualified"];
+    case "Engaged": return ["warmed"];
+    case "DM sent": return ["dm_sent"];
+    case "Replied": return ["replied"];
+    case "Closed": return ["closed"];
+    case "Dead": return current === "dm_sent" || current === "replied" ? ["closed"] : ["skipped", "closed"];
+    default: return null; // "Follow-up due" and "Call booked" have no app stage
+  }
+}
+
 export const LEADS_HEADERS = [
   "username", "name", "profile_url", "niche", "followers",
   "engagement_rate", "last_post_date", "bio_link", "fit_score", "source",
@@ -65,13 +82,13 @@ export function leadExtras(db: Db, leadId: number): LeadExtras {
   };
 }
 
-export function leadRow(lead: Lead, extras: LeadExtras): Cell[] {
+export function leadRow(lead: Lead, extras: LeadExtras, keepStage?: string): Cell[] {
   const note = [lead.skipReason && `skipped: ${lead.skipReason}`, lead.notes].filter(Boolean).join(" | ");
   return [
     safeCell(normUsername(lead.handle)), "", `https://www.instagram.com/${normUsername(lead.handle)}/`, safeCell(lead.niche), lead.followers ?? "",
     "", "", "", lead.fitScore ?? "", safeCell(lead.source),
     safeCell(extras.actions), safeCell(extras.comments), extras.engagedAt,
     safeCell(extras.dmText), extras.dmAt, "", "", "",
-    STAGE_TO_SHEET[lead.stage], safeCell(note),
+    keepStage ?? STAGE_TO_SHEET[lead.stage], safeCell(note),
   ];
 }

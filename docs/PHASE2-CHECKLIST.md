@@ -46,17 +46,20 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [x] Five tabs (Leads, Settings, Jobs, Activity Log, Do-not-contact), header row locked, Stage dropdown with the nine stages: defined and tested in `lib/sheets/model.ts`; the request shapes for locking and the dropdown are tested with a fake fetch in `tests/google-sheets-gateway.test.ts`. Not run against a real Sheet.
 - [x] Idempotent writes and retry: syncing twice changes nothing; a failed sync never throws, is recorded as `sheet_sync_error` and caught up on the next call; a failure halfway does not lose or double activity rows (`lib/sheets/sync.ts`, `tests/sheet-sync.test.ts`, fake Sheets client)
 - [x] Only safe settings are shown (allow-list); formula-looking text is kept as text
-- [x] Tests with a fake Sheets client: 685 tests, types and lint green, 2026-11-03
+- [x] Tests with a fake Sheets client: 690 tests, types and lint green, 2026-11-03
 - [ ] Sheet matches the app within a minute of any change: `syncIfDue` (once a minute) exists but is not called by the worker loop yet, because no Google token source exists
 - [ ] Username checked against the Sheet before any action: `sheetKnowsUsername` exists and is tested, not yet called before queueing or sending
 - [ ] Sheets consent: the current Google sign-in asks only for `openid email profile`. A second consent for the Sheets scope, with the refresh token stored encrypted, needs routes and a button in `app/` (Codex area) and an owner click
 - [ ] **Needs:** that one consent click, then a live run that creates the Sheet and mirrors the test lead's history, and a deliberate failure and recovery
 
 ## Slab 6: The Sheet as shared truth (two-way)
-- [ ] Do-not-contact edit in the Sheet blocks that prospect in the app
-- [ ] Stage cell edit updates the lead under the allowed-transition rules
-- [ ] Conflicting edits: last change wins, with a log line
-- [ ] One live edit round-trip
+- [x] A name added to Do-not-contact in the Sheet blocks that prospect in the app (closes or skips its lead; unknown names are blocked too; removing a name does not unblock): `lib/sheets/from-sheet.ts`, `tests/sheet-from-sheet.test.ts`, fake Sheets client
+- [x] A Stage cell edit updates the lead along the app's allowed transitions only; a refused edit is logged (`sheet.stage_refused`) and the cell is put back by the next one-way sync; "Dead" on a messaged lead means Stopped; "Follow-up due" and "Call booked" stay as the person wrote them and are never overwritten
+- [x] Conflicting edits: if both the app and the Sheet changed the same lead since the last sync, the person's edit wins when the app allows it, and a `sheet.conflict` line is logged. This is a rule I chose, because the Sheets API gives no edit time; it needs the owner's OK (see COLLAB #15)
+- [x] One round = read people's edits first, then write the app's state, at most once a minute, and no write when the read failed (`lib/sheets/cycle.ts`, `tests/sheet-cycle.test.ts`)
+- [x] 702 tests, types and lint green, 2026-11-03
+- [ ] The worker loop does not run the cycle yet (no Google token source), and the Sheets consent flow does not exist (see slab 5)
+- [ ] **Needs:** one live edit round-trip in a real Sheet
 
 ## Slab 7: Claude Sonnet 5.5 as the writer
 - [ ] One real comment, one three-part DM and one fit score come from Sonnet 5.5; cost metered; monthly limit stops it; local writer stays as fallback

@@ -3,7 +3,7 @@ import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { listLeads } from "@/lib/db/repos/leads";
 import { listDnc } from "@/lib/db/repos/dnc";
 import type { SheetGateway } from "./gateway";
-import { leadExtras, leadRow, normUsername, safeCell, SHEET_SETTING_KEYS, TABS, type Cell } from "./model";
+import { HUMAN_ONLY_STAGES, leadExtras, leadRow, LEADS_HEADERS, normUsername, safeCell, SHEET_SETTING_KEYS, STAGE_TO_SHEET, TABS, type Cell } from "./model";
 
 export const SHEET_SYNC_EVERY_MS = 60_000;
 const SCHEMA_VERSION = "1";
@@ -19,7 +19,16 @@ export async function syncToSheet(db: Db, gateway: SheetGateway, now = new Date(
     }
     const leads = listLeads(db, { limit: 100_000 });
     const byId = new Map(leads.map((l) => [l.id, normUsername(l.handle)]));
-    await gateway.upsertRows("Leads", 0, leads.map((l) => leadRow(l, leadExtras(db, l.id))));
+    // A person may have marked a handed-over lead "Follow-up due" or "Call booked" in the Sheet; the app has no such stage, so keep it.
+    const stageCol = LEADS_HEADERS.indexOf("stage");
+    const humanStage = new Map((await gateway.readRows("Leads")).filter((r) => HUMAN_ONLY_STAGES.includes(String(r[stageCol] ?? ""))).map((r) => [normUsername(String(r[0] ?? "").replace(/^'/, "")), String(r[stageCol])]));
+    const handedOver = (stage: string) => stage === "dm_sent" || stage === "replied" || stage === "closed";
+    await gateway.upsertRows("Leads", 0, leads.map((l) => leadRow(l, leadExtras(db, l.id), handedOver(l.stage) ? humanStage.get(normUsername(l.handle)) : undefined)));
+    // Remember the stage each cell now shows, so a later edit in the Sheet can be told apart from an app change.
+    setSetting(db, "sheet_stage_seen", JSON.stringify(Object.fromEntries(leads.map((l) => {
+      const n = normUsername(l.handle);
+      return [n, handedOver(l.stage) ? humanStage.get(n) ?? STAGE_TO_SHEET[l.stage] : STAGE_TO_SHEET[l.stage]];
+    }))));
 
     await gateway.upsertRows("Settings", 0, SHEET_SETTING_KEYS.flatMap((key) => {
       const value = getSetting(db, key);

@@ -1613,9 +1613,17 @@ Next I will: slab 5, the Google Sheet module with a fake client.
 
 ### [2026-11-03] Claude #14: Slab 5, the Sheet module (one-way), backend half
 Changed on branch `docs/phase2-slab-checklist` (not merged): new `lib/sheets/` (`model.ts` tabs, headers, stage names, row builders; `gateway.ts` the interface; `sync.ts` one-way sync, once-a-minute throttle, username lookup; `google.ts` the real REST gateway), `tests/fake-sheet-gateway.ts`, `tests/sheet-sync.test.ts`, `tests/google-sheets-gateway.test.ts`. No migration, no dependency. Sync state lives in `settings` keys `sheet_schema`, `sheet_synced_at`, `sheet_sync_tried_at`, `sheet_sync_error`, `sheet_activity_synced_id`.
-Verified: `npx vitest run` all passed (685), `npx tsc --noEmit` clean, `npm run lint` clean.
+Verified: `npx vitest run` all passed (690), `npx tsc --noEmit` clean, `npm run lint` clean.
 NOT verified: anything against a real Google Sheet. `google.ts` is written from the public REST API and tested only with a fake fetch. The worker loop does not call `syncIfDue` yet and `sheetKnowsUsername` is not called before actions.
 Decisions made: the nine sheet stages map from the app's seven (`warmed` is "Engaged", `skipped` is "Dead"); "Follow-up due" and "Call booked" are for people to set after the hand-off. Only an allow-list of settings reaches the sheet. USER_ENTERED writes with a leading apostrophe keep formula-looking text as text.
 Needs from you (Codex), NEEDS ACK: the Sheets consent needs a second Google OAuth step (scope `https://www.googleapis.com/auth/spreadsheets`, refresh token stored encrypted, a "Connect Google Sheet" button and a Sheet id field in Settings). That is `app/` and `lib/auth/` territory. Say whether you take it or want me to.
 Next I will: wire `syncIfDue` into the worker loop behind a configured gateway once a token source exists; slab 6 (two-way) after that.
+
+### [2026-11-03] Claude #15: Slab 6, the Sheet as shared truth (two-way), backend half
+Changed on branch `docs/phase2-slab-checklist` (not merged): new `lib/sheets/from-sheet.ts` (Sheet to app), `lib/sheets/cycle.ts` (one round: read edits first, then write; once a minute), `lib/sheets/model.ts` and `lib/sheets/sync.ts` (the one-way sync now keeps "Follow-up due" and "Call booked" on handed-over leads and remembers the stage each cell showed, in settings key `sheet_stage_seen`), `tests/sheet-from-sheet.test.ts`, `tests/sheet-cycle.test.ts`. No migration.
+Verified: `npx vitest run` 702 passed (92 files), `npx tsc --noEmit` clean, `npm run lint` clean, all with the fake Sheets client.
+NOT verified: any real Google Sheet; the worker loop does not call `runSheetCycle` yet.
+Decisions made / NEEDS OWNER RULING: BUILD-SLABS says conflicting edits "last change wins", but the Sheets values API gives no edit time, so "last" cannot be known. I implemented: if both sides changed the same lead since the last sync, the person's Sheet edit wins when the app's transition table allows it, otherwise the app's stage stays, and either way a `sheet.conflict` line is logged. Removing a name from Do-not-contact in the Sheet never unblocks anyone in the app.
+Needs from you (Codex): none beyond the Sheets consent request in #14.
+Next I will: slab 7 needs the owner's API credit; slab 1 and 8 need the owner. Nothing further to build without them except wiring `runSheetCycle` into `worker/index.ts` once a token source exists.
 
