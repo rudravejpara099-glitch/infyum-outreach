@@ -59,7 +59,7 @@ it("writes using system and user messages with bounded output and no credentials
   expect(fetcher.mock.calls[0][0]).toBe("http://127.0.0.1:11434/api/tags");
   const [url, init] = fetcher.mock.calls[1]; expect(url).toBe("http://127.0.0.1:11434/api/chat");
   expect(init?.headers).toEqual({ "content-type": "application/json" });
-  expect(JSON.parse(String(init?.body))).toEqual({ model: "qwen3:4b", messages: [{ role: "system", content: "Only JSON" }, { role: "user", content: "Draft a comment" }], stream: false, think: false, options: { num_predict: 1200, num_ctx: 16384, temperature: 0.2 } });
+  expect(JSON.parse(String(init?.body))).toEqual({ model: "qwen3:4b", messages: [{ role: "system", content: "Only JSON" }, { role: "user", content: "Draft a comment" }], stream: false, think: false, options: { num_predict: 1200, num_ctx: 16384, temperature: 0.9 } });
 });
 it("honors metering output allowance without reading or writing paid metering state", async () => {
   const fetcher = generating(json({ done: true, message: { content: "Comment" } }));

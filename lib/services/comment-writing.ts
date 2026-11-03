@@ -7,7 +7,7 @@ const norm = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "
 const opener = (text: string) => norm(text).split(" ").slice(0, 3).join(" ");
 /** Why a comment is too samey: generic opener, or the same opening/words as one already posted. */
 export function repeatedCommentError(comment: string, avoid: string[]): string | null {
-  if (/^(love|loving|great|nice|amazing|awesome) (this|it|that)\b/i.test(norm(comment))) return "Do not open with a generic phrase like 'Love this'. Start with a concrete detail from the post.";
+  if (/^(love|loving|great|nice|amazing|awesome) (this|it|that)\b/i.test(norm(comment)) || /^(i|we) (really |just )?(love|loved|like|liked|appreciate|admire) (how|that|the way|this|it)\b/i.test(norm(comment)) || /^(thank you|thanks) for sharing\b/i.test(norm(comment))) return "Do not open with a generic phrase like 'Love this' or 'I love how'. Start with a concrete detail from the post.";
   const mine = norm(comment);
   for (const used of avoid) {
     if (norm(used) === mine || (opener(used) === opener(comment) && mine.length > 0)) return `It repeats an earlier comment (${JSON.stringify(used)}). Use a different opening and different wording.`;

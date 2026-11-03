@@ -40,7 +40,8 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [x] Warm-up behaviour: a visit now touches 2 to 5 posts picked at random from the newest 12 (never the grid from the top), every touched post is liked and about half also get a comment, the follow comes first or last, and the story is reacted to only sometimes (`lib/domain/warmup-plan.ts`, `worker/chrome-warmup.ts`; `tests/warmup-plan.test.ts`; 674 tests, build and smoke green, 2026-11-03). Not run live.
 - [ ] Not built, deliberately: comment-only posts (a comment needs the like step's receipt check), the pinned-post half-chance, and honouring a `story_reactions` Settings switch (no such setting exists in the app yet)
 - [ ] "No invented company facts" is only enforced by the prompt, not by code
-- [ ] **Needs:** owner reads five sample first messages for five different profiles. These need a running writer (local Ollama model or Anthropic credit); neither exists on this Mac yet.
+- [x] Five sample first messages and comments were written by the real local model (`qwen3.5:latest` through Ollama) for five fictional profiles with `scripts/local-writing-samples.ts` (output in `data/local-writing-samples.json`, nothing sent, no paid call). Honest read: this small local model is uneven (it guessed a first name, mixed up who is in India, invented feelings in comments, and one profile got no valid comment). Quality with Claude Sonnet 5.5 is untested.
+- [ ] **Needs:** the owner reads the samples and decides whether the local model is good enough or Slab 7 (Anthropic credit) comes first
 
 ## Slab 5: Google Sheet module, one-way
 - [x] One module owns all Sheets access: `lib/sheets/gateway.ts` is the interface, `lib/sheets/google.ts` the only code that calls the Sheets API
