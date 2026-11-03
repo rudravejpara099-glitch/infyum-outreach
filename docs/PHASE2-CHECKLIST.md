@@ -10,7 +10,7 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [x] Tests pass (`npx vitest run`): 671 passed, 2026-11-03, fresh clone of `main` at `3425851`
 - [x] Types pass (`npm run typecheck`, which runs `next typegen` first): no errors
 - [x] Lint passes (`npm run lint`): clean
-- [ ] Browser smoke (`npm run smoke:ui`) (repo: passed 2026-10-29)
+- [x] Browser smoke (`npm run smoke:ui`): passed 2026-11-03 on the Slab 2 backend commit `1d84efa`, together with `npx next build --webpack`
 
 ## Slab 4: Google sign-in (built and tested, live sign-in waiting)
 - [x] (repo) Sign in with Google built, allow-list by connected account, secret server-side
@@ -22,7 +22,7 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [ ] Follow up button, automatic reply checks and follow-up drafting removed (touches `app/`: Codex area, needs ACK)
 - [ ] Replies page and "replied" wording removed or hidden (`app/`: needs ACK)
 - [ ] Overview and Sheet show DM sent as the end of the line with a "handed over" label (`app/`: needs ACK)
-- [ ] Browser smoke updated and green
+- [ ] Browser smoke updated for the UI changes and green (smoke and build are green on the backend half; the UI half is not done)
 
 ## Slab 1: Extension live and verified
 - [ ] After an app restart the extension is back online within 60 seconds, no manual action
