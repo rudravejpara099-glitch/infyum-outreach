@@ -15,7 +15,8 @@ describe("signed-in Chrome mode", () => {
     expect(browserModeAllowsJob("chrome_read_only", "check_inbox")).toBe(true);
     expect(browserModeAllowsJob("chrome_read_only", "send")).toBe(true);
     expect(browserModeAllowsJob("isolated", "send")).toBe(true);
-    expect(browserModeAllowsLeadSearch(["chrome_read_only"])).toBe(false);
+    expect(browserModeAllowsLeadSearch(["chrome_read_only"])).toBe(true); // Apify needs no Instagram browser
+    expect(browserModeAllowsLeadSearch([])).toBe(true);
     expect(browserModeAllowsLeadSearch(["chrome_read_only", "isolated"])).toBe(true);
   });
 
