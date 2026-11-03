@@ -15,7 +15,7 @@ import { isChromeUnreachable } from "@/lib/domain/chrome-connection-failure";
 import { activeJobExists, claimNext, completeJob, deferJob, deferJobUntil, enqueue, failedJobExists, failJob, failJobPermanently, resolveSupersededInboxJobs, type Lane } from "@/lib/db/repos/jobs";
 import { afterJob, DEFAULT_PACING, EMPTY_STATE, gate, type PaceState, type PacingConfig, type Rng } from "@/lib/domain/pacing";
 import { canMove } from "@/lib/domain/stages";
-import { assignLead, dueFollowups, findLeadByHandle, getLead, listLeads, moveStage, setFit, setNotes, updateFacts } from "@/lib/db/repos/leads";
+import { assignLead, findLeadByHandle, getLead, listLeads, moveStage, setFit, setNotes, updateFacts } from "@/lib/db/repos/leads";
 import { approvedQueue, getMessage, listMessages, markFailed, sentTodayForAccount } from "@/lib/db/repos/messages";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { killSwitchOn } from "@/lib/services/kill-switch";
@@ -52,11 +52,10 @@ export type Deps = {
 };
 
 const WARMUP_PIECES = 10;
-const INBOX_EVERY_MINUTES = 30;
 const teamDate = (db: Db, now: Date) => dateInTimeZone(now, getSetting(db, "team_timezone") ?? DEFAULT_PACING.tz);
 
 /** Looks at the whole database and queues whatever work is due. Safe to run as often as you like. */
-export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
+export function planWork({ db }: Pick<Deps, "db" | "now">): void {
   if (killSwitchOn(db)) return;
   // Four action buttons: in the default "buttons" mode only a step someone has started is planned.
   const on = (step: Step) => isArmed(db, step);
@@ -91,36 +90,12 @@ export function planWork({ db, now }: Pick<Deps, "db" | "now">): void {
       enqueue(db, { type: step, leadId: lead.id, accountId: chosen });
     }
   }
-  if (on("followup")) for (const lead of dueFollowups(db, now().toISOString().replace("T", " ").slice(0, 19))) {
-    const c = lead.campaignId ? getCampaign(db, lead.campaignId) : null;
-    if (c?.status !== "active" || !c.followupsEnabled || isDnc(db, lead.handle)) continue;
-    const account = lead.accountId ? getAccount(db, lead.accountId) : null;
-    if (!account || !browserModeAllowsJob(account.browserMode, "draft_followup")) continue;
-    if (!activeJobExists(db, "draft_followup", lead.id) && !hasOutgoing(db, lead.id, "followup", ["pending_approval", "approved", "failed"])) {
-      enqueue(db, { type: "draft_followup", leadId: lead.id, accountId: lead.accountId });
-    }
-  }
   for (const m of approvedQueue(db)) {
     const lead = getLead(db, m.leadId);
-    if (!lead || !canSendAtStage(lead.stage, m.kind) || !on(m.kind === "followup" ? "followup" : "send")) continue;
+    if (!lead || !canSendAtStage(lead.stage, m.kind) || !on("send")) continue;
     const account = m.accountId ? getAccount(db, m.accountId) : null;
     if (!account || !browserModeAllowsJob(account.browserMode, "send")) continue;
     if (!activeJobExists(db, "send", m.leadId) ) enqueue(db, { type: "send", leadId: m.leadId, accountId: m.accountId, payload: { messageId: m.id } });
-  }
-  const inboxAccounts = new Set(on("followup") ? active.flatMap((c) => campaignAccountIds(db, c.id)) : []);
-  // A paused campaign can still receive the reply we were waiting for.
-  if (on("followup")) for (const row of db.prepare("SELECT DISTINCT account_id FROM leads WHERE stage='dm_sent' AND account_id IS NOT NULL").all() as { account_id: number }[]) {
-    inboxAccounts.add(row.account_id);
-  }
-  for (const accountId of inboxAccounts) {
-    const account = getAccount(db, accountId);
-    if (!account || !browserModeAllowsJob(account.browserMode, "check_inbox")) continue;
-    const key = `inbox_checked_${accountId}`;
-    const last = Number(getSetting(db, key) ?? 0);
-    if (now().getTime() - last >= INBOX_EVERY_MINUTES * 60_000 && !activeJobExists(db, "check_inbox", null, accountId)) {
-      enqueue(db, { type: "check_inbox", accountId });
-      setSetting(db, key, String(now().getTime()));
-    }
   }
   disarmFinished(db);
 }

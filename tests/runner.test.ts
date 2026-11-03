@@ -95,7 +95,7 @@ describe("worker pipeline", () => {
       if (system.includes("judge whether")) return prompt.includes("@weak-fit") ? '{"score": 25, "reason": "No offer"}' : '{"score": 85, "reason": "Sells coaching"}';
       return dm;
     } };
-    for (let i = 0; i < 3; i++) { planWork(deps); await runOne(deps); } // qualify one, the inbox check, qualify the other
+    for (let i = 0; i < 2; i++) { planWork(deps); await runOne(deps); } // qualify one, then the other
     const weak = getLead(db, 1)!, strong = getLead(db, 2)!;
     expect(weak.stage).toBe("skipped"); expect(weak.skipReason).toContain("Fit score 25"); expect(weak.fitScore).toBe(25);
     expect(strong.stage).toBe("qualified"); expect(strong.fitScore).toBe(85);
@@ -395,30 +395,27 @@ describe("worker pipeline", () => {
     expect(db.prepare("SELECT count(*) n FROM jobs WHERE type='send' AND status='queued'").get()).toEqual({ n: 0 });
   });
 
-  it("rechecks the handoff after pacing an approved follow-up", async () => {
+  it("never dispatches an approved follow-up for a lead that has been handed over", async () => {
     const { acct, camp } = setup(true);
-    const { lead } = addLead(db, { handle: "reply-during-wait", campaignId: camp.id, stage: "dm_sent" }, "t");
+    const { lead } = addLead(db, { handle: "handed-over", campaignId: camp.id, stage: "dm_sent" }, "t");
     db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
     const message = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "followup", parts: ["A reviewed follow-up"], campaign: { approvalRequired: true } }, "t");
     approveMessage(db, message.id, "t");
-    enqueue(db, { type: "send", leadId: lead.id, accountId: acct.id, payload: { messageId: message.id } });
-    deps.pace = async () => { handleIncoming(db, lead.id, "I have a question"); };
-    await runOne(deps);
+    planWork(deps);
+    expect(await runOne(deps)).toBe(false);
     expect(driver.sent).toHaveLength(0);
-    expect(getLead(db, lead.id)?.stage).toBe("replied");
   });
-  it("keeps checking for a first reply after a campaign is paused", async () => {
+  it("plans no inbox check for a handed-over lead, even after its campaign is paused", async () => {
     const { acct, camp } = setup(true);
-    const { lead } = addLead(db, { handle: "waiting-for-reply", campaignId: camp.id, stage: "dm_sent" }, "t");
+    const { lead } = addLead(db, { handle: "handed-over", campaignId: camp.id, stage: "dm_sent" }, "t");
     db.prepare("UPDATE leads SET account_id=? WHERE id=?").run(acct.id, lead.id);
     setCampaignStatus(db, camp.id, "paused", "t");
     driver.inbox = [{ handle: lead.handle, text: "I am interested" }];
     planWork(deps);
-    await runOne(deps);
-    expect(driver.inboxReads).toBe(1);
-    expect(getLead(db, lead.id)?.stage).toBe("replied");
+    expect(await runOne(deps)).toBe(false);
+    expect(driver.inboxReads).toBe(0);
+    expect(getLead(db, lead.id)?.stage).toBe("dm_sent");
   });
-
   it("holds an uncertain multi-part send for human checking instead of retrying", async () => {
     const { camp } = setup(false);
     driver.uncertainOnSend = true;
@@ -550,31 +547,24 @@ describe("worker pipeline", () => {
     expect(driver.sent).toHaveLength(0);
   });
 
-  it("reads replies, ignores auto-replies, and hands off without drafting", async () => {
+  it("stops at dm_sent: no inbox read, no follow-up, no job of any kind afterwards", async () => {
     const { camp } = setup(false);
     const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");
-    await runUntilIdle(deps);
-    driver.inbox = [{ handle: "target", text: "Thanks for contacting us, we've received your message." }, { handle: "stranger", text: "hi" }];
-    clock = new Date("2026-10-20T11:00:00Z");
     await runUntilIdle(deps);
     expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
+    expect(getLead(db, lead.id)!.nextFollowupAt).toBeNull();
+    const jobsAfterDm = (db.prepare("SELECT COUNT(*) n FROM jobs").get() as { n: number }).n;
     driver.inbox = [{ handle: "target", text: "Interesting, what do you do exactly?" }];
-    clock = new Date("2026-10-20T12:00:00Z");
-    await runUntilIdle(deps);
-    expect(getLead(db, lead.id)!.stage).toBe("replied");
-    expect(listMessages(db, { leadId: lead.id }).some((m) => m.kind === "reply")).toBe(false);
-  });
-
-  it("drafts a follow-up when it is due and nobody replied", async () => {
-    const { camp } = setup(false);
-    const { lead } = addLead(db, { handle: "target", campaignId: camp.id }, "t");
-    await runUntilIdle(deps);
-    expect(getLead(db, lead.id)!.nextFollowupAt).toBe("2026-10-23 10:00:00");
-    deps.engine = { async complete() { return JSON.stringify({ parts: ["One thing I noticed: your booking page hides the call button below four other links."] }); } };
-    clock = new Date("2026-10-23T10:30:00Z");
-    await runUntilIdle(deps);
-    expect(driver.sent).toHaveLength(2);
-    expect(getLead(db, lead.id)!.followupsSent).toBe(1);
+    for (const at of ["2026-10-20T12:00:00Z", "2026-10-23T10:30:00Z", "2026-10-30T10:30:00Z"]) {
+      clock = new Date(at);
+      await runUntilIdle(deps);
+    }
+    expect(driver.sent).toHaveLength(1);
+    expect(driver.inboxReads).toBe(0);
+    expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
+    expect(getLead(db, lead.id)!.followupsSent).toBe(0);
+    expect((db.prepare("SELECT COUNT(*) n FROM jobs").get() as { n: number }).n).toBe(jobsAfterDm);
+    expect(listMessages(db, { leadId: lead.id }).filter((m) => m.direction === "out")).toHaveLength(1);
   });
 
   it("recovers a sign-in-only stop during the scheduled read-only inbox check", async () => {

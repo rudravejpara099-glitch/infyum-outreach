@@ -85,17 +85,16 @@ describe("messages and approval", () => {
 });
 
 describe("sending flow", () => {
-  it("moves the lead to dm_sent, schedules a follow-up and counts toward today's limit", () => {
+  it("moves the lead to dm_sent, schedules nothing after it and counts toward today's limit", () => {
     const { acct, camp, lead } = seed(false);
     moveStage(db, lead.id, "qualified", "t"); moveStage(db, lead.id, "warmed", "t");
     const m = createOutgoing(db, { leadId: lead.id, accountId: acct.id, kind: "dm", parts: ["a", "b", "c"], campaign: camp }, "t");
     afterSent(db, m.id, new Date("2026-10-20T10:00:00Z"));
     const l = getLead(db, lead.id)!;
     expect(l.stage).toBe("dm_sent");
-    expect(l.nextFollowupAt).toBe("2026-10-23 10:00:00");
+    expect(l.nextFollowupAt).toBeNull();
     expect(sentTodayForAccount(db, acct.id, "2026-10-20")).toBe(1);
-    expect(dueFollowups(db, "2026-10-22 10:00:01")).toHaveLength(0);
-    expect(dueFollowups(db, "2026-10-23 10:00:01")).toHaveLength(1);
+    expect(dueFollowups(db, "2026-12-31 23:59:59")).toHaveLength(0);
   });
   it("counts the team's local day across UTC midnight and daylight-saving changes", () => {
     const { acct, camp } = seed(false);

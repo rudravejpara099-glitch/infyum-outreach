@@ -38,7 +38,8 @@ export function canMove(from: Stage, to: Stage): boolean {
 
 /** An incoming first DM ends outreach, even if it arrives before our first send. */
 export function canSendAtStage(stage: Stage, kind: "dm" | "followup" | "reply" | "incoming"): boolean {
-  return (kind === "dm" && stage === "warmed") || (kind === "followup" && stage === "dm_sent");
+  // Only the first DM is ever sent by the app; a lead at dm_sent has been handed to a person.
+  return kind === "dm" && stage === "warmed";
 }
 
 export function isStage(value: string): value is Stage {

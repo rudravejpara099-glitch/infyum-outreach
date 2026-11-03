@@ -22,8 +22,9 @@ export function afterSent(db: Db, messageId: number, now = new Date(), actor = "
   logActivity(db, actor, `message.sent.${m.kind}`, { leadId: lead.id, accountId: m.accountId });
 
   if (m.kind === "dm") {
+    // Hand-off (owner ruling, 2026-10-29): after the first DM a person takes over, so nothing more is ever scheduled for this lead.
     moveStage(db, lead.id, "dm_sent", actor);
-    if (campaign?.followupsEnabled) scheduleFollowup(db, lead.id, addDays(FIRST_FOLLOWUP_DAYS, now), 0);
+    scheduleFollowup(db, lead.id, null, 0);
   } else if (m.kind === "followup") {
     const sent = lead.followupsSent + 1;
     const more = campaign?.followupsEnabled && sent < MAX_FOLLOWUPS;
