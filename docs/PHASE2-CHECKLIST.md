@@ -36,7 +36,8 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [x] Comment text rules: any length and any emoji count, no links/hashtags/dashes, no generic openers, max 300 characters; extension copy rebuilt (`lib/domain/warmup-comment.ts`, `extension/warmup.js`)
 - [x] Prompts and settings stay editable; the DM prompt no longer has to contain `{link}`
 - [x] Tests updated and green: 670 passed, types, lint, `next build --webpack` and `npm run smoke:ui` all pass (2026-11-03)
-- [ ] Warm-up behaviour: random posts from the newest ~12, skip many, like-only or comment-only, follow timing, story reaction only if `story_reactions` is on. The worker still does "10 pieces, like each, comment each" (`worker/chrome-warmup.ts`). Not changed yet.
+- [x] Warm-up behaviour: a visit now touches 2 to 5 posts picked at random from the newest 12 (never the grid from the top), every touched post is liked and about half also get a comment, the follow comes first or last, and the story is reacted to only sometimes (`lib/domain/warmup-plan.ts`, `worker/chrome-warmup.ts`; `tests/warmup-plan.test.ts`; 674 tests, build and smoke green, 2026-11-03). Not run live.
+- [ ] Not built, deliberately: comment-only posts (a comment needs the like step's receipt check), the pinned-post half-chance, and honouring a `story_reactions` Settings switch (no such setting exists in the app yet)
 - [ ] "No invented company facts" is only enforced by the prompt, not by code
 - [ ] **Needs:** owner reads five sample first messages for five different profiles. These need a running writer (local Ollama model or Anthropic credit); neither exists on this Mac yet.
 

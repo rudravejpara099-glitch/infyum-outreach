@@ -3,6 +3,7 @@ import { InstagramBlockedError, InstagramWarmupUncertainError, type WarmUpResult
 import { looksBlocked, looksLoggedOut, skipComment } from "./parse";
 import { instagramPostUrl, type WarmupPage } from "./chrome-warmup-data";
 import type { DelayKind } from "@/lib/domain/pacing";
+import { planWarmup, type Rng } from "@/lib/domain/warmup-plan";
 
 export type WarmupBrowser = {
   navigate(url: string): Promise<void>;
@@ -16,9 +17,10 @@ export type WarmupBrowser = {
   reload?(): Promise<void>;
 };
 
-/** Uses fresh controls and receipt checks; a partial warm-up is never replayed automatically. */
+/** Uses fresh controls and receipt checks; a partial warm-up is never replayed automatically.
+ * `pieces` is the most posts this visit may touch; the visit itself is planned at random (see lib/domain/warmup-plan.ts). */
 export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string, pieces: number,
-  makeComment: (context: string) => Promise<string>, mayContinue = () => true): Promise<WarmUpResult> {
+  makeComment: (context: string) => Promise<string>, mayContinue = () => true, rng: Rng = Math.random): Promise<WarmUpResult> {
   if (!Number.isSafeInteger(pieces) || pieces < 1 || pieces > 10) throw new Error("Warm-up needs 1 to 10 posts.");
   const reloaded = new Set<string>();
   const check = async (url: string, comment?: string) => {
@@ -47,9 +49,24 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
   const result: WarmUpResult = { likes: 0, comments: 0, followed: false };
   try {
     const profile = await check(profileUrl);
-    const posts = [...new Set(profile.postUrls.map(instagramPostUrl).filter((url): url is string => url !== null))].slice(0, pieces);
-    if (posts.length < pieces) throw new Error(`This profile needs ${pieces} available posts before warm-up can finish.`);
-    if (browser.likeStory && !profile.following) {
+    const available = [...new Set(profile.postUrls.map(instagramPostUrl).filter((url): url is string => url !== null))];
+    if (available.length < 1) throw new Error("This profile needs at least one available post before warm-up can finish.");
+    const plan = planWarmup(available, pieces, rng);
+    const posts = plan.picks.map((pick) => pick.url);
+    const commentOn = new Set(plan.picks.filter((pick) => pick.comment).map((pick) => pick.url));
+    const followProfile = async () => {
+      await browser.navigate(profileUrl);
+      await browser.wait("read");
+      const state = await check(profileUrl);
+      if (!state.following) {
+        attempted = true;
+        await browser.click("Follow");
+        await browser.wait("read");
+      }
+      result.followed = (await check(profileUrl)).following;
+      if (!result.followed) throw new Error("Instagram did not confirm following this profile.");
+    };
+    if (browser.likeStory && !profile.following && plan.reactToStory) {
       // Story first, like a person landing on the profile. It is a bonus: only a warning from Instagram stops the run.
       attempted = true;
       try {
@@ -62,6 +79,7 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
       await browser.wait("read");
       await check(profileUrl);
     }
+    if (plan.followFirst) await followProfile();
     for (const url of posts) {
       // Only post URLs actually read from this profile may be opened.
       const target = new URL(url);
@@ -72,7 +90,7 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
       if (!post.caption) throw new Error("Instagram did not provide enough post context for a specific comment.");
       let comment: string | null = null;
       // Never comment twice on one post: an interrupted warm-up may already have commented here.
-      if (!skipComment(post.caption) && !post.ownerCommented) {
+      if (commentOn.has(url) && !skipComment(post.caption) && !post.ownerCommented) {
         try {
           comment = (await makeComment(post.caption.slice(0, 400))).trim();
           if (warmupCommentError(comment)) comment = null;
@@ -113,16 +131,7 @@ export async function runChromeWarmup(browser: WarmupBrowser, profileUrl: string
       }
       await browser.wait("betweenPieces");
     }
-    await browser.navigate(profileUrl);
-    await browser.wait("read");
-    const profileAfter = await check(profileUrl);
-    if (!profileAfter.following) {
-      attempted = true;
-      await browser.click("Follow");
-      await browser.wait("read");
-    }
-    result.followed = (await check(profileUrl)).following;
-    if (!result.followed) throw new Error("Instagram did not confirm following this profile.");
+    if (!result.followed) await followProfile();
     return result;
   } catch (error) {
     if (attempted) throw new InstagramWarmupUncertainError(error instanceof InstagramBlockedError, error instanceof Error ? error.message : String(error));

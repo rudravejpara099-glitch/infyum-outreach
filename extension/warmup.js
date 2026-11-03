@@ -59,8 +59,26 @@ function instagramPostUrl(value) {
   }
 }
 
+// lib/domain/warmup-plan.ts
+var WARMUP_WINDOW = 12;
+function planWarmup(postUrls, budget, rng = Math.random) {
+  const pool = postUrls.slice(0, WARMUP_WINDOW);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = i - Math.floor(rng() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const most = Math.max(0, Math.min(budget, pool.length));
+  const wanted = Math.min(most, 2 + Math.floor(rng() * 4));
+  return {
+    // Likes outnumber comments: roughly half the touched posts also get a comment.
+    picks: pool.slice(0, wanted).map((url) => ({ url, comment: rng() < 0.55 })),
+    followFirst: rng() > 0.7,
+    reactToStory: rng() < 0.4
+  };
+}
+
 // worker/chrome-warmup.ts
-async function runChromeWarmup(browser, profileUrl, pieces, makeComment, mayContinue = () => true) {
+async function runChromeWarmup(browser, profileUrl, pieces, makeComment, mayContinue = () => true, rng = Math.random) {
   if (!Number.isSafeInteger(pieces) || pieces < 1 || pieces > 10) throw new Error("Warm-up needs 1 to 10 posts.");
   const reloaded = /* @__PURE__ */ new Set();
   const check = async (url, comment) => {
@@ -86,9 +104,24 @@ async function runChromeWarmup(browser, profileUrl, pieces, makeComment, mayCont
   const result = { likes: 0, comments: 0, followed: false };
   try {
     const profile = await check(profileUrl);
-    const posts = [...new Set(profile.postUrls.map(instagramPostUrl).filter((url) => url !== null))].slice(0, pieces);
-    if (posts.length < pieces) throw new Error(`This profile needs ${pieces} available posts before warm-up can finish.`);
-    if (browser.likeStory && !profile.following) {
+    const available = [...new Set(profile.postUrls.map(instagramPostUrl).filter((url) => url !== null))];
+    if (available.length < 1) throw new Error("This profile needs at least one available post before warm-up can finish.");
+    const plan = planWarmup(available, pieces, rng);
+    const posts = plan.picks.map((pick) => pick.url);
+    const commentOn = new Set(plan.picks.filter((pick) => pick.comment).map((pick) => pick.url));
+    const followProfile = async () => {
+      await browser.navigate(profileUrl);
+      await browser.wait("read");
+      const state = await check(profileUrl);
+      if (!state.following) {
+        attempted = true;
+        await browser.click("Follow");
+        await browser.wait("read");
+      }
+      result.followed = (await check(profileUrl)).following;
+      if (!result.followed) throw new Error("Instagram did not confirm following this profile.");
+    };
+    if (browser.likeStory && !profile.following && plan.reactToStory) {
       attempted = true;
       try {
         const story = await browser.likeStory();
@@ -100,6 +133,7 @@ async function runChromeWarmup(browser, profileUrl, pieces, makeComment, mayCont
       await browser.wait("read");
       await check(profileUrl);
     }
+    if (plan.followFirst) await followProfile();
     for (const url of posts) {
       const target = new URL(url);
       if (!/^https:\/\/(www\.)?instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+\/$/.test(target.href)) throw new Error("Instagram returned an invalid post link.");
@@ -108,7 +142,7 @@ async function runChromeWarmup(browser, profileUrl, pieces, makeComment, mayCont
       let post = await check(url);
       if (!post.caption) throw new Error("Instagram did not provide enough post context for a specific comment.");
       let comment = null;
-      if (!skipComment(post.caption) && !post.ownerCommented) {
+      if (commentOn.has(url) && !skipComment(post.caption) && !post.ownerCommented) {
         try {
           comment = (await makeComment(post.caption.slice(0, 400))).trim();
           if (warmupCommentError(comment)) comment = null;
@@ -146,16 +180,7 @@ async function runChromeWarmup(browser, profileUrl, pieces, makeComment, mayCont
       }
       await browser.wait("betweenPieces");
     }
-    await browser.navigate(profileUrl);
-    await browser.wait("read");
-    const profileAfter = await check(profileUrl);
-    if (!profileAfter.following) {
-      attempted = true;
-      await browser.click("Follow");
-      await browser.wait("read");
-    }
-    result.followed = (await check(profileUrl)).following;
-    if (!result.followed) throw new Error("Instagram did not confirm following this profile.");
+    if (!result.followed) await followProfile();
     return result;
   } catch (error) {
     if (attempted) throw new InstagramWarmupUncertainError(error instanceof InstagramBlockedError, error instanceof Error ? error.message : String(error));

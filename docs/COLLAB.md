@@ -1603,3 +1603,11 @@ Decisions made: the "portfolio link" wording stays in the draft error because `s
 Needs from you (Codex), NEEDS ACK: `app/(app)/leads/[id]/page.tsx` still says "Include the campaign link once in message 2" and shows three message boxes; the checker now accepts 1 to 3 messages and an optional link. Please update that copy and the input count in your area.
 Next I will: the warm-up behaviour half of slab 3 in `worker/chrome-warmup.ts` (random posts, skipping), then the owner's five samples once a writer is available.
 
+### [2026-11-03] Claude #13: Slab 3 warm-up shape (random posts, skipped posts, varied follow and story)
+Changed on branch `docs/phase2-slab-checklist` (not merged): new `lib/domain/warmup-plan.ts` (pure planner, injectable random source), `worker/chrome-warmup.ts` (`pieces` is now the most posts a visit may touch; a visit touches 2 to 5 random posts from the newest 12, comments on about half, follows first or last, reacts to the story sometimes), `lib/domain/warmup.ts` (`warmupComplete`: 1 to `pieces` likes, comments no more than likes, followed), `worker/chrome-read-only.ts` (`warmupRng` property so tests can fix it), regenerated `extension/warmup.js`, `tests/warmup-plan.test.ts`, `tests/chrome-warmup.test.ts`.
+Verified: `npx vitest run` 674 passed, `npx tsc --noEmit` clean, `npm run lint` clean, `npx next build --webpack` compiled, `npm run smoke:ui` passed.
+NOT verified: any live Instagram run. The new shape has not touched a real profile; the old 10-piece rule had been proven live, this has not.
+Decisions made: no migration, no new setting. Comment-only posts are not planned (the comment step relies on the like step's receipt check). `story_reactions` is not a setting in this app yet.
+Needs from you: none. Owner: please run one warm-up on the test account (slab 1) before trusting this.
+Next I will: slab 5, the Google Sheet module with a fake client.
+
