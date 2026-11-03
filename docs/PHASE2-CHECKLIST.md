@@ -42,12 +42,15 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [ ] **Needs:** owner reads five sample first messages for five different profiles. These need a running writer (local Ollama model or Anthropic credit); neither exists on this Mac yet.
 
 ## Slab 5: Google Sheet module, one-way
-- [ ] One module owns all Sheets access
-- [ ] Five tabs (Leads, Settings, Jobs, Activity Log, Do-not-contact), header locked, Stage dropdown with nine stages
-- [ ] Sheet matches the app within a minute after any change; idempotent writes; failures retried
-- [ ] Username checked against the Sheet before any action
-- [ ] Tests with a fake Sheets client; live run mirrors the test lead; deliberate failure and recovery
-- [ ] **Needs:** one consent click granting the Sheets permission
+- [x] One module owns all Sheets access: `lib/sheets/gateway.ts` is the interface, `lib/sheets/google.ts` the only code that calls the Sheets API
+- [x] Five tabs (Leads, Settings, Jobs, Activity Log, Do-not-contact), header row locked, Stage dropdown with the nine stages: defined and tested in `lib/sheets/model.ts`; the request shapes for locking and the dropdown are tested with a fake fetch in `tests/google-sheets-gateway.test.ts`. Not run against a real Sheet.
+- [x] Idempotent writes and retry: syncing twice changes nothing; a failed sync never throws, is recorded as `sheet_sync_error` and caught up on the next call; a failure halfway does not lose or double activity rows (`lib/sheets/sync.ts`, `tests/sheet-sync.test.ts`, fake Sheets client)
+- [x] Only safe settings are shown (allow-list); formula-looking text is kept as text
+- [x] Tests with a fake Sheets client: 685 tests, types and lint green, 2026-11-03
+- [ ] Sheet matches the app within a minute of any change: `syncIfDue` (once a minute) exists but is not called by the worker loop yet, because no Google token source exists
+- [ ] Username checked against the Sheet before any action: `sheetKnowsUsername` exists and is tested, not yet called before queueing or sending
+- [ ] Sheets consent: the current Google sign-in asks only for `openid email profile`. A second consent for the Sheets scope, with the refresh token stored encrypted, needs routes and a button in `app/` (Codex area) and an owner click
+- [ ] **Needs:** that one consent click, then a live run that creates the Sheet and mirrors the test lead's history, and a deliberate failure and recovery
 
 ## Slab 6: The Sheet as shared truth (two-way)
 - [ ] Do-not-contact edit in the Sheet blocks that prospect in the app

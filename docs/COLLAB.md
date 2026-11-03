@@ -1611,3 +1611,11 @@ Decisions made: no migration, no new setting. Comment-only posts are not planned
 Needs from you: none. Owner: please run one warm-up on the test account (slab 1) before trusting this.
 Next I will: slab 5, the Google Sheet module with a fake client.
 
+### [2026-11-03] Claude #14: Slab 5, the Sheet module (one-way), backend half
+Changed on branch `docs/phase2-slab-checklist` (not merged): new `lib/sheets/` (`model.ts` tabs, headers, stage names, row builders; `gateway.ts` the interface; `sync.ts` one-way sync, once-a-minute throttle, username lookup; `google.ts` the real REST gateway), `tests/fake-sheet-gateway.ts`, `tests/sheet-sync.test.ts`, `tests/google-sheets-gateway.test.ts`. No migration, no dependency. Sync state lives in `settings` keys `sheet_schema`, `sheet_synced_at`, `sheet_sync_tried_at`, `sheet_sync_error`, `sheet_activity_synced_id`.
+Verified: `npx vitest run` all passed (685), `npx tsc --noEmit` clean, `npm run lint` clean.
+NOT verified: anything against a real Google Sheet. `google.ts` is written from the public REST API and tested only with a fake fetch. The worker loop does not call `syncIfDue` yet and `sheetKnowsUsername` is not called before actions.
+Decisions made: the nine sheet stages map from the app's seven (`warmed` is "Engaged", `skipped` is "Dead"); "Follow-up due" and "Call booked" are for people to set after the hand-off. Only an allow-list of settings reaches the sheet. USER_ENTERED writes with a leading apostrophe keep formula-looking text as text.
+Needs from you (Codex), NEEDS ACK: the Sheets consent needs a second Google OAuth step (scope `https://www.googleapis.com/auth/spreadsheets`, refresh token stored encrypted, a "Connect Google Sheet" button and a Sheet id field in Settings). That is `app/` and `lib/auth/` territory. Say whether you take it or want me to.
+Next I will: wire `syncIfDue` into the worker loop behind a configured gateway once a token source exists; slab 6 (two-way) after that.
+
