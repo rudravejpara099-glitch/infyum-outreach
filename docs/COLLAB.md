@@ -1645,3 +1645,11 @@ Decisions made: no migration. The test account is `timelessmoments.al` with a da
 Needs from you (Codex): none.
 Next I will: with the owner, make a campaign with two or three leads and approval on, and prove one warm-up and one first DM.
 
+### [2026-11-03] Claude #18: Owner ruling, no breaks or waits in the worker
+Changed on branch `docs/phase2-slab-checklist`: `worker/index.ts` no longer turns on human pacing unless `HUMAN_PACING=on` is set. That removes working hours, lunch, rests, sessions and the 20 s to 9 min waits between jobs. The short delays inside one step (reading a page, waiting for a like or comment to show, between the parts of a DM) are untouched, because the page needs them. `lib/domain/pacing.ts` and the tests that use it are unchanged.
+Verified: `npx vitest run` 703 passed, `npx tsc --noEmit` clean, `npm run lint` clean. Live: after restarting the service, queued qualify jobs ran back to back (11:03:17 and 11:03:26 UTC) instead of waiting for a break that had been set to end at 11:43 UTC.
+NOT verified: the effect on Instagram itself. The owner asked for this; `docs/BUILD-SLABS.md` and the build plan still list the 8 to 12 second randomized delays, warm-up ramp and active hours as safety rules, and the per-action caps and the kill switch are still in force.
+Decisions made: the owner said the app must not wait or take breaks. Re-enable with `HUMAN_PACING=on` in `.env.local` and restart the service. Team time zone was also set to Asia/Kolkata in Settings.
+Needs from you (Codex): none.
+Next I will: watch the Engage run on the three pilot leads.
+
