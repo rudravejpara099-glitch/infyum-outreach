@@ -2,15 +2,15 @@ import type { Db } from "@/lib/db/core";
 import { getSetting, setSetting } from "@/lib/db/repos/settings";
 import { logActivity } from "@/lib/db/repos/activity";
 
-/** Build plan, Phase 2: four action buttons. Each one starts a step; nothing runs on its own until a button is pressed. */
-export const STEPS = ["find", "engage", "send", "followup"] as const;
+/** Build plan, Phase 2: action buttons. Each one starts a step; nothing runs on its own until a button is pressed.
+ * The system stops after the first DM (owner ruling, 2026-10-29), so there is no follow-up step. */
+export const STEPS = ["find", "engage", "send"] as const;
 export type Step = typeof STEPS[number];
-export const STEP_LABEL: Record<Step, string> = { find: "Find leads", engage: "Engage", send: "Send DMs", followup: "Follow up" };
+export const STEP_LABEL: Record<Step, string> = { find: "Find leads", engage: "Engage", send: "Send DMs" };
 export const STEP_HELP: Record<Step, string> = {
   find: "Searches for new prospects and checks them against your filters.",
   engage: "Checks found leads, then likes, comments and follows qualified ones.",
   send: "Writes first messages for engaged leads and sends the approved ones.",
-  followup: "Writes follow-ups that are due, sends approved ones and looks for replies.",
 };
 
 export type RunMode = "buttons" | "automatic";
@@ -37,7 +37,6 @@ export function stepHasWork(db: Db, step: Step): boolean {
     case "find": return count(`SELECT COUNT(*) n FROM jobs WHERE type='find_leads' AND ${active}`);
     case "engage": return count(`SELECT COUNT(*) n FROM jobs WHERE type IN ('qualify','warmup') AND ${active}`);
     case "send": return count(`SELECT COUNT(*) n FROM jobs WHERE type='draft_dm' AND ${active}`) || sendOf("dm");
-    case "followup": return count(`SELECT COUNT(*) n FROM jobs WHERE type IN ('draft_followup','check_inbox') AND ${active}`) || sendOf("followup");
   }
 }
 

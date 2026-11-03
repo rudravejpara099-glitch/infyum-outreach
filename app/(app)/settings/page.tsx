@@ -118,7 +118,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
 
         <section className="card p-5">
           <h2 className="text-base font-semibold">How work starts</h2>
-          <p className="mb-3 mt-1 text-sm text-muted">With action buttons (recommended), nothing runs until you press Find leads, Engage, Send DMs or Follow up on the Overview page. With automatic, Outreach runs every step by itself within your limits.</p>
+          <p className="mb-3 mt-1 text-sm text-muted">With action buttons (recommended), nothing runs until you press Find leads, Engage, or Send DMs on the Overview page. With automatic, Outreach runs every step by itself within your limits.</p>
           <ActionForm action={saveRunMode} className="flex flex-wrap items-end gap-3">
             <div><label className="label" htmlFor="runMode">Mode</label>
               <select id="runMode" name="runMode" defaultValue={mode} className="input"><option value="buttons">Action buttons (I press each step)</option><option value="automatic">Automatic (all steps on their own)</option></select></div>

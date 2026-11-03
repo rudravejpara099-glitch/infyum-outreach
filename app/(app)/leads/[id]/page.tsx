@@ -54,7 +54,6 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         {lead.fitScore !== null && lead.fitReason && <span className="text-muted">{lead.fitReason}</span>}
         {campaign && <Link href={`/campaigns/${campaign.id}`} className="text-accent">{campaign.name}</Link>}
         {isDnc(db, lead.handle) && <span className="badge badge-bad">Do not contact</span>}
-        {lead.nextFollowupAt && <span className="text-muted">Next follow-up {lead.nextFollowupAt.slice(0, 10)}</span>}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">

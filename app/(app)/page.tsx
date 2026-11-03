@@ -7,7 +7,6 @@ import { startWorker, stopWorker } from "./worker/actions";
 import { runStep } from "./step-actions";
 import { runMode, stepHasWork, STEPS, STEP_HELP, STEP_LABEL, type Step } from "@/lib/services/run-steps";
 import { approvedQueue } from "@/lib/db/repos/messages";
-import { dueFollowups } from "@/lib/db/repos/leads";
 import { nextQueuedWork, workerStatus } from "@/lib/queries/worker-status";
 import { workerStartProblem } from "@/lib/services/worker-start-readiness";
 import { dashboardData } from "@/lib/queries/dashboard";
@@ -41,7 +40,6 @@ export default async function Dashboard() {
     find: "Searches new prospects",
     engage: `${(d.stages.found ?? 0) + (d.stages.qualified ?? 0)} waiting`,
     send: `${d.stages.warmed ?? 0} to write, ${approvedQueue(db).length} approved to send`,
-    followup: `${dueFollowups(db, new Date().toISOString().replace("T", " ").slice(0, 19)).length} due`,
   };
   const funnel = STAGES.filter((s): s is Exclude<Stage, "skipped"> => s !== "skipped");
   const max = Math.max(1, ...funnel.map((s) => d.stages[s] ?? 0));
@@ -111,8 +109,7 @@ export default async function Dashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Leads" value={number(d.totalLeads)} />
         <Stat label="DMs sent today" value={d.sentToday} hint={`${d.sentWeek} in the last 7 days`} />
-        <Stat label="Replies" value={d.stages.replied ?? 0} />
-        <Stat label="Reply rate" value={`${Math.round(((d.stages.replied ?? 0) / Math.max(1, (d.stages.dm_sent ?? 0) + (d.stages.replied ?? 0))) * 100)}%`} hint="of leads we messaged" />
+        <Stat label="Handed over" value={(d.stages.dm_sent ?? 0) + (d.stages.replied ?? 0)} hint="first message sent; a person takes it from here" />
       </div>
 
       {d.pending > 0 && (

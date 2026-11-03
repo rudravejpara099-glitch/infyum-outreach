@@ -17,12 +17,13 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [ ] **Needs:** owner signs in once with Google
 - [ ] **Needs:** one refused sign-in with a non-allowed account
 
-## Slab 2: Hand-off after "DM sent" (next, needs nothing from the owner)
-- [x] No job of any kind is planned or run for a lead at DM sent (`worker/runner.ts`, `lib/services/outreach.ts`, `lib/domain/stages.ts`; test "stops at dm_sent" in `tests/runner.test.ts`; 670 tests, types and lint green, 2026-11-03). Not yet run live.
-- [ ] Follow up button, automatic reply checks and follow-up drafting removed (touches `app/`: Codex area, needs ACK)
-- [ ] Replies page and "replied" wording removed or hidden (`app/`: needs ACK)
-- [ ] Overview and Sheet show DM sent as the end of the line with a "handed over" label (`app/`: needs ACK)
-- [ ] Browser smoke updated for the UI changes and green (smoke and build are green on the backend half; the UI half is not done)
+## Slab 2: Hand-off after "DM sent" (done, not run live)
+- [x] No job of any kind is planned or run for a lead at DM sent (`worker/runner.ts`, `lib/services/outreach.ts`, `lib/domain/stages.ts`; test "stops at dm_sent" in `tests/runner.test.ts`)
+- [x] The Follow up button and step are removed (`lib/services/run-steps.ts`, Overview); the automatic reply checks and follow-up drafting no longer run; the "Send follow-ups" campaign checkbox is gone and new campaigns save it as off
+- [x] The Replies page and "replied" wording are replaced: the page and menu entry are now "Handed over" (everyone at DM sent or Replied), the Overview shows a "Handed over" count instead of Replies and Reply rate, campaign cards say "handed over", and DM sent is labelled "Handed over" in the app
+- [x] The Overview was looked at in the smoke-test screenshots (three buttons: Find leads, Engage, Send DMs; Handed over stat; Handed over menu entry)
+- [x] Browser smoke updated and green; 702 tests, types, lint and `next build --webpack` all pass (2026-11-03)
+- [ ] Still in the code and harmless: the `followupsEnabled` column, `draft_followup` and `check_inbox` job types and the History "first reply" chart, because removing them needs a migration and touches billing history. The Sheet still shows the stage name "DM sent" (it is the document's stage name)
 
 ## Slab 1: Extension live and verified
 - [ ] After an app restart the extension is back online within 60 seconds, no manual action

@@ -32,7 +32,7 @@ export default async function CampaignsPage() {
                     <div className="font-medium">{c.name} <span className={`badge ml-2 ${STATUS_BADGE[c.status]}`}>{CAMPAIGN_STATUS_LABEL[c.status]}</span></div>
                     <div className="mt-0.5 text-xs text-muted">{c.niches.join(", ") || "No niche chosen"} · {c.minFollowers.toLocaleString()} to {c.maxFollowers.toLocaleString()} followers · {c.country}</div>
                   </div>
-                  <div className="shrink-0 text-right text-xs text-muted tabular-nums">{total} leads · {s.dm_sent ?? 0} sent · {s.replied ?? 0} replied</div>
+                  <div className="shrink-0 text-right text-xs text-muted tabular-nums">{total} leads · {(s.dm_sent ?? 0) + (s.replied ?? 0)} handed over</div>
                 </Link>
                 {c.status === "active" && <div className="flex flex-wrap gap-2 sm:shrink-0">
                   <ActionForm action={changeCampaignStatus} className="contents">
