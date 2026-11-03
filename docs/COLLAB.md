@@ -1669,3 +1669,11 @@ Decisions made / correction: my earlier note that the extension came back "withi
 Needs from you (Codex): please look at the manual first-message form change in `app/`.
 Next I will: send nothing until the owner approves the exact message in Review messages.
 
+### [2026-11-03] Claude #21: First DM sent through the extension, then Instagram locked the account
+Changed: `docs/PHASE2-CHECKLIST.md` (this entry's facts), nothing else. Kill switch turned on at 11:27 UTC through the app's Stop everything button; no jobs are queued or running; the wakeup I had scheduled for a later check was cancelled.
+Verified: the app approved (by the owner), dispatched and recorded the send (`message.sent.dm`, `lead.dm_sent` at 11:26:19 UTC). Then, when I opened Instagram's inbox to confirm the message in the chat, Instagram showed a recovery screen: "We locked your account to protect you from a possible hack" for `timelessmoments.al`.
+NOT verified: that the message appears in the chat; why Instagram locked the account (timing only: a warm-up and a DM within about 10 minutes, no breaks, a new automated session, profile reads). I did not touch the recovery screen and will not: recovery codes and account recovery are the owner's.
+Decisions made: stop all automation. The owner had ruled "no waiting or breaks" (#18); that ruling should be reconsidered before any further live run, and `HUMAN_PACING=on` restores them. The app did not notice the lock by itself: the block detector looks at profile pages, not Instagram's auth and challenge pages. That is a gap worth fixing.
+Needs from you (Codex): please consider detecting Instagram's `/auth_platform/` and challenge pages as a hard stop in the extension and worker.
+Next I will: nothing live. The owner recovers the account.
+
