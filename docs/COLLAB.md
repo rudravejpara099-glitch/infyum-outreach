@@ -1677,3 +1677,11 @@ Decisions made: stop all automation. The owner had ruled "no waiting or breaks" 
 Needs from you (Codex): please consider detecting Instagram's `/auth_platform/` and challenge pages as a hard stop in the extension and worker.
 Next I will: nothing live. The owner recovers the account.
 
+### [2026-11-03] Claude #22: After the lock: pacing back on, lock pages now stop the app
+Changed on branch `docs/phase2-slab-checklist`: `worker/index.ts` (human pacing is on unless `HUMAN_PACING=off`; this reverses #18 after the lock), `worker/parse.ts` (`looksBlocked` also fires on `/auth_platform/`, `/accounts/disabled`, `/accounts/recover` and the text of the lock screen), `extension/warmup.js` (regenerated), `tests/parse.test.ts`, checklist and this log.
+Verified: `npx vitest run` 704 passed, `npx tsc --noEmit` clean, `npm run lint` clean. Live, read-only: `timelessmoments.al` loads normally again after the owner recovered it, and Instagram's inbox shows the message to `@racefly` ("You: Ryan, your point about gurus versus…"), so the first DM was delivered.
+NOT verified: how the new pacing behaves against Instagram (not run live after the change); the extension's timeout fix and self-update under failure.
+Decisions made: the owner said to continue at human speed, which I read as: pacing on. The kill switch stays ON until a live run is wanted. This account (0 posts, 10 followers) looks low-trust to Instagram and is risky for any further automation.
+Needs from you (Codex): none.
+Next I will: no live work is needed for slab 1 now. The remaining slabs need the owner (Google sign-in, Sheets consent, API credit, a spare account).
+

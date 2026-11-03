@@ -31,10 +31,15 @@ var BLOCK_SIGNS = [
   /confirm you'?re (a )?human/i,
   /suspicious (activity|login)/i,
   /your account has been (disabled|suspended|temporarily locked)/i,
-  /help us confirm/i
+  /help us confirm/i,
+  // The screen Instagram showed on 2026-11-03 after an automated session: "We locked your account to protect you from a possible hack".
+  /we locked your account/i,
+  /possible hack/i,
+  /choose a way to recover/i,
+  /account (is )?(locked|restricted)/i
 ];
 function looksBlocked(pageText, url) {
-  return /\/(challenge|accounts\/suspended)\//.test(url) || BLOCK_SIGNS.some((r) => r.test(pageText));
+  return /\/(challenge|auth_platform|accounts\/(suspended|disabled|recover))(\/|\?|$)/.test(url) || BLOCK_SIGNS.some((r) => r.test(pageText));
 }
 var LOGIN_PROMPTS = [
   /log in to (?:see|view) (?:photos|posts|this profile|content)/i,

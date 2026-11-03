@@ -41,9 +41,9 @@ async function main(): Promise<void> {
     const deps: Deps = {
       db, engine: defaultEngine(), driver, now: () => new Date(),
       apify: process.env.APIFY_TOKEN ? new ApifyClient({ token: process.env.APIFY_TOKEN }) : undefined,
-      // Owner ruling, 2026-11-03: no working hours, lunch, rests or waits between jobs. Set HUMAN_PACING=on to bring them back.
-      // Short delays inside a step (reading a page, waiting for a like to show) always stay: the page needs them.
-      ...(process.env.HUMAN_PACING === "on" ? { humanPace: {} } : {}),
+      // Human pace is ON: working hours, lunch, rests and waits between jobs. The owner briefly switched it off on 2026-11-03
+      // and Instagram locked the test account minutes later, so it is back on. HUMAN_PACING=off disables it (not recommended).
+      ...(process.env.HUMAN_PACING === "off" ? {} : { humanPace: {} }),
       mayClaim: () => workerMayClaim(db, token!, process.pid),
       pace: () => new Promise((r) => setTimeout(r, humanDelayMs("beforeSend", Math.random))),
     };
