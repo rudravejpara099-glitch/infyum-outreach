@@ -71,7 +71,9 @@ function followers(text) {
 async function openLogin(handle) {
   if (!HANDLE.test(handle ?? "")) throw new Error("The sign-in check needs the account's Instagram handle.");
   const state = await inTab(`https://www.instagram.com/${handle}/`, loginCheckInPage, [`/${handle.toLowerCase()}/`]);
-  if (/warning|human check|confirm it.s you|suspicious/i.test(state?.text ?? "") && !state?.loggedIn) throw new Error("Instagram showed a warning or human check. Review it in Chrome.");
+  // Instagram sent the tab somewhere else (a sign-in, a security check, a lock screen): say so, do not just answer "not signed in".
+  if (state?.allowed === false) throw new Error("Instagram did not show the profile page; it may be asking for a sign-in or a security check. Review it in Chrome.");
+  if (/warning|human check|confirm it.s you|suspicious|locked|possible hack/i.test(state?.text ?? "") && !state?.loggedIn) throw new Error("Instagram showed a warning or human check. Review it in Chrome.");
   return state?.loggedIn === true;
 }
 

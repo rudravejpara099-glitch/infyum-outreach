@@ -26,7 +26,7 @@ export function qualify(facts: LeadFacts, rules: AudienceRules): Verdict {
   if (facts.country !== rules.country) return fail(`Based in ${facts.country}`);
   if (facts.followers < rules.minFollowers) return fail(`Only ${facts.followers} followers (min ${rules.minFollowers})`);
   if (facts.followers > rules.maxFollowers) return fail(`${facts.followers} followers (max ${rules.maxFollowers})`);
-  if (facts.linkedToInfyum) return fail("Connected to Infyum");
+  if (facts.linkedToInfyum) return fail("Already connected: this account follows them, or they follow it");
   return { ok: true };
 }
 
