@@ -30,12 +30,15 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [ ] One warm-up and one first DM complete on the test account
 - [ ] **Needs:** one reload click on the extension, and the test Instagram account
 
-## Slab 3: App matches Dhrumit's process and the new first DM
-- [ ] Warm-up rules match the Phase 1 kit (within daily limits)
-- [ ] First DM rules match the kit; fresh hook per person; check against the last 10 sent; no invented company facts
-- [ ] Prompts and settings stay editable
-- [ ] Tests for the prompt and the variety check
-- [ ] **Needs:** owner reads five sample first messages for five profiles
+## Slab 3: App matches the Phase 1 kit (owner ruled 2026-11-03: follow the kit, not the older three-message rule)
+- [x] First DM: 1 to 3 messages, free-form goals-based prompt, only the Settings link allowed (at most two links), no dashes, banned stock/agency phrases, no invented facts in the prompt (`lib/engine/prompts.ts`, `lib/engine/validate.ts`, `lib/domain/writing-settings.ts`, `lib/domain/manual-first-dm.ts`, `lib/domain/local-ai.ts`)
+- [x] Variety check against the last 10 sent first messages already existed (`recentSentTexts` limit 10) and is kept
+- [x] Comment text rules: any length and any emoji count, no links/hashtags/dashes, no generic openers, max 300 characters; extension copy rebuilt (`lib/domain/warmup-comment.ts`, `extension/warmup.js`)
+- [x] Prompts and settings stay editable; the DM prompt no longer has to contain `{link}`
+- [x] Tests updated and green: 670 passed, types, lint, `next build --webpack` and `npm run smoke:ui` all pass (2026-11-03)
+- [ ] Warm-up behaviour: random posts from the newest ~12, skip many, like-only or comment-only, follow timing, story reaction only if `story_reactions` is on. The worker still does "10 pieces, like each, comment each" (`worker/chrome-warmup.ts`). Not changed yet.
+- [ ] "No invented company facts" is only enforced by the prompt, not by code
+- [ ] **Needs:** owner reads five sample first messages for five different profiles. These need a running writer (local Ollama model or Anthropic credit); neither exists on this Mac yet.
 
 ## Slab 5: Google Sheet module, one-way
 - [ ] One module owns all Sheets access

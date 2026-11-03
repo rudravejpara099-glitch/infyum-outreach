@@ -9,13 +9,13 @@ const installedModel = (name = "qwen3:4b") => ({ name, size: 2_600_000_000, deta
 const installed = () => json({ models: [installedModel()] });
 const generating = (response: Response) => vi.fn<typeof fetch>().mockResolvedValueOnce(installed()).mockResolvedValueOnce(response);
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
-it("constrains local JSON to three first-message parts or one follow-up part", async () => {
+it("constrains local JSON to one to three first-message parts or one follow-up part", async () => {
   expect(localMessageFormat()).toBeUndefined();
-  expect(localMessageFormat("dm")?.properties.parts).toMatchObject({ minItems: 3, maxItems: 3 });
+  expect(localMessageFormat("dm")?.properties.parts).toMatchObject({ minItems: 1, maxItems: 3 });
   expect(localMessageFormat("followup")?.properties.parts).toMatchObject({ minItems: 1, maxItems: 1 });
   const fetcher = generating(json({ done: true, message: { content: '{"parts":["one","two","three"]}' } }));
   await new LocalEngine({ model: "qwen3:4b", fetcher }).complete({ system: "s", prompt: "p", format: "dm" });
-  expect(JSON.parse(String(fetcher.mock.calls[1][1]?.body)).format).toMatchObject({ required: ["parts"], additionalProperties: false, properties: { parts: { minItems: 3, maxItems: 3 } } });
+  expect(JSON.parse(String(fetcher.mock.calls[1][1]?.body)).format).toMatchObject({ required: ["parts"], additionalProperties: false, properties: { parts: { minItems: 1, maxItems: 3 } } });
 });
 it("bounds free comments independently of billing without exceeding a metered allowance", async () => {
   expect(localRequestOutputLimit(160)).toBe(160);

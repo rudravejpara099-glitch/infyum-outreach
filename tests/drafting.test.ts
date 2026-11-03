@@ -27,11 +27,17 @@ beforeEach(() => {
 describe("draft validation", () => {
   it("parses JSON even inside code fences", () => expect(parseParts("```json\n" + good + "\n```")).toHaveLength(3));
   it("rejects wrong shapes", () => {
-    expect(checkDraft(["one", "two"], "dm")).toMatch(/exactly three/);
-    expect(checkDraft(["a", "no link here", "c"], "dm")).toMatch(/link exactly once/);
-    expect(checkDraft([`a ${LINK}`, `b ${LINK}`, "c"], "dm")).toMatch(/Only message 2/);
-    expect(checkDraft(["a", `b https://evil.example/x ${LINK}`, "c"], "dm")).toMatch(/exactly once/);
+    expect(checkDraft([], "dm")).toMatch(/one to three/);
+    expect(checkDraft(["a", "b", "c", "d"], "dm")).toMatch(/one to three/);
+    expect(checkDraft(["just one human line"], "dm")).toBeNull();
+    expect(checkDraft(["a", "no link here", "c"], "dm")).toBeNull();
+    expect(checkDraft([`a ${LINK}`, `b ${LINK}`, "c"], "dm")).toBeNull();
+    expect(checkDraft([`a ${LINK}`, `b ${LINK}`, `c ${LINK}`], "dm")).toMatch(/at most two/);
+    expect(checkDraft(["a", `b https://evil.example/x ${LINK}`, "c"], "dm")).toMatch(/only portfolio link allowed/);
     expect(checkDraft(["a — b", `c ${LINK}`, "d"], "dm")).toBe("No dashes");
+    expect(checkDraft(["I hope this finds you well, I came across your profile"], "dm")).toMatch(/Banned/);
+    expect(checkDraft([`see ${LINK}`], "dm", [LINK, "https://work.example/a"])).toBeNull();
+    expect(checkDraft(["see https://work.example/a"], "dm", [LINK, "https://work.example/a"])).toBeNull();
     expect(checkDraft(["Just checking in again."], "followup")).toMatch(/Filler/);
     expect(checkDraft(["Hello"], "followup")).toBeNull();
   });
@@ -47,7 +53,7 @@ describe("drafting", () => {
     const e = fake(["not json", good]);
     await draftFirstDm(db, e, leadId, "");
     expect(e.calls).toBe(2);
-    const bad = fake(["{\"parts\":[\"only one\"]}"]);
+    const bad = fake(["{\"parts\":[\"I hope this finds you well\"]}"]);
     await expect(draftFirstDm(db, bad, leadId, "")).rejects.toThrow(/acceptable dm draft/);
     expect(bad.calls).toBe(3);
   });

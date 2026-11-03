@@ -4,18 +4,18 @@ export type WritingSettings = {
   company: string;
   location: string;
   offer: string;
-  /** Instructions for the three first-DM messages. {sender} {company} {location} {offer} {link} are filled in. */
+  /** Instructions for the first DM (one to three messages). {sender} {company} {location} {offer} {link} are filled in. */
   dmPrompt: string;
   /** Instructions for one comment. */
   commentPrompt: string;
 };
 
-export const DEFAULT_DM_PROMPT = `Message 1: speak directly to the recipient using "you" or "your" and mention one specific, true detail about their page or business that proves you looked. No introduction yet.
-Message 2: introduce yourself by name as {sender} at {company}, {offer} based in {location}. You MUST include all three names: {sender}, {company}, {location}. Add one honest observation about their funnel and this link exactly once: {link}
-Message 3: one curious question about their funnel or business. Nothing else.
-Rules: each message under 380 characters. Different wording and shape from the recent openings below. Match their language if their audience is not English. No other links.`;
+export const DEFAULT_DM_PROMPT = `You are a sharp, funny, human person who really looked at this account and has something to say. There is no script and no fixed structure. Your goals: (1) they open the DM, because the first line is interesting enough to read on; (2) they feel value, because you say something sharp and useful about them or their business, an insight and never a brag; (3) they reply, because you end on a question so natural and easy to answer that replying is the obvious move.
+Two things always hold: it makes complete sense to a stranger (they know what you mean and why you are writing), and it is different every time, like a human: language, slang, humour, mood, length and shape all vary, from one line to up to three messages. Emojis are random too: none, one or several.
+You may say who you are ({sender} at {company}, {offer} based in {location}) in your own words if it helps, and never hide it if asked. Links: none or at most one, usually none; if you use one it is exactly this: {link}
+Never: invented results, prices, client names, years or guarantees; a guessed first name; a compliment with no detail; stock AI lines ("I hope this finds you well", "I came across your profile", "I'd love to connect", "reaching out because"); agency talk ("high-converting", "lead generation machine", "premium", "conversion-focused funnels", "white-label partner", "are you interested?"); humour at their expense or on a sad or sensitive post; guilt or pressure. Do not copy any earlier message, example or phrase. Match their language. Each message under 380 characters, and a different kind of message from the recent openings below.`;
 
-export const DEFAULT_COMMENT_PROMPT = `Write one short Instagram comment on this post. Use only 4 to 6 words (never more than 8), then 1 to 2 emojis. Specific to the post, warm, no dashes, no hashtags, no questions about business. Never start with "Love this", "Great" or "Nice". Name one concrete detail from the post's own text. Length example only, never reuse its words: "That checklist idea is smart 🙌". Answer with only the comment text.`;
+export const DEFAULT_COMMENT_PROMPT = `Write one Instagram comment on this post. The goal is to get noticed and make them feel genuinely seen: no pitch, no mention of what we do, no link, no hashtags, no dashes. React to what really matters to this person in this post (what they went through, what they are proud of, what is at stake for them), clearly about this post and one concrete detail of it. Never a generic reaction ("great post", "so true", "amazing", "Love this", a bare emoji). Be a real human with a random mood and voice; length and emojis (none to several) are up to you. Never copy any example or earlier comment. No question about their business, prices or clients. Grief, death, illness, elections or conflict: one short plain line of warmth. Match the post's language. Answer with only the comment text.`;
 
 export const DEFAULT_WRITING: WritingSettings = {
   senderName: "Rudra",
@@ -50,7 +50,6 @@ export function writingFromForm(values: Record<string, string>): { writing: Writ
     if (v.length > max) return { error: { field: k, message: `${label} must be ${max} characters or fewer.` } };
     if (v) writing[k] = v;
   }
-  if (!/\{link\}/.test(writing.dmPrompt)) return { error: { field: "dmPrompt", message: "The DM prompt must include {link} so message 2 carries your link." } };
   return { writing };
 }
 

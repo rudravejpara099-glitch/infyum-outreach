@@ -127,10 +127,10 @@ describe("Chrome campaign preparation", () => {
 
   it("never posts a comment that breaks the rules; that post only gets a like", async () => {
     const { browser } = fixture();
-    await expect(runChromeWarmup(browser, profileUrl, 1, async () => "Nice 🙌")).resolves.toEqual({ likes: 1, comments: 0, followed: true });
+    await expect(runChromeWarmup(browser, profileUrl, 1, async () => "Nice #sale")).resolves.toEqual({ likes: 1, comments: 0, followed: true });
     expect(browser.comment).not.toHaveBeenCalled();
     const { browser: other } = fixture();
-    await expect(runChromeWarmup(other, profileUrl, 1, async () => { throw new Error("Comment writing did not return valid text after 3 attempts. Comments need 3 to 8 words."); })).resolves.toEqual({ likes: 1, comments: 0, followed: true });
+    await expect(runChromeWarmup(other, profileUrl, 1, async () => { throw new Error("Comment writing did not return valid text after 3 attempts. Comments cannot contain dashes, hashtags, or links."); })).resolves.toEqual({ likes: 1, comments: 0, followed: true });
     expect(other.comment).not.toHaveBeenCalled();
   });
 
@@ -197,12 +197,15 @@ describe("warm-up comment rules", () => {
     expect(warmupComplete({ likes: 10, comments: 0, followed: true }, 10)).toBe(true);
     for (const value of [{ likes: 9, comments: 9, followed: true }, { likes: 10, comments: 10, followed: false }, { likes: 10, comments: 11, followed: true }]) expect(warmupComplete(value, 10)).toBe(false);
   });
-  it("accepts 3 to 8 words and 1 to 3 emoji graphemes", () => {
+  it("accepts any length and any number of emoji, within the hard limits", () => {
     expect(warmupCommentError(validComment)).toBeNull();
     expect(warmupCommentError("Your family looks wonderful 👨‍👩‍👦")).toBeNull();
+    for (const text of ["Wow", "Those details look amazing", "One two three four five six seven eight nine ten eleven twelve", "Those details look amazing 🙌🙌🙌🙌🙌"]) {
+      expect(warmupCommentError(text)).toBeNull();
+    }
   });
-  it("rejects missing emoji, excessive words, links, hashtags and every dash form", () => {
-    for (const text of ["Those details look amazing", "One two three four five six seven eight nine 🙌", "Those details look amazing 🙌🙌🙌🙌", "Those details look amazing #wood 🙌", "Those details look-amazing 🙌", "Those details look—amazing 🙌", "Those details https://site.test 🙌"]) {
+  it("rejects an empty or emoji-only comment, a very long one, links, hashtags and every dash form", () => {
+    for (const text of ["", "🙌", "x ".repeat(160), "Those details look amazing #wood 🙌", "Those details look-amazing 🙌", "Those details look—amazing 🙌", "Those details https://site.test 🙌"]) {
       expect(warmupCommentError(text)).not.toBeNull();
     }
   });

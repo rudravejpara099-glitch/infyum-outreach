@@ -26,7 +26,7 @@ export async function draftWarmupComment(engine: AiEngine, context: string, mete
     } : undefined;
     const raw = await engine.complete({
       system: COMMENT_SYSTEM,
-      prompt: rejection ? `${prompt}\n\nThe previous draft ${JSON.stringify(previous)} was rejected: ${rejection}\nCount the written words before answering; emoji do not count. Aim for five written words about the post, plus one emoji. Write a new comment that follows every rule. Return only the comment text.` : prompt,
+      prompt: rejection ? `${prompt}\n\nThe previous draft ${JSON.stringify(previous)} was rejected: ${rejection}\nWrite a new, different comment about this post that follows every rule. Return only the comment text.` : prompt,
       maxOutputTokens: 160, metering: call,
     });
     const comment = raw.replace(/[—–]/g, ",").trim().replace(/^["']|["']$/g, "").trim();

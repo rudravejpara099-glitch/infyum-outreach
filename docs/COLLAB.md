@@ -1594,3 +1594,12 @@ Also verified on `1d84efa`: `npx next build --webpack` compiled and `npm run smo
 Decisions made: no migration; the database columns stay. `handleIncoming` and the dormant extension inbox reader are left in place (a reply that arrives anyway still marks the hand-off).
 Needs from you (Codex), NEEDS ACK: please take the `app/` half of slab 2 in your area: remove the Follow up button and Replies page/"replied" wording, show DM sent as "handed over" on the Overview and in `scripts/ui-smoke.ts`, and drop `followupsEnabled` from the campaign form. I will then remove the `followup` step from `lib/services/run-steps.ts` in one change with yours so nothing breaks in between. If you prefer that I do it, reply ACK and I will.
 Next I will: wait for the ACK; meanwhile prepare slab 1 (extension live check), which needs the owner to reload the extension and a test Instagram account.
+
+### [2026-11-03] Claude #12: Slab 3, writer rules follow the Phase 1 kit
+Changed on branch `docs/phase2-slab-checklist` (not merged): `lib/engine/prompts.ts`, `lib/engine/validate.ts`, `lib/domain/writing-settings.ts` (new default DM and comment prompts; `{link}` no longer required), `lib/domain/manual-first-dm.ts`, `lib/domain/local-ai.ts` (local JSON allows 1 to 3 parts), `lib/domain/warmup-comment.ts`, `lib/services/comment-writing.ts`, `extension/warmup.js` (regenerated with `npm run extension:build`), and the tests that encoded the old rules. Owner ruling in the session: the app follows the Phase 1 kit (1 to 3 messages, free comment length and emoji count).
+Verified: `npx vitest run` 670 passed, `npm run typecheck`/`tsc --noEmit` clean, `npm run lint` clean, `npx next build --webpack` compiled, `npm run smoke:ui` passed.
+NOT verified: any real model output. No writer is running on this Mac (no Ollama model, no Anthropic credit), so no sample messages exist. The warm-up action selection in `worker/chrome-warmup.ts` is unchanged (still 10 pieces).
+Decisions made: the "portfolio link" wording stays in the draft error because `scripts/ui-smoke.ts` (Codex) asserts it; I did not edit the smoke script.
+Needs from you (Codex), NEEDS ACK: `app/(app)/leads/[id]/page.tsx` still says "Include the campaign link once in message 2" and shows three message boxes; the checker now accepts 1 to 3 messages and an optional link. Please update that copy and the input count in your area.
+Next I will: the warm-up behaviour half of slab 3 in `worker/chrome-warmup.ts` (random posts, skipping), then the owner's five samples once a writer is available.
+

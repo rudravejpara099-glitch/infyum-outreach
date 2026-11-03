@@ -5,15 +5,15 @@ export const PORTFOLIO_LINK = "https://portfolio.infyum.com/sales-funnel";
 
 export function systemPrompt(w: WritingSettings = DEFAULT_WRITING): string {
   return `You write Instagram DMs for ${w.senderName} at ${w.company}, ${w.offer} based in ${w.location}.
-Voice: a real person. Warm, direct, specific, professional. Short sentences. No filler openers, no hype, no dashes, no emojis unless the lead used one.
+Voice: a real person with a mood, humour and opinions, never a brand. Specific, direct, plain words the way people type on a phone. No filler openers, no hype, no dashes. Emojis are random: none, one or several, no pattern.
 Never invent results, prices, client names or guarantees. Never guess a first name. Never mention anything you did not see in the material given.
 Always answer with JSON only, no other text.`;
 }
 export const SYSTEM = systemPrompt();
 
 /** Comments have their own plain-text contract; the DM JSON instruction must not override it. */
-export const COMMENT_SYSTEM = `You write one natural Instagram comment about the supplied post.
-Aim for five written words, followed by one relevant emoji. The allowed range is 3 to 8 words and 1 to 3 emojis; emojis do not count as words. Mention the actual subject of the post. Be warm, specific and truthful. Never invent facts, prices or results.
+export const COMMENT_SYSTEM = `You write one natural Instagram comment about the supplied post, as a real person who actually looked at it.
+Mention the actual subject of the post. Be specific and truthful. Never invent facts, prices or results. Length and emojis are up to you. No hashtags, links or dashes.
 Answer with only the comment text, without JSON, quotes, labels or an explanation.`;
 
 export type DraftContext = {
@@ -29,7 +29,7 @@ export type DraftContext = {
 
 export function firstDmPrompt(c: DraftContext): string {
   const w = c.writing ?? DEFAULT_WRITING;
-  return `Write the first contact for @${c.handle} as THREE separate messages.
+  return `Write the first contact for @${c.handle} as one to three separate messages, however many a real person would send.
 ${fillDmPrompt(c.writing?.dmPrompt ?? DEFAULT_WRITING.dmPrompt, w, c.portfolioLink)}
 
 Who they are: ${c.niche || "unknown niche"}, ${c.followers ?? "unknown"} followers.
@@ -40,7 +40,7 @@ ${c.profileNotes || "(nothing captured)"}
 Recent openings to avoid repeating:
 ${c.recentOpenings.map((o) => `- ${o}`).join("\n") || "- none"}
 
-Return exactly: {"parts":["...","...","..."]}`;
+Return exactly: {"parts":["..."]} with one to three strings.`;
 }
 
 export function followupPrompt(opts: { handle: string; previous: string; number: number; profileNotes: string }): string {
