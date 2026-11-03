@@ -95,6 +95,10 @@ it("uses a pure bounded comment allowance and rejects malformed counters", () =>
 it("validates protocol operation shapes rather than accepting arbitrary instructions or paths", () => {
   expect(validConnectorArgs("readFacts", { handle: "https://evil.example" })).toBe(false);
   expect(validConnectorArgs("openLogin", { profileDir: "/private" })).toBe(false);
+  expect(validConnectorArgs("openLogin", {})).toBe(true);
+  expect(validConnectorArgs("openLogin", { handle: "my.company" })).toBe(true);
+  expect(validConnectorArgs("openLogin", { handle: "../bad" })).toBe(false);
+  expect(validConnectorArgs("openLogin", { handle: "my.company", extra: 1 })).toBe(false);
   expect(validConnectorArgs("warmUp", { handle: "lead", pieces: 11 })).toBe(false);
   expect(validConnectorArgs("sendMessages", { handle: "lead", parts: ["x".repeat(2001)] })).toBe(false);
   expect(validConnectorResult("readInbox", [{ handle: "valid", text: "Hi" }])).toBe(true);

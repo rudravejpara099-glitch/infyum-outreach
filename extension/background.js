@@ -1,4 +1,4 @@
-import { readFactsInPage } from "./page-scripts.js";
+import { readFactsInPage, loginCheckInPage } from "./page-scripts.js";
 import { warmUp, sendMessages, readInbox } from "./actions.js";
 import { InstagramBlockedError, InstagramWarmupUncertainError } from "./warmup.js";
 
@@ -65,6 +65,14 @@ function followers(text) {
   const n = parseFloat(raw.replace(/,/g, ""));
   if (Number.isNaN(n)) return null;
   return Math.round(raw.endsWith("k") ? n * 1_000 : raw.endsWith("m") ? n * 1_000_000 : n);
+}
+
+/** Is Chrome signed in as this account? Only the owner sees "Edit profile" on their own profile page. Reads only; nothing is sent. */
+async function openLogin(handle) {
+  if (!HANDLE.test(handle ?? "")) throw new Error("The sign-in check needs the account's Instagram handle.");
+  const state = await inTab(`https://www.instagram.com/${handle}/`, loginCheckInPage, [`/${handle.toLowerCase()}/`]);
+  if (/warning|human check|confirm it.s you|suspicious/i.test(state?.text ?? "") && !state?.loggedIn) throw new Error("Instagram showed a warning or human check. Review it in Chrome.");
+  return state?.loggedIn === true;
 }
 
 async function readFacts(handle) {
@@ -139,6 +147,7 @@ async function run(command, credential) {
     try { return await action(command, gate); } finally { await gate.finish(); }
   }
   const handle = command.args?.handle;
+  if (command.kind === "openLogin") return openLogin(handle);
   if (command.kind === "readFacts" && HANDLE.test(handle)) return readFacts(handle);
   if (command.kind === "readProfileNotes" && HANDLE.test(handle)) return readProfileNotes(handle);
   throw new Error("The extension cannot do this action yet.");

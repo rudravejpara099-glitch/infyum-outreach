@@ -186,6 +186,18 @@ export const storyLikeInPage = (argStory) => (async () => {
     while (!heart('Unlike') && Date.now() < doneBy) await sleep(200);
     return { hadStory: true, liked: Boolean(heart('Unlike')) && location.pathname.toLowerCase().startsWith(storyPath) };
   })();
+export const loginCheckInPage = (argPath) => (async () => {
+    const allowed = location.protocol === 'https:' &&
+      (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
+      location.pathname.toLowerCase() === argPath;
+    if (!allowed) return { allowed: false, loggedIn: false };
+    // Instagram shows a blank splash before the profile renders; wait for the answer instead of reading the splash.
+    const decided = () => /edit profile|log in|sign up/i.test(document.body?.innerText ?? '');
+    const until = Date.now() + 15000;
+    while (!decided() && Date.now() < until) await new Promise((resolve) => setTimeout(resolve, 300));
+    const text = document.body?.innerText ?? '';
+    return { allowed: true, text, loggedIn: /edit profile/i.test(text) };
+  })();
 export const inboxListInPage = (argOwner) => (async () => {
     const path = location.pathname.replace(/\/$/, '').toLowerCase();
     let isInbox = path === '/direct/inbox';
