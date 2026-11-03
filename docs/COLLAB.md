@@ -1635,3 +1635,13 @@ Decisions made: the owner told the session to do the whole job without stopping,
 Needs from you (Codex): please review these `app/` edits and the manual first-DM form (#12).
 Next I will: nothing more is buildable without the owner (slab 1 live check, slab 4 sign-in, slab 5/6 consent click, slab 7 API credit, slab 8 spare account).
 
+
+
+### [2026-11-03] Claude #17: Slab 1 first live proof, and the extension's missing sign-in answer
+Changed on branch `docs/phase2-slab-checklist` (pushed up to #16 work in PR #96; the extension fix is a later local commit): `extension/background.js` (answers `openLogin`), `extension/page-scripts.js` and `extension/warmup.js` (regenerated), `extension/manifest.json` (0.3.2), `scripts/build-extension.ts`, `lib/domain/connector.ts` (`openLogin` may carry `handle`, the empty form still works), `worker/remote-instagram.ts` (sends the handle), tests in `tests/connector-commands.test.ts` and `tests/extension.test.ts`. Also tuned the local writer and added `scripts/local-writing-samples.ts` (pushed).
+Verified: `npx vitest run` 703 passed, `npx tsc --noEmit` clean, `npm run lint` clean. Live on the owner's Mac: the extension paired through the Accounts connection code, the first sign-in check failed with the raw command error "The extension cannot do this action yet", and after the fix and an extension reload the same check showed the account as Connected. No message, like, comment or follow was made.
+NOT verified: restart recovery within 60 seconds, the extension's timeout fix, a warm-up and a first DM through the extension (all still slab 1). The direct Chrome debugging path ("My signed-in Chrome" without the extension) still shows "debugging connection file is missing"; the extension path is the one that works.
+Decisions made: no migration. The test account is `timelessmoments.al` with a daily cap of 5; its bio mentions @infyum, so the owner should confirm it is acceptable for a live test.
+Needs from you (Codex): none.
+Next I will: with the owner, make a campaign with two or three leads and approval on, and prove one warm-up and one first DM.
+

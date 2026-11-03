@@ -26,6 +26,7 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [ ] Still in the code and harmless: the `followupsEnabled` column, `draft_followup` and `check_inbox` job types and the History "first reply" chart, because removing them needs a migration and touches billing history. The Sheet still shows the stage name "DM sent" (it is the document's stage name)
 
 ## Slab 1: Extension live and verified
+- [x] Live, 2026-11-03: the extension (0.3.2) paired with the app on this Mac and the app's "Check Chrome sign-in" confirmed `timelessmoments.al` as connected through it. This needed a fix: the extension had no answer for the `openLogin` command ("The extension cannot do this action yet"); it now opens the account's own profile in a background tab and reports signed in only if "Edit profile" is there (commit `aefe478`). Read-only; nothing was sent or clicked on Instagram.
 - [ ] After an app restart the extension is back online within 60 seconds, no manual action
 - [ ] Timeout fix shipped and the extension updates itself
 - [ ] One warm-up and one first DM complete on the test account
