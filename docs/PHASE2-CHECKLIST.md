@@ -45,7 +45,7 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [x] Tests updated and green: 670 passed, types, lint, `next build --webpack` and `npm run smoke:ui` all pass (2026-11-03)
 - [x] Warm-up behaviour: a visit now touches 2 to 5 posts picked at random from the newest 12 (never the grid from the top), every touched post is liked and about half also get a comment, the follow comes first or last, and the story is reacted to only sometimes (`lib/domain/warmup-plan.ts`, `worker/chrome-warmup.ts`; `tests/warmup-plan.test.ts`; 674 tests, build and smoke green, 2026-11-03). Not run live.
 - [ ] Not built, deliberately: comment-only posts (a comment needs the like step's receipt check), the pinned-post half-chance, and honouring a `story_reactions` Settings switch (no such setting exists in the app yet)
-- [ ] "No invented company facts" is only enforced by the prompt, not by code
+- [x] "No invented facts" is now also checked by a second strict reviewer pass on the free writer (`criticPrompt` in `lib/engine/prompts.ts`, `lib/services/drafting.ts`): it rejects criticism of the person, claims about them the notes do not support, results or guarantees, agency-speak and guessed first names. A draft it refuses three times is kept only as a held draft with "Reviewer concern: …", never queued without a person. Paid (metered) calls skip the reviewer so they cost no more. Real-model run on five fictional profiles: all five were still held for a person, so the small local model is not good enough on its own.
 - [x] Five sample first messages and comments were written by the real local model (`qwen3.5:latest` through Ollama) for five fictional profiles with `scripts/local-writing-samples.ts` (output in `data/local-writing-samples.json`, nothing sent, no paid call). Honest read: this small local model is uneven (it guessed a first name, mixed up who is in India, invented feelings in comments, and one profile got no valid comment). Quality with Claude Sonnet 5.5 is untested.
 - [ ] **Needs:** the owner reads the samples and decides whether the local model is good enough or Slab 7 (Anthropic credit) comes first
 
@@ -55,10 +55,10 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [x] Idempotent writes and retry: syncing twice changes nothing; a failed sync never throws, is recorded as `sheet_sync_error` and caught up on the next call; a failure halfway does not lose or double activity rows (`lib/sheets/sync.ts`, `tests/sheet-sync.test.ts`, fake Sheets client)
 - [x] Only safe settings are shown (allow-list); formula-looking text is kept as text
 - [x] Tests with a fake Sheets client: 690 tests, types and lint green, 2026-11-03
-- [ ] Sheet matches the app within a minute of any change: `syncIfDue` (once a minute) exists but is not called by the worker loop yet, because no Google token source exists
-- [ ] Username checked against the Sheet before any action: `sheetKnowsUsername` exists and is tested, not yet called before queueing or sending
-- [ ] Sheets consent: the current Google sign-in asks only for `openid email profile`. A second consent for the Sheets scope, with the refresh token stored encrypted, needs routes and a button in `app/` (Codex area) and an owner click
-- [ ] **Needs:** that one consent click, then a live run that creates the Sheet and mirrors the test lead's history, and a deliberate failure and recovery
+- [x] Sheet matches the app within a minute of any change: the worker loop now runs the sheet cycle (`worker/index.ts` calling `runSheetCycle`) whenever a Sheet and a Google connection are set up; once a minute, and a failure is logged and never stops outreach. Tested with fakes only.
+- [x] Username check against the Sheet: a username that is in the Sheet's Leads tab but unknown to the app is blocked in the app on the next cycle (`lib/sheets/from-sheet.ts`, `sheet.known_username`), and the Do-not-contact tab already flows in. Granularity is one minute, not "before every action".
+- [x] Sheets consent built: `/api/sheets/google/start` and `/callback` (spreadsheets scope only, offline, PKCE, signed-in user checked first), the refresh token stored encrypted (AES-256-GCM, key from the server secret) in the workspace settings, a Settings section with Connect, Create the Sheet, Use an existing Sheet and Disconnect (`lib/sheets/oauth.ts`, `lib/sheets/connection.ts`, `tests/sheets-connection.test.ts`). 722 tests, types, lint, build and smoke green. Not run against real Google.
+- [ ] **Needs:** the owner's Google client id and secret in `.env.local` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), the redirect address `http://localhost:3000/api/sheets/google/callback` added to that Google client, one consent click, then a live run that creates the Sheet and mirrors the leads, and a deliberate failure and recovery
 
 ## Slab 6: The Sheet as shared truth (two-way)
 - [x] A name added to Do-not-contact in the Sheet blocks that prospect in the app (closes or skips its lead; unknown names are blocked too; removing a name does not unblock): `lib/sheets/from-sheet.ts`, `tests/sheet-from-sheet.test.ts`, fake Sheets client
@@ -66,8 +66,7 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - [x] Conflicting edits: if both the app and the Sheet changed the same lead since the last sync, the person's edit wins when the app allows it, and a `sheet.conflict` line is logged. This is a rule I chose, because the Sheets API gives no edit time; it needs the owner's OK (see COLLAB #15)
 - [x] One round = read people's edits first, then write the app's state, at most once a minute, and no write when the read failed (`lib/sheets/cycle.ts`, `tests/sheet-cycle.test.ts`)
 - [x] 702 tests, types and lint green, 2026-11-03
-- [ ] The worker loop does not run the cycle yet (no Google token source), and the Sheets consent flow does not exist (see slab 5)
-- [ ] **Needs:** one live edit round-trip in a real Sheet
+- [ ] Same live needs as slab 5 (Google credentials and one consent click); then one live edit round-trip in a real Sheet
 
 ## Slab 7: Claude Sonnet 5.5 as the writer
 - [ ] One real comment, one three-part DM and one fit score come from Sonnet 5.5; cost metered; monthly limit stops it; local writer stays as fallback

@@ -104,6 +104,22 @@ describe("Stage edits in the Sheet", () => {
   });
 });
 
+describe("the duplicate rule", () => {
+  it("blocks a username that is in the Sheet's Leads tab but unknown to the app, once, and leaves the app's own leads alone", async () => {
+    const own = await leadAt("mine");
+    const row = ["handled.by.a.teammate", ...Array(LEADS_HEADERS.length - 1).fill("")];
+    row[STAGE] = "DM sent";
+    sheet.tabs.get("Leads")!.rows.push(row, ["'=BAD()", ...Array(LEADS_HEADERS.length - 1).fill("")]);
+    const first = await syncFromSheet(db, sheet);
+    expect(first).toMatchObject({ ok: true, knownNamesBlocked: 1 });
+    expect(isDnc(db, "handled.by.a.teammate")).toBe(true);
+    expect(isDnc(db, "mine")).toBe(false);
+    expect(getLead(db, own.id)!.stage).toBe("found");
+    expect(actions()).toContain("sheet.known_username");
+    expect(await syncFromSheet(db, sheet)).toMatchObject({ ok: true, knownNamesBlocked: 0 });
+  });
+});
+
 describe("failure", () => {
   it("is recorded without throwing and the next call carries on", async () => {
     const lead = await leadAt("hal");

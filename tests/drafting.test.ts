@@ -4,7 +4,7 @@ import { createAccount } from "@/lib/db/repos/accounts";
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { addLead, assignLead, moveStage } from "@/lib/db/repos/leads";
 import { draftFirstDm } from "@/lib/services/drafting";
-import { checkDraft, parseParts } from "@/lib/engine/validate";
+import { checkDraft, parseParts, parseVerdict } from "@/lib/engine/validate";
 import type { AiEngine } from "@/lib/engine/types";
 
 const LINK = "https://portfolio.infyum.com/sales-funnel";
@@ -50,11 +50,54 @@ describe("drafting", () => {
     expect(m.parts).toHaveLength(3);
   });
   it("retries after a bad answer and stops after three failures", async () => {
-    const e = fake(["not json", good]);
+    const e = fake(["not json", good, '{"ok": true}']);
     await draftFirstDm(db, e, leadId, "");
-    expect(e.calls).toBe(2);
+    expect(e.calls).toBe(3); // the bad answer, the good draft, then the reviewer's pass
     const bad = fake(["{\"parts\":[\"I hope this finds you well\"]}"]);
     await expect(draftFirstDm(db, bad, leadId, "")).rejects.toThrow(/acceptable dm draft/);
     expect(bad.calls).toBe(3);
   });
 });
+
+describe("the reviewer pass on the free writer", () => {
+  it("sends a draft back when the reviewer rejects it, with the reason, and keeps the one it accepts", async () => {
+    const prompts: string[] = [];
+    const answers = [good, '{"ok": false, "problem": "It says their bio hides the offer."}', good, '{"ok": true}'];
+    let i = 0;
+    const engine: AiEngine = { async complete({ prompt }) { prompts.push(prompt); return answers[i++]; } };
+    const message = await draftFirstDm(db, engine, leadId, "bio: 1-on-1 coaching for founders");
+    expect(message.parts).toHaveLength(3);
+    expect(prompts[0]).not.toContain("rejected");
+    expect(prompts[1]).toContain("bio: 1-on-1 coaching for founders");
+    expect(prompts[2]).toContain("A reviewer rejected it: It says their bio hides the offer.");
+    expect(i).toBe(4);
+  });
+  it("after three refusals keeps the draft only for a person to decide on, flagged with the concern, even when approval is otherwise off", async () => {
+    const engine: AiEngine = { async complete({ prompt }) { return prompt.startsWith("You check a draft") ? '{"ok": false, "problem": "Too salesy."}' : good; } };
+    const message = await draftFirstDm(db, engine, leadId, "");
+    expect(message.status).toBe("pending_approval");
+    expect(message.approvalReasons).toContain("Reviewer concern: Too salesy.");
+  });
+  it("still fails when the draft breaks a hard rule, whatever the reviewer says", async () => {
+    const banned = JSON.stringify({ parts: ["I hope this finds you well"] });
+    const engine: AiEngine = { async complete({ prompt }) { return prompt.startsWith("You check a draft") ? '{"ok": true}' : banned; } };
+    await expect(draftFirstDm(db, engine, leadId, "")).rejects.toThrow(/acceptable dm draft/);
+  });
+  it("tells the reviewer what it may accept about the sender", async () => {
+    const prompts: string[] = [];
+    const engine: AiEngine = { async complete({ prompt }) { prompts.push(prompt); return prompt.startsWith("You check a draft") ? '{"ok": true}' : good; } };
+    await draftFirstDm(db, engine, leadId, "bio: coach");
+    const review = prompts.find((p) => p.startsWith("You check a draft"))!;
+    expect(review).toContain("Rudra at Infyum");
+    expect(review).toContain("based in India");
+    expect(review).toContain("claims about the sender are fine");
+  });
+  it("lets a draft through when the reviewer's answer cannot be read or the reviewer call fails", () => {
+    expect(parseVerdict("I think it is fine")).toEqual({ ok: true });
+    expect(parseVerdict("{broken")).toEqual({ ok: true });
+    expect(parseVerdict('{"ok": true}')).toEqual({ ok: true });
+    expect(parseVerdict('{"ok": false}')).toMatchObject({ ok: false });
+    expect(parseVerdict('Sure! {"ok": false, "problem": "Criticises the bio."} done')).toEqual({ ok: false, problem: "Criticises the bio." });
+  });
+});
+

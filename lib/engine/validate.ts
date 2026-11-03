@@ -10,6 +10,17 @@ export function parseParts(raw: string): string[] {
   return partsSchema.parse(JSON.parse(raw.slice(start, end + 1))).parts;
 }
 
+/** Reads the critic's answer. An unreadable answer counts as a pass: a flaky checker must never block every message. */
+export function parseVerdict(raw: string): { ok: true } | { ok: false; problem: string } {
+  const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
+  if (start < 0 || end < start) return { ok: true };
+  try {
+    const value = JSON.parse(raw.slice(start, end + 1)) as { ok?: unknown; problem?: unknown };
+    if (value.ok === false) return { ok: false, problem: typeof value.problem === "string" && value.problem.trim() ? value.problem.trim().slice(0, 240) : "The draft was too critical or too salesy" };
+  } catch { /* unreadable: pass */ }
+  return { ok: true };
+}
+
 const URL_RE = /https?:\/\/\S+/g;
 const DASHES = /[—–]/;
 

@@ -28,6 +28,7 @@ async function main() {
       const comment = await draftWarmupComment(engine, p.notes).catch((error: unknown) => (error instanceof Error && /^Comment writing did not return valid text/.test(error.message) ? "(no comment: the writer broke the rules three times, so the app would only like this post)" : Promise.reject(error)));
       const message = await draftFirstDm(db, engine, index + 1, p.notes, "samples");
       out.push({ handle: p.handle, comment, parts: message.parts });
+      if (message.approvalReasons.some((r) => r.startsWith("Reviewer concern"))) console.log(`  (held for a person: ${message.approvalReasons.find((r) => r.startsWith("Reviewer concern"))})`);
       console.log(`\n@${p.handle} (${p.niche})\n  comment: ${comment}\n  first message:\n${message.parts.map((part) => `    | ${part}`).join("\n")}`);
       // Sending is simulated: mark this one sent so the next draft is checked against it, like the real variety check.
       db.prepare("UPDATE messages SET status='sent', sent_at=datetime('now') WHERE id=?").run(message.id);

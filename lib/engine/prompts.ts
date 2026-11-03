@@ -43,6 +43,28 @@ ${c.recentOpenings.map((o) => `- ${o}`).join("\n") || "- none"}
 Return exactly: {"parts":["..."]} with one to three strings.`;
 }
 
+/** A second, strict read of a first-message draft by the free local writer. It catches what word lists cannot. */
+export function criticPrompt(profileNotes: string, parts: string[], sender = ""): string {
+  return `You check a draft Instagram first message before it is sent to a stranger. Be strict.
+
+What we know about the person (the only facts the message may rely on):
+${profileNotes || "(nothing captured)"}
+
+Facts about the sender, which the message MAY state (do not reject these): ${sender || "name, company and location as written in the draft"}
+
+The draft (${parts.length} message${parts.length === 1 ? "" : "s"}):
+${parts.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+
+Reject the draft if ANY of these is true:
+- it criticises or talks down to the person, their account, bio, content or business (for example "stuck in the past", "missed opportunity", "hiding your offer", "nobody knows where to click")
+- it states something about THE PERSON that the notes above do not support (claims about the sender are fine)
+- it promises or mentions results, guarantees, prices or numbers we cannot back up
+- it sounds like an agency pitch, a template, or a lecture instead of one person writing to another
+- it guesses the person's first name from their handle
+
+Answer with JSON only: {"ok": true} or {"ok": false, "problem": "<one short sentence saying what to change>"}`;
+}
+
 export function followupPrompt(opts: { handle: string; previous: string; number: number; profileNotes: string }): string {
   return `@${opts.handle} did not reply to our first DMs. Write follow-up number ${opts.number} (max 2).
 It must add something new: a specific observation or one useful point about their funnel. Never "just checking in", no guilt, no pressure, do not repeat earlier wording. Two to three sentences, no link.

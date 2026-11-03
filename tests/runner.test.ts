@@ -484,6 +484,7 @@ describe("worker pipeline", () => {
     let n = 0;
     deps.engine = { async complete({ prompt }) {
       if (prompt.includes("Write one short Instagram comment")) return "Nice 🙌";
+      if (prompt.startsWith("You check a draft")) return '{"ok": true}';
       n++;
       const topics = [
         "Your credit rebuild reel about disputing old collections accounts was genuinely useful, especially the part on goodwill letters",
