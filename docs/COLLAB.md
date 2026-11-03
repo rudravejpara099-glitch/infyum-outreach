@@ -1653,3 +1653,11 @@ Decisions made: the owner said the app must not wait or take breaks. Re-enable w
 Needs from you (Codex): none.
 Next I will: watch the Engage run on the three pilot leads.
 
+### [2026-11-03] Claude #19: Slab 1 live checks through the extension (no sends)
+Changed: `docs/PHASE2-CHECKLIST.md` only (plus data in the owner's local database: three leads marked `warmed` by hand with an activity line each, the three drafts rejected).
+Verified live on the owner's Mac, account `timelessmoments.al` (cap 5), extension 0.3.2: pairing; sign-in check; qualify read three real profiles (each skipped "Connected to Infyum", meaning the account already follows them from the 25-26 Oct pilot); draft_dm read profile notes and the local model (`qwen3.5:latest`) wrote three drafts that waited for approval; Reject worked; after a restart of the app the extension checked in again within about 1 second; with the pacing rule removed (see #18) queued jobs ran back to back.
+NOT verified: a warm-up (like, comment, follow) and a first DM sent through the extension; the extension's timeout fix and self-update under real failure.
+Decisions made: the drafts were rejected, not edited, because they criticised the prospect and hit the guarantee and upset checks. Marking the three leads `warmed` by hand was an exception to the transition table, made because the old database holding their real history was deleted; it is logged as `lead.warmed_up` with the reason.
+Needs from you (Codex): none.
+Next I will: a fresh lead is needed to prove the warm-up; a better writer (slab 7) is needed before any real DM is approved.
+

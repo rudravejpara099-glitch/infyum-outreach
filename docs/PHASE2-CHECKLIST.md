@@ -27,10 +27,12 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 
 ## Slab 1: Extension live and verified
 - [x] Live, 2026-11-03: the extension (0.3.2) paired with the app on this Mac and the app's "Check Chrome sign-in" confirmed `timelessmoments.al` as connected through it. This needed a fix: the extension had no answer for the `openLogin` command ("The extension cannot do this action yet"); it now opens the account's own profile in a background tab and reports signed in only if "Edit profile" is there (commit `aefe478`). Read-only; nothing was sent or clicked on Instagram.
-- [ ] After an app restart the extension is back online within 60 seconds, no manual action
+- [x] After an app restart the extension is back online within 60 seconds, no manual action: measured live 2026-11-03, it checked in again within about 1 second of the app coming back
 - [ ] Timeout fix shipped and the extension updates itself
-- [ ] One warm-up and one first DM complete on the test account
-- [ ] **Needs:** one reload click on the extension, and the test Instagram account
+- [x] Live, 2026-11-03, through the extension on `timelessmoments.al`: reading three real profiles worked (the app saw "already followed" and skipped them by its own rule), reading profile notes for first messages worked, the local writer produced three drafts that all stopped at the approval gate, and Reject worked. Nothing was sent.
+- [ ] One warm-up (like, comment, follow) on a fresh lead: not run live. The three pilot leads were already followed from the 25-26 Oct pilot, so they were marked warmed by hand (logged in the activity history) and the warm-up was skipped.
+- [ ] One first DM sent through the extension: not run. The three drafts were rejected for breaking the rules (criticising the prospect, "guarantee" wording, one long block) because the local model writes poorly; a Claude Sonnet writer (slab 7) or better prompts come first.
+- [ ] **Needs:** one fresh, public lead whose account the test account does not follow yet, to prove the warm-up
 
 ## Slab 3: App matches the Phase 1 kit (owner ruled 2026-11-03: follow the kit, not the older three-message rule)
 - [x] First DM: 1 to 3 messages, free-form goals-based prompt, only the Settings link allowed (at most two links), no dashes, banned stock/agency phrases, no invented facts in the prompt (`lib/engine/prompts.ts`, `lib/engine/validate.ts`, `lib/domain/writing-settings.ts`, `lib/domain/manual-first-dm.ts`, `lib/domain/local-ai.ts`)
