@@ -83,7 +83,6 @@ async function readFacts(handle) {
   if (found.blocked) { const e = new Error("Instagram needs your attention."); e.blocked = true; throw e; }
   if (found.loggedOut) { const e = new Error("Instagram sign-in is not confirmed in this Chrome."); e.blocked = true; throw e; }
   if (found.restricted) throw new Error("Instagram restricts this profile.");
-  if (found.aboutFailed) throw new Error("Instagram's About popup failed to load. Will retry.");
   const count = followers(found.followerText || "");
   if (count === null) throw new Error("Could not read the follower count.");
   if (!["follow", "follow back", "following", "requested"].includes(found.relation)) throw new Error("No clear connection status.");

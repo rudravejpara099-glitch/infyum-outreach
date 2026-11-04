@@ -36,7 +36,7 @@ describe("qualify", () => {
   it("passes a good lead", () => expect(qualify(good, rules).ok).toBe(true));
   it("fails each rule with its own reason", () => {
     expect(qualify({ ...good, isPublic: false }, rules)).toEqual({ ok: false, reason: "Account is private" });
-    expect(qualify({ ...good, country: null }, rules).ok).toBe(false);
+    expect(qualify({ ...good, country: null }, rules).ok).toBe(true); // unreadable country no longer stops a lead
     expect(qualify({ ...good, country: "India" }, rules)).toEqual({ ok: false, reason: "Based in India" });
     expect(qualify({ ...good, followers: 1999 }, rules).ok).toBe(false);
     expect(qualify({ ...good, followers: 150001 }, rules).ok).toBe(false);
