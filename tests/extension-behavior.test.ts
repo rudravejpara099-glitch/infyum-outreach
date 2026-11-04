@@ -27,7 +27,7 @@ beforeEach(async () => {
         set: async (o: Record<string, unknown>) => { Object.assign(store, o); },
         remove: async (keys: string | string[]) => { for (const k of Array.isArray(keys) ? keys : [keys]) delete store[k]; },
       } },
-      runtime: { getManifest: () => ({ version: "0.3.3" }), reload, onMessage: { addListener: () => {} }, onStartup: { addListener: () => {} }, onInstalled: { addListener: () => {} } },
+      runtime: { getManifest: () => ({ version: "0.3.6" }), reload, onMessage: { addListener: () => {} }, onStartup: { addListener: () => {} }, onInstalled: { addListener: () => {} } },
       alarms: { create: () => {}, onAlarm: { addListener: (fn: typeof alarm) => { alarm = fn; } } },
       tabs: {
         create: async ({ url }: { url: string }) => { opened.push(url); return { id: 7 }; },
@@ -55,8 +55,8 @@ function serve(cmd: ReturnType<typeof command>) {
   server = (path, body) => {
     if (path === "/api/connector/poll") {
       if (body.commandId) return { json: { continue: true, command: cmd } };
-      if (!handed) { handed = true; return { json: { command: cmd, extensionVersion: "0.3.3" } }; }
-      return { json: { command: null, extensionVersion: "0.3.3" } };
+      if (!handed) { handed = true; return { json: { command: cmd, extensionVersion: "0.3.6" } }; }
+      return { json: { command: null, extensionVersion: "0.3.6" } };
     }
     return { json: {} };
   };

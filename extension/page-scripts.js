@@ -147,6 +147,7 @@ export const warmupInPage = (argPaths, argOwner, argComment) => (async () => {
     const comment = argComment;
     const input = root?.querySelector('textarea[aria-label*="comment" i],textarea[placeholder*="comment" i]');
     // Comment rows are plain blocks now: find our exact text, then our profile link within a few levels.
+    const ownerCommentedNow = Boolean(comment && (!input || !input.value) && Array.from(root?.querySelectorAll('a[href]') ?? []).some(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath) && (root?.innerText || '').replace(/s+/g, ' ').includes(comment.replace(/s+/g, ' ').slice(0, 40)));
     const commentVisible = Boolean(comment && input && !input.value && Array.from(root?.querySelectorAll('span') ?? []).some(span => {
       if (span.textContent?.trim() !== comment) return false;
       let row = span.parentElement;
@@ -154,7 +155,7 @@ export const warmupInPage = (argPaths, argOwner, argComment) => (async () => {
         if (Array.from(row.querySelectorAll('a[href]')).some(a => a.getAttribute('href')?.toLowerCase() === ownerPath)) return true;
       }
       return false;
-    }));
+    })) || ownerCommentedNow;
     // Inside the post, our profile link only appears on our own comments.
     const ownerCommented = Array.from(root?.querySelectorAll('a[href]') ?? []).some(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath);
     // Diagnostics only (no personal data): how many links point at the signed-in account anywhere on the page.

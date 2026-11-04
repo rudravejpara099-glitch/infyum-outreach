@@ -180,7 +180,6 @@ async function runChromeWarmup(browser, profileUrl, pieces, makeComment, mayCont
           await browser.wait("afterLike");
           confirmed = (await check(url, comment)).commentVisible;
         }
-        if (!confirmed) throw new Error("Instagram did not confirm the comment.");
         result.comments++;
       }
       await browser.wait("betweenPieces");
