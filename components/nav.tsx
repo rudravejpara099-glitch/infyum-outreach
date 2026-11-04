@@ -11,6 +11,7 @@ const ITEMS = [
   { href: "/approvals", label: navigationCopy["/approvals"], icon: "approval" },
   { href: "/inbox", label: navigationCopy["/inbox"], icon: "inbox" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
+  { href: "/sheet", label: "Sheet", icon: "pipeline" },
   { href: "/activity", label: navigationCopy["/activity"], icon: "activity" },
   { href: "/billing", label: "Usage and billing", icon: "billing" },
   { href: "/settings", label: "Settings", icon: "settings" },
