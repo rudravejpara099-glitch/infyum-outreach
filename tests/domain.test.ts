@@ -20,14 +20,15 @@ describe("stages", () => {
     expect(canMove("skipped", "found")).toBe(true);
     expect(canMove("skipped", "replied")).toBe(true);
   });
-  it("only sends a first DM before first contact and follow-ups while waiting for a reply", () => {
+  it("only ever sends the first DM, and only to a warmed lead; after that a person takes over", () => {
     expect(canSendAtStage("warmed", "dm")).toBe(true);
-    expect(canSendAtStage("dm_sent", "followup")).toBe(true);
-    for (const stage of ["found", "qualified", "replied", "closed", "skipped"] as const) {
+    for (const stage of ["found", "qualified", "dm_sent", "replied", "closed", "skipped"] as const) {
       expect(canSendAtStage(stage, "dm")).toBe(false);
-      expect(canSendAtStage(stage, "followup")).toBe(false);
     }
-    expect(canSendAtStage("replied", "reply")).toBe(false);
+    for (const stage of ["found", "qualified", "warmed", "dm_sent", "replied", "closed", "skipped"] as const) {
+      expect(canSendAtStage(stage, "followup")).toBe(false);
+      expect(canSendAtStage(stage, "reply")).toBe(false);
+    }
   });
 });
 
@@ -35,7 +36,7 @@ describe("qualify", () => {
   it("passes a good lead", () => expect(qualify(good, rules).ok).toBe(true));
   it("fails each rule with its own reason", () => {
     expect(qualify({ ...good, isPublic: false }, rules)).toEqual({ ok: false, reason: "Account is private" });
-    expect(qualify({ ...good, country: null }, rules).ok).toBe(false);
+    expect(qualify({ ...good, country: null }, rules).ok).toBe(true); // unreadable country no longer stops a lead
     expect(qualify({ ...good, country: "India" }, rules)).toEqual({ ok: false, reason: "Based in India" });
     expect(qualify({ ...good, followers: 1999 }, rules).ok).toBe(false);
     expect(qualify({ ...good, followers: 150001 }, rules).ok).toBe(false);

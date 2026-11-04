@@ -10,7 +10,7 @@ describe("plain-language UI copy", () => {
   });
 
   it("uses direct navigation and message labels", () => {
-    expect(navigationCopy).toMatchObject({ "/": "Overview", "/pipeline": "Lead progress", "/approvals": "Review messages", "/inbox": "Replies", "/activity": "History" });
+    expect(navigationCopy).toMatchObject({ "/": "Overview", "/pipeline": "Lead progress", "/approvals": "Review messages", "/inbox": "Handed over", "/activity": "History" });
     expect(messageKindLabel("dm")).toBe("First message");
     expect(messageKindLabel("followup")).toBe("Follow-up");
     expect(messageKindLabel("reply")).toBe("Message");

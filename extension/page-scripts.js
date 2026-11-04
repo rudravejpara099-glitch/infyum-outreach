@@ -147,6 +147,7 @@ export const warmupInPage = (argPaths, argOwner, argComment) => (async () => {
     const comment = argComment;
     const input = root?.querySelector('textarea[aria-label*="comment" i],textarea[placeholder*="comment" i]');
     // Comment rows are plain blocks now: find our exact text, then our profile link within a few levels.
+    const ownerCommentedNow = Boolean(comment && (!input || !input.value) && Array.from(root?.querySelectorAll('a[href]') ?? []).some(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath) && (root?.innerText || '').replace(/s+/g, ' ').includes(comment.replace(/s+/g, ' ').slice(0, 40)));
     const commentVisible = Boolean(comment && input && !input.value && Array.from(root?.querySelectorAll('span') ?? []).some(span => {
       if (span.textContent?.trim() !== comment) return false;
       let row = span.parentElement;
@@ -154,7 +155,7 @@ export const warmupInPage = (argPaths, argOwner, argComment) => (async () => {
         if (Array.from(row.querySelectorAll('a[href]')).some(a => a.getAttribute('href')?.toLowerCase() === ownerPath)) return true;
       }
       return false;
-    }));
+    })) || ownerCommentedNow;
     // Inside the post, our profile link only appears on our own comments.
     const ownerCommented = Array.from(root?.querySelectorAll('a[href]') ?? []).some(a => a.getAttribute?.('href')?.toLowerCase() === ownerPath);
     // Diagnostics only (no personal data): how many links point at the signed-in account anywhere on the page.
@@ -185,6 +186,18 @@ export const storyLikeInPage = (argStory) => (async () => {
     const doneBy = Date.now() + 4000;
     while (!heart('Unlike') && Date.now() < doneBy) await sleep(200);
     return { hadStory: true, liked: Boolean(heart('Unlike')) && location.pathname.toLowerCase().startsWith(storyPath) };
+  })();
+export const loginCheckInPage = (argPath) => (async () => {
+    const allowed = location.protocol === 'https:' &&
+      (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com') &&
+      location.pathname.toLowerCase() === argPath;
+    if (!allowed) return { allowed: false, loggedIn: false };
+    // Instagram shows a blank splash before the profile renders; wait for the answer instead of reading the splash.
+    const decided = () => /edit profile|log in|sign up/i.test(document.body?.innerText ?? '');
+    const until = Date.now() + 15000;
+    while (!decided() && Date.now() < until) await new Promise((resolve) => setTimeout(resolve, 300));
+    const text = document.body?.innerText ?? '';
+    return { allowed: true, text, loggedIn: /edit profile/i.test(text) };
   })();
 export const inboxListInPage = (argOwner) => (async () => {
     const path = location.pathname.replace(/\/$/, '').toLowerCase();

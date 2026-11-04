@@ -23,6 +23,15 @@ it("hands the warm-up page scripts their targets as parameters, with no sample v
   expect(pages).not.toMatch(/sentinel/i);
 });
 
+it("answers the sign-in check from the account's own profile, reading only", () => {
+  const pages = readFileSync("extension/page-scripts.js", "utf8");
+  expect(pages).toContain("loginCheckInPage = (argPath) =>");
+  const background = readFileSync("extension/background.js", "utf8");
+  expect(background).toContain('command.kind === "openLogin"');
+  expect(background).toContain("loginCheckInPage, [`/${handle.toLowerCase()}/`]");
+  expect(background).not.toMatch(/openLogin[\s\S]{0,400}(\.click\(|keyboard)/);
+});
+
 it("bundles the shared warm-up logic and keeps the stop checks in the action code", () => {
   const warm = readFileSync("extension/warmup.js", "utf8");
   expect(warm).toContain("runChromeWarmup");

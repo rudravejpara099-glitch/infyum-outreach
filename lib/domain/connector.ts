@@ -14,7 +14,9 @@ const handle = (value: unknown): value is string => typeof value === "string" &&
 export function validConnectorArgs(kind: ConnectorKind, value: unknown): value is Record<string, unknown> {
   if (!object(value)) return false;
   const keys = Object.keys(value).sort().join(",");
-  if (kind === "openLogin" || kind === "readInbox") return keys === "";
+  // openLogin may name the account's handle so the browser can confirm it is signed in as that account; the older form without it is still accepted.
+  if (kind === "openLogin") return keys === "" || (keys === "handle" && handle(value.handle));
+  if (kind === "readInbox") return keys === "";
   if (!handle(value.handle)) return false;
   if (kind === "warmUp") return keys === "handle,pieces" && Number.isSafeInteger(value.pieces) && Number(value.pieces) >= 1 && Number(value.pieces) <= 10;
   if (kind === "sendMessages") return keys === "handle,parts" && Array.isArray(value.parts) && value.parts.length >= 1 && value.parts.length <= 3 && value.parts.every(part => text(part, 2000));

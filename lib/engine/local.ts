@@ -52,7 +52,7 @@ export class LocalEngine implements AiEngine {
     const body = {
       model, messages: [{ role: "system", content: input.system }, { role: "user", content: input.prompt }],
       ...(input.format ? { format: localMessageFormat(input.format) } : {}),
-      stream: false, think: false, options: { num_predict: localRequestOutputLimit(input.maxOutputTokens, input.metering?.maxOutputTokens), num_ctx: 16_384, temperature: 0.2 },
+      stream: false, think: false, options: { num_predict: localRequestOutputLimit(input.maxOutputTokens, input.metering?.maxOutputTokens), num_ctx: 16_384, temperature: 0.9 },
     };
     const timeoutMs = input.timeoutMs ?? 120_000;
     validateRequest(body, timeoutMs);

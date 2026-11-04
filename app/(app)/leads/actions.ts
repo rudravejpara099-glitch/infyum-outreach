@@ -111,7 +111,8 @@ export async function createManualFirstDm(form: FormData): Promise<ActionResult>
   const user = await requireUser();
   const id = Number(form.get("id")), db = (await getDb(form));
   if (!validId(id)) return { error: "This lead could not be found. Refresh the page." };
-  const parts = [1, 2, 3].map((index) => String(form.get(`part${index}`) ?? "").trim());
+  // One to three messages: boxes left empty are simply not used.
+  const parts = [1, 2, 3].map((index) => String(form.get(`part${index}`) ?? "").trim()).filter((part) => part.length > 0);
   const portfolioLink = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
   const writingError = manualFirstDmError(parts, portfolioLink);
   if (writingError) return { error: writingError, field: "part1" };

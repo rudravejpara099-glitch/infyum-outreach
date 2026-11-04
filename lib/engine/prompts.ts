@@ -5,15 +5,15 @@ export const PORTFOLIO_LINK = "https://portfolio.infyum.com/sales-funnel";
 
 export function systemPrompt(w: WritingSettings = DEFAULT_WRITING): string {
   return `You write Instagram DMs for ${w.senderName} at ${w.company}, ${w.offer} based in ${w.location}.
-Voice: a real person. Warm, direct, specific, professional. Short sentences. No filler openers, no hype, no dashes, no emojis unless the lead used one.
+Voice: a real person with a mood, humour and opinions, never a brand. Specific, direct, plain words the way people type on a phone. No filler openers, no hype, no dashes. Emojis are random: none, one or several, no pattern.
 Never invent results, prices, client names or guarantees. Never guess a first name. Never mention anything you did not see in the material given.
 Always answer with JSON only, no other text.`;
 }
 export const SYSTEM = systemPrompt();
 
 /** Comments have their own plain-text contract; the DM JSON instruction must not override it. */
-export const COMMENT_SYSTEM = `You write one natural Instagram comment about the supplied post.
-Aim for five written words, followed by one relevant emoji. The allowed range is 3 to 8 words and 1 to 3 emojis; emojis do not count as words. Mention the actual subject of the post. Be warm, specific and truthful. Never invent facts, prices or results.
+export const COMMENT_SYSTEM = `You write one natural Instagram comment about the supplied post, as a real person who actually looked at it.
+Mention the actual subject of the post. Be specific and truthful. Never invent facts, prices or results. Length and emojis are up to you. No hashtags, links or dashes.
 Answer with only the comment text, without JSON, quotes, labels or an explanation.`;
 
 export type DraftContext = {
@@ -29,7 +29,7 @@ export type DraftContext = {
 
 export function firstDmPrompt(c: DraftContext): string {
   const w = c.writing ?? DEFAULT_WRITING;
-  return `Write the first contact for @${c.handle} as THREE separate messages.
+  return `Write the first contact for @${c.handle} as one to three separate messages, however many a real person would send.
 ${fillDmPrompt(c.writing?.dmPrompt ?? DEFAULT_WRITING.dmPrompt, w, c.portfolioLink)}
 
 Who they are: ${c.niche || "unknown niche"}, ${c.followers ?? "unknown"} followers.
@@ -40,7 +40,29 @@ ${c.profileNotes || "(nothing captured)"}
 Recent openings to avoid repeating:
 ${c.recentOpenings.map((o) => `- ${o}`).join("\n") || "- none"}
 
-Return exactly: {"parts":["...","...","..."]}`;
+Return exactly: {"parts":["..."]} with one to three strings.`;
+}
+
+/** A second, strict read of a first-message draft by the free local writer. It catches what word lists cannot. */
+export function criticPrompt(profileNotes: string, parts: string[], sender = ""): string {
+  return `You check a draft Instagram first message before it is sent to a stranger. Be strict.
+
+What we know about the person (the only facts the message may rely on):
+${profileNotes || "(nothing captured)"}
+
+Facts about the sender, which the message MAY state (do not reject these): ${sender || "name, company and location as written in the draft"}
+
+The draft (${parts.length} message${parts.length === 1 ? "" : "s"}):
+${parts.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+
+Reject the draft if ANY of these is true:
+- it criticises or talks down to the person, their account, bio, content or business (for example "stuck in the past", "missed opportunity", "hiding your offer", "nobody knows where to click")
+- it states something about THE PERSON that the notes above do not support (claims about the sender are fine)
+- it promises or mentions results, guarantees, prices or numbers we cannot back up
+- it sounds like an agency pitch, a template, or a lecture instead of one person writing to another
+- it guesses the person's first name from their handle
+
+Answer with JSON only: {"ok": true} or {"ok": false, "problem": "<one short sentence saying what to change>"}`;
 }
 
 export function followupPrompt(opts: { handle: string; previous: string; number: number; profileNotes: string }): string {

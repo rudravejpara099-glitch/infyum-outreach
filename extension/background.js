@@ -1,4 +1,4 @@
-import { readFactsInPage } from "./page-scripts.js";
+import { readFactsInPage, loginCheckInPage } from "./page-scripts.js";
 import { warmUp, sendMessages, readInbox } from "./actions.js";
 import { InstagramBlockedError, InstagramWarmupUncertainError } from "./warmup.js";
 
@@ -67,13 +67,22 @@ function followers(text) {
   return Math.round(raw.endsWith("k") ? n * 1_000 : raw.endsWith("m") ? n * 1_000_000 : n);
 }
 
+/** Is Chrome signed in as this account? Only the owner sees "Edit profile" on their own profile page. Reads only; nothing is sent. */
+async function openLogin(handle) {
+  if (!HANDLE.test(handle ?? "")) throw new Error("The sign-in check needs the account's Instagram handle.");
+  const state = await inTab(`https://www.instagram.com/${handle}/`, loginCheckInPage, [`/${handle.toLowerCase()}/`]);
+  // Instagram sent the tab somewhere else (a sign-in, a security check, a lock screen): say so, do not just answer "not signed in".
+  if (state?.allowed === false) throw new Error("Instagram did not show the profile page; it may be asking for a sign-in or a security check. Review it in Chrome.");
+  if (/warning|human check|confirm it.s you|suspicious|locked|possible hack/i.test(state?.text ?? "") && !state?.loggedIn) throw new Error("Instagram showed a warning or human check. Review it in Chrome.");
+  return state?.loggedIn === true;
+}
+
 async function readFacts(handle) {
   const found = await inTab(`https://www.instagram.com/${handle}/`, readFactsInPage, [`/${handle.toLowerCase()}/`]);
   if (!found || found.allowed !== true) throw new Error("Instagram did not show the expected profile.");
   if (found.blocked) { const e = new Error("Instagram needs your attention."); e.blocked = true; throw e; }
   if (found.loggedOut) { const e = new Error("Instagram sign-in is not confirmed in this Chrome."); e.blocked = true; throw e; }
   if (found.restricted) throw new Error("Instagram restricts this profile.");
-  if (found.aboutFailed) throw new Error("Instagram's About popup failed to load. Will retry.");
   const count = followers(found.followerText || "");
   if (count === null) throw new Error("Could not read the follower count.");
   if (!["follow", "follow back", "following", "requested"].includes(found.relation)) throw new Error("No clear connection status.");
@@ -139,6 +148,7 @@ async function run(command, credential) {
     try { return await action(command, gate); } finally { await gate.finish(); }
   }
   const handle = command.args?.handle;
+  if (command.kind === "openLogin") return openLogin(handle);
   if (command.kind === "readFacts" && HANDLE.test(handle)) return readFacts(handle);
   if (command.kind === "readProfileNotes" && HANDLE.test(handle)) return readProfileNotes(handle);
   throw new Error("The extension cannot do this action yet.");

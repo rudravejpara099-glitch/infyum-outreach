@@ -30,12 +30,12 @@ it("uses the plain-text comment contract rather than the conflicting DM JSON con
   } finally { db.close(); }
 });
 
-it("repairs missing emoji with a bounded retry using the specific rejection reason", async () => {
-  const complete = vi.fn().mockResolvedValueOnce("The checklist looks helpful").mockResolvedValueOnce("The checklist looks helpful 🙌");
+it("repairs a hashtag with a bounded retry using the specific rejection reason", async () => {
+  const complete = vi.fn().mockResolvedValueOnce("The checklist looks helpful #tips").mockResolvedValueOnce("The checklist looks helpful 🙌");
   expect(await draftWarmupComment({ complete }, "A useful checklist")).toBe("The checklist looks helpful 🙌");
   expect(complete).toHaveBeenCalledTimes(2);
   expect(complete.mock.calls[0][0]).toEqual({ system: COMMENT_SYSTEM, prompt: commentPrompt("A useful checklist"), maxOutputTokens: 160, metering: undefined });
-  expect(complete.mock.calls[1][0].prompt).toContain("Comments need 1 to 3 emojis.");
+  expect(complete.mock.calls[1][0].prompt).toContain("Comments cannot contain dashes, hashtags, or links.");
 });
 
 it("never returns JSON or fenced code even if the words and emoji otherwise qualify", async () => {
@@ -48,7 +48,7 @@ it("never returns JSON or fenced code even if the words and emoji otherwise qual
 });
 
 it("stops after three invalid returned drafts without creating a browser interaction", async () => {
-  const complete = vi.fn().mockResolvedValue("Too short");
+  const complete = vi.fn().mockResolvedValue("Too salesy, see https://example.com");
   await expect(draftWarmupComment({ complete }, "A checklist")).rejects.toThrow("after 3 attempts");
   expect(complete).toHaveBeenCalledTimes(3);
 });
@@ -63,7 +63,7 @@ it("does not retry thrown provider, network or uncertain-operation errors", asyn
 it("never reuses a paid operation ID for a validation retry and retains its original attribution", async () => {
   const db = new Proxy({}, { get() { throw new Error("Writing helper must not touch the ledger"); } });
   const metering = { db, userId: 2, operationId: "ai:17:warmup-comment:1", source: { jobId: 17, leadId: 4 }, maxOutputTokens: 1200 } as MeteredAiCall;
-  const complete = vi.fn().mockResolvedValueOnce("Missing emoji again").mockResolvedValueOnce("Still missing emoji").mockResolvedValueOnce("The checklist looks helpful 🙌");
+  const complete = vi.fn().mockResolvedValueOnce("A link https://example.com").mockResolvedValueOnce("A #hashtag").mockResolvedValueOnce("The checklist looks helpful 🙌");
   await draftWarmupComment({ complete }, "A checklist", metering);
   expect(complete.mock.calls.map(call => call[0].metering.operationId)).toEqual([
     "ai:17:warmup-comment:1", "ai:17:warmup-comment:1:retry:2", "ai:17:warmup-comment:1:retry:3",
@@ -90,16 +90,17 @@ it("rejects structured comment shapes as a pure rule", () => {
   expect(warmupCommentError("The checklist looks helpful 🙌")).toBeNull();
 });
 
-it("includes rejected text and word-count guidance so retries can correct a short comment", async () => {
-  const complete = vi.fn().mockResolvedValueOnce("Great tips! 📄✅").mockResolvedValueOnce("Your document checklist looks helpful 📄");
+it("includes the rejected text and the specific rule so retries can correct a comment", async () => {
+  const complete = vi.fn().mockResolvedValueOnce("Great tips! #docs").mockResolvedValueOnce("Your document checklist looks helpful 📄");
   expect(await draftWarmupComment({ complete }, "A document checklist")).toBe("Your document checklist looks helpful 📄");
-  expect(complete.mock.calls[1][0].prompt).toContain('"Great tips! 📄✅"');
-  expect(complete.mock.calls[1][0].prompt).toContain("emoji do not count");
-  expect(complete.mock.calls[1][0].prompt).toContain("Comments need 3 to 8 words.");
+  expect(complete.mock.calls[1][0].prompt).toContain('"Great tips! #docs"');
+  expect(complete.mock.calls[1][0].prompt).toContain("Comments cannot contain dashes, hashtags, or links.");
 });
 
-it("makes the decided sender identity and direct recipient address explicit in first-contact instructions", () => {
+it("lets the first-contact instructions name the sender and company without forcing an introduction", () => {
   const prompt = firstDmPrompt({ handle: "synthetic", niche: "", followers: null, profileNotes: "A public checklist", audienceText: "", recentOpenings: [], portfolioLink: "https://portfolio.infyum.com/sales-funnel" });
-  expect(prompt).toContain('using "you" or "your"');
-  expect(prompt).toContain("MUST include all three names: Rudra, Infyum, India");
+  expect(prompt).toContain("Rudra at Infyum");
+  expect(prompt).toContain("based in India");
+  expect(prompt).toContain("never hide it if asked");
+  expect(prompt).toContain("one to three separate messages");
 });

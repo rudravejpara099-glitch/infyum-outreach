@@ -9,13 +9,13 @@ const installedModel = (name = "qwen3:4b") => ({ name, size: 2_600_000_000, deta
 const installed = () => json({ models: [installedModel()] });
 const generating = (response: Response) => vi.fn<typeof fetch>().mockResolvedValueOnce(installed()).mockResolvedValueOnce(response);
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
-it("constrains local JSON to three first-message parts or one follow-up part", async () => {
+it("constrains local JSON to one to three first-message parts or one follow-up part", async () => {
   expect(localMessageFormat()).toBeUndefined();
-  expect(localMessageFormat("dm")?.properties.parts).toMatchObject({ minItems: 3, maxItems: 3 });
+  expect(localMessageFormat("dm")?.properties.parts).toMatchObject({ minItems: 1, maxItems: 3 });
   expect(localMessageFormat("followup")?.properties.parts).toMatchObject({ minItems: 1, maxItems: 1 });
   const fetcher = generating(json({ done: true, message: { content: '{"parts":["one","two","three"]}' } }));
   await new LocalEngine({ model: "qwen3:4b", fetcher }).complete({ system: "s", prompt: "p", format: "dm" });
-  expect(JSON.parse(String(fetcher.mock.calls[1][1]?.body)).format).toMatchObject({ required: ["parts"], additionalProperties: false, properties: { parts: { minItems: 3, maxItems: 3 } } });
+  expect(JSON.parse(String(fetcher.mock.calls[1][1]?.body)).format).toMatchObject({ required: ["parts"], additionalProperties: false, properties: { parts: { minItems: 1, maxItems: 3 } } });
 });
 it("bounds free comments independently of billing without exceeding a metered allowance", async () => {
   expect(localRequestOutputLimit(160)).toBe(160);
@@ -59,7 +59,7 @@ it("writes using system and user messages with bounded output and no credentials
   expect(fetcher.mock.calls[0][0]).toBe("http://127.0.0.1:11434/api/tags");
   const [url, init] = fetcher.mock.calls[1]; expect(url).toBe("http://127.0.0.1:11434/api/chat");
   expect(init?.headers).toEqual({ "content-type": "application/json" });
-  expect(JSON.parse(String(init?.body))).toEqual({ model: "qwen3:4b", messages: [{ role: "system", content: "Only JSON" }, { role: "user", content: "Draft a comment" }], stream: false, think: false, options: { num_predict: 1200, num_ctx: 16384, temperature: 0.2 } });
+  expect(JSON.parse(String(init?.body))).toEqual({ model: "qwen3:4b", messages: [{ role: "system", content: "Only JSON" }, { role: "user", content: "Draft a comment" }], stream: false, think: false, options: { num_predict: 1200, num_ctx: 16384, temperature: 0.9 } });
 });
 it("honors metering output allowance without reading or writing paid metering state", async () => {
   const fetcher = generating(json({ done: true, message: { content: "Comment" } }));

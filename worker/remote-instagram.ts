@@ -79,7 +79,7 @@ export class RemoteInstagramDriver implements InstagramDriver {
     }
   }
   async openLogin(account: IgAccount): Promise<boolean> {
-    const result = await this.execute(account, "openLogin", {});
+    const result = await this.execute(account, "openLogin", handleValid(account.handle) ? { handle: account.handle } : {});
     if (typeof result !== "boolean") throw invalid();
     return result;
   }

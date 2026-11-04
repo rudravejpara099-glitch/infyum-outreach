@@ -7,7 +7,7 @@ function form() {
 }
 describe("campaign form boundaries", () => {
   it("keeps draft campaigns without sender accounts and preserves explicit approval", () => {
-    expect(parseCampaignForm(form())).toMatchObject({ input: { name: "Test campaign", approvalRequired: true, followupsEnabled: true }, accountIds: [] });
+    expect(parseCampaignForm(form())).toMatchObject({ input: { name: "Test campaign", approvalRequired: true, followupsEnabled: false }, accountIds: [] });
   });
   it("deduplicates valid sender IDs rather than silently accepting invalid values", () => {
     const data = form(); data.append("accountIds", "1"); data.append("accountIds", "1"); data.append("accountIds", "2");

@@ -48,10 +48,10 @@ it("keeps the oldest preview reachable when the approval queue exceeds one page"
   expect(queue).toHaveLength(100);
   expect(campaignOverview(db, c.id).pendingCount).toBe(102);
 });
-it("counts inbox conversations by stage without claiming they are unread", () => {
+it("counts handed-over leads (first message sent or replied) per campaign", () => {
   const a = campaign("A"), b = campaign("B");
   addLead(db, { handle: "reply", campaignId: a.id, stage: "replied" }, "test");
   addLead(db, { handle: "sent", campaignId: a.id, stage: "dm_sent" }, "test");
   addLead(db, { handle: "other", campaignId: b.id, stage: "replied" }, "test");
-  expect(campaignOverview(db, a.id)).toMatchObject({ total: 2, conversations: 1 });
+  expect(campaignOverview(db, a.id)).toMatchObject({ total: 2, conversations: 2 });
 });

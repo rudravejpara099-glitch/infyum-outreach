@@ -54,6 +54,38 @@ LOCAL_AI_MODEL=qwen2.5:7b
 
 The adapter checks local model metadata before every generation and rejects cloud-backed aliases. There is no paid fallback or usage charge for local inference. Comment and message rules still apply, and first messages remain in the approval queue. If the model goes offline, the app shows the problem and pauses preparation.
 
+## Connect your own Chrome with the extension (no debugging switch)
+
+This is the route that was proven live on 2026-11-03. It needs no `chrome://inspect` setting and no Mac download.
+
+1. Build it if needed: `npm run extension:build` (the generated files in `extension/` are committed; a test keeps them in sync).
+2. In Chrome open `chrome://extensions`, turn on **Developer mode**, remove any old "Infyum Outreach" card (one that points at a folder that no longer exists shows "file not found"), then **Load unpacked** and pick this repository's `extension/` folder.
+3. In the app open **Accounts**, then **Connect your Chrome** (`/accounts/connect`) and press **Create connection code**. The code lasts 5 minutes and works once.
+4. Click the extension's icon, paste the code and press **Connect**. The page then says "1 computer is online".
+5. On the same page choose the Instagram account (its handle and a small daily limit) and press **Check my Instagram sign-in**. The extension opens that account's own profile in a background tab and answers true only if the "Edit profile" button is there. It reads only.
+
+The extension checks in every 5 seconds, so it is back within about 15 seconds after the app restarts. It reloads itself when the app ships a newer version (the version in `extension/manifest.json`); you only need to reload it by hand after the first install. To stop everything at once use **Stop everything** in the app or the extension's Stop button.
+
+## Google Sheet (server administrator)
+
+The team Sheet mirrors every lead, job and action, and a name added to **Do-not-contact** or a changed **Stage** in the Sheet flows back into the app. Keys and tokens are never written to it.
+
+1. In Google Cloud, use the same OAuth "Web application" client as Google sign-in (or create one) and add the redirect address `<APP_URL>/api/sheets/google/callback`, for example `http://localhost:3000/api/sheets/google/callback`. Enable the **Google Sheets API** for the project.
+2. Put `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and (when not on localhost) `APP_URL` in `.env.local`, then restart the app and the background service.
+3. In **Settings**, find **Google Sheet** and press **Connect Google Sheets**. Google asks only for access to spreadsheets. The lasting token is stored encrypted (AES-256-GCM, key derived from `SESSION_SECRET`) in the workspace's settings, so keep `SESSION_SECRET` stable: changing it makes the stored token unreadable and you simply connect again.
+4. Press **Create the Sheet** (or paste the link of a Sheet you already have). The background service then creates the five tabs (Leads, Settings, Jobs, Activity Log, Do-not-contact) with a locked header row and a Stage dropdown, and syncs once a minute. A failed sync is logged, shown in Settings and retried; it never stops outreach.
+
+A person's own labels "Follow-up due" and "Call booked" on a handed-over lead are never overwritten. If both sides changed the same lead, the person's edit in the Sheet wins when the app allows it, and a `sheet.conflict` line is logged. A username that is in the Leads tab but unknown to the app is blocked in the app.
+
+## Instagram safety and pacing
+
+On 2026-11-03 Instagram locked the test account (`We locked your account to protect you from a possible hack`) minutes after a run with human pacing switched off: a warm-up and a DM within about ten minutes, from an account with no posts and 10 followers. The lessons are built in:
+
+- **Human pacing is on by default**: working hours, session lengths, rests, lunch and waits between jobs (`lib/domain/pacing.ts`). `HUMAN_PACING=off` turns it off and is not recommended.
+- **Lock and challenge pages stop the app**: `/auth_platform/`, `/challenge`, `/accounts/suspended` and the lock screen's text count as a hard stop in the worker and the extension.
+- **Use a spare or well-used account** for any live test, a small daily cap (the week-one ramp is about 5 actions a day), and keep **Ask me before anything is sent** on.
+- Restarting the app needs the old server gone first: `lsof -ti :3000 | xargs kill`, then `npm start`. `pkill -f "next start"` does not stop `next-server`.
+
 ## Customer connector (server administrator)
 
 Build the Mac download with `node --import tsx scripts/build-connector.ts --verify`. This bundles the installed runtime and checks the actual packaged executable using disposable data. The current package targets Apple silicon Macs; it is unsigned and not notarized. Do not bypass macOS security or present it as verified public distribution. A Developer ID signing identity is not available on this machine. Disconnecting a device revokes its credential; quitting the helper preserves pairing for reopening. Other companies cannot claim its account commands.

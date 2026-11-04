@@ -94,6 +94,8 @@ export class ChromeInstagram implements InstagramDriver {
   constructor(testClient?: Client, private readonly pause: (kind: DelayKind) => Promise<void> = async kind => {
     await new Promise(resolve => setTimeout(resolve, humanDelayMs(kind, Math.random)));
   }) { this.client = testClient; }
+  /** Random source for planning a warm-up visit; tests fix it. */
+  warmupRng: () => number = Math.random;
   private async connect(): Promise<Client> {
     if (this.client) return this.client;
     const entry = createRequire(import.meta.url).resolve("chrome-devtools-mcp");
@@ -398,7 +400,7 @@ export class ChromeInstagram implements InstagramDriver {
         await call("press_key", { key: "Enter" }, "Chrome could not post the prepared comment.");
       },
       wait: kind => this.pause(kind),
-    }, target.url, pieces, makeComment, mayContinue);
+    }, target.url, pieces, makeComment, mayContinue, this.warmupRng);
   }
   async sendMessages(account: IgAccount, handle: string, parts: string[], mayContinue = () => true): Promise<void> {
     const check = () => { if (!mayContinue()) throw new Error("Message sending was stopped."); };

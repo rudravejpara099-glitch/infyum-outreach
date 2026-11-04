@@ -16,7 +16,7 @@ export function parseCampaignForm(form: FormData): { input: CampaignInput; accou
   const extra = String(form.get("nicheOther") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const niches = [...form.getAll("niches").map(String), ...extra];
   return {
-    input: { ...base, niches, approvalRequired: form.get("approvalRequired") === "on", followupsEnabled: form.get("followupsEnabled") === "on" },
+    input: { ...base, niches, approvalRequired: form.get("approvalRequired") === "on", followupsEnabled: false },
     accountIds: [...new Set(z.array(z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER)).parse(form.getAll("accountIds")))],
   };
 }

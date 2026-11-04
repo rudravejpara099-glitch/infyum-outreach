@@ -21,7 +21,7 @@ export function recentSentTexts(db: Db, limit = 10): string[] {
 
 export type DraftInput = {
   leadId: number; accountId: number | null; kind: Exclude<MessageKind, "incoming">;
-  parts: string[]; campaign: Pick<Campaign, "approvalRequired">; incomingText?: string;
+  parts: string[]; campaign: Pick<Campaign, "approvalRequired">; incomingText?: string; extraReasons?: string[];
 };
 
 /** Stores an outgoing draft and decides, in one place, whether a human must approve it. */
@@ -30,7 +30,7 @@ export function createOutgoing(db: Db, input: DraftInput, actor: string): Messag
   const similar = checkAgainstRecent(joined, recentSentTexts(db));
   const decision = decideApproval({
     campaignApprovalRequired: input.campaign.approvalRequired,
-    incoming: input.incomingText, outgoing: joined, similarityFlag: similar.tooSimilar,
+    incoming: input.incomingText, outgoing: joined, similarityFlag: similar.tooSimilar, extraReasons: input.extraReasons,
   });
   const status: MessageStatus = decision.needsApproval ? "pending_approval" : "approved";
   const info = db.prepare(

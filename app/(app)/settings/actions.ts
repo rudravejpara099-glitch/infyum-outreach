@@ -16,6 +16,8 @@ import { googleEnabled, passwordSignInOff } from "@/lib/auth/google-config";
 import { getIdentityDb } from "@/lib/workspaces/storage";
 import { safetyFromForm } from "@/lib/domain/safety-settings";
 import { writingFromForm } from "@/lib/domain/writing-settings";
+import { config } from "@/lib/config";
+import { createTeamSheet, disconnectSheets, sheetIdFromInput } from "@/lib/sheets/connection";
 
 function commitAtomically(db: Awaited<ReturnType<typeof getDb>>, write: () => void): boolean {
   try { db.transaction(write).immediate(); return true; }
@@ -139,3 +141,40 @@ export async function savePasswordSignIn(form: FormData): Promise<ActionResult> 
   revalidatePath("/settings");
   return { message: off ? "Password sign-in is off. People sign in with Google." : "Password sign-in is on." };
 }
+
+const sheetsCreds = () => ({ clientId: config.google.clientId, clientSecret: config.google.clientSecret, sessionSecret: config.sessionSecret });
+
+/** Makes a new Google Sheet in the connected Google account and starts using it. */
+export async function createSheet(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const db = (await getDb(form));
+  try {
+    const sheet = await createTeamSheet(db, sheetsCreds());
+    logActivity(db, user.email, "sheets.created", { detail: sheet.id });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not create the Sheet. Try again shortly." };
+  }
+  revalidatePath("/settings"); return { message: "Sheet created. It fills in within a minute once the background service is running." };
+}
+
+/** Uses a Sheet that already exists (paste its link or id). */
+export async function saveSheet(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const id = sheetIdFromInput(String(form.get("sheet") ?? ""));
+  if (!id) return { error: "Paste the Sheet's link or its id from the address bar.", field: "sheet" };
+  const db = (await getDb(form));
+  if (!commitAtomically(db, () => {
+    setSetting(db, "sheet_id", id);
+    db.prepare("DELETE FROM settings WHERE key IN ('sheet_schema','sheet_activity_synced_id','sheet_stage_seen')").run();
+    logActivity(db, user.email, "sheets.sheet_saved", { detail: id });
+  })) return { error: "Couldn’t save this change. Try again shortly." };
+  revalidatePath("/settings"); return { message: "Sheet saved. The background service will set up its tabs within a minute." };
+}
+
+export async function disconnectGoogleSheets(form: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const db = (await getDb(form));
+  if (!commitAtomically(db, () => { disconnectSheets(db); logActivity(db, user.email, "sheets.disconnected"); })) return { error: "Couldn’t save this change. Try again shortly." };
+  revalidatePath("/settings"); return { message: "Google Sheets is disconnected. The Sheet itself is untouched." };
+}
+

@@ -7,7 +7,7 @@ const ctx = { handle: "synthetic", niche: "", followers: null, profileNotes: "",
 it("defaults keep today's wording", () => {
   expect(parseWritingSettings(null)).toEqual(DEFAULT_WRITING);
   expect(systemPrompt()).toContain("Rudra at Infyum");
-  expect(firstDmPrompt(ctx)).toContain("introduce yourself by name as Rudra at Infyum");
+  expect(firstDmPrompt(ctx)).toContain("Rudra at Infyum");
   expect(firstDmPrompt(ctx)).toContain("https://example.com/x");
 });
 
@@ -20,9 +20,9 @@ it("edited sender details and prompts reach the writer", () => {
   expect(parseWritingSettings(JSON.stringify(parsed.writing))).toEqual(parsed.writing);
 });
 
-it("blank fields fall back, and a DM prompt without the link is refused", () => {
+it("blank fields fall back, and a DM prompt without the link is accepted because links are optional", () => {
   const blank = writingFromForm({});
   expect("writing" in blank && blank.writing).toEqual(DEFAULT_WRITING);
-  expect(writingFromForm({ dmPrompt: "No link here" })).toMatchObject({ error: { field: "dmPrompt" } });
+  expect(writingFromForm({ dmPrompt: "No link here" })).toMatchObject({ writing: { dmPrompt: "No link here" } });
   expect(fillDmPrompt("{sender}/{company}/{location}/{offer}", DEFAULT_WRITING, "l")).toContain("Rudra/Infyum/India");
 });

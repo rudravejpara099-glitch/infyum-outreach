@@ -10,6 +10,9 @@ import type { IgAccount } from "@/lib/db/types";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 const profileUrl = "https://www.instagram.com/prospect/";
+// A random source of 0 gives the plain visit: every available post up to the budget, each liked and commented on, story reacted to, follow last.
+const run = (browser: WarmupBrowser, url: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue: () => boolean = () => true) =>
+  runChromeWarmup(browser, url, pieces, makeComment, mayContinue, () => 0);
 const posts = ["https://www.instagram.com/p/first/", "https://www.instagram.com/p/second/"];
 const validComment = "Those details look amazing 🙌";
 function fixture(captions = ["A detailed woodworking project", "A lesson on wood finishing"]) {
@@ -49,28 +52,29 @@ describe("Chrome campaign preparation", () => {
     });
     const account: IgAccount = { id: 1, handle: "owner", label: "", profileDir: "/tmp/owner", browserMode: "chrome_read_only", dailyCap: 35, rampStart: "2026-01-01", status: "active", statusNote: "" };
     const driver = new ChromeInstagram({ callTool, close: vi.fn() } as unknown as Client, async () => {});
+    driver.warmupRng = () => 0;
     await expect(driver.warmUp(account, "prospect", 1, async () => validComment)).resolves.toEqual({ likes: 1, comments: 1, followed: true });
     expect(calls.filter(name => ["click", "fill", "press_key"].includes(name))).toEqual(["click", "fill", "press_key", "click"]);
   });
   it("likes the story first when the profile has one, and a failing story never stops the warm-up", async () => {
     const { browser, actions } = fixture();
     browser.likeStory = vi.fn(async () => { actions.push("story"); return { hadStory: true, liked: true }; });
-    const result = await runChromeWarmup(browser, profileUrl, 2, async () => validComment);
+    const result = await run(browser, profileUrl, 2, async () => validComment);
     expect(result).toEqual({ likes: 2, comments: 2, followed: true, storyLiked: true });
     expect(actions.indexOf("story")).toBeLessThan(actions.indexOf("Like"));
     const failing = fixture();
     failing.browser.likeStory = vi.fn(async () => { throw new Error("story viewer did not open"); });
-    await expect(runChromeWarmup(failing.browser, profileUrl, 2, async () => validComment)).resolves.toMatchObject({ likes: 2, comments: 2, followed: true });
+    await expect(run(failing.browser, profileUrl, 2, async () => validComment)).resolves.toMatchObject({ likes: 2, comments: 2, followed: true });
     const noStory = fixture();
     noStory.browser.likeStory = vi.fn(async () => ({ hadStory: false, liked: false }));
-    expect((await runChromeWarmup(noStory.browser, profileUrl, 2, async () => validComment)).storyLiked).toBeUndefined();
+    expect((await run(noStory.browser, profileUrl, 2, async () => validComment)).storyLiked).toBeUndefined();
   });
   it("never comments twice on a post our account already commented on (an interrupted earlier warm-up)", async () => {
     const { browser, actions } = fixture();
     const read = browser.read;
     browser.read = vi.fn(async (url: string, comment?: string) => ({ ...(await read(url, comment)), ownerCommented: url === posts[0] }));
     const write = vi.fn(async () => validComment);
-    await expect(runChromeWarmup(browser, profileUrl, 2, write)).resolves.toEqual({ likes: 2, comments: 1, followed: true });
+    await expect(run(browser, profileUrl, 2, write)).resolves.toEqual({ likes: 2, comments: 1, followed: true });
     expect(write).toHaveBeenCalledTimes(1);
     expect(actions.filter((a) => a.startsWith("comment:"))).toHaveLength(1);
   });
@@ -78,7 +82,7 @@ describe("Chrome campaign preparation", () => {
     const { browser } = fixture();
     const read = browser.read;
     browser.read = vi.fn(async (url: string, comment?: string) => ({ ...(await read(url, comment)), ownerMatches: url === profileUrl, canComment: url !== profileUrl }));
-    await expect(runChromeWarmup(browser, profileUrl, 2, async () => validComment)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
+    await expect(run(browser, profileUrl, 2, async () => validComment)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
   });
   it("reloads a page stuck on Instagram's splash once, then continues", async () => {
     const { browser } = fixture();
@@ -89,13 +93,13 @@ describe("Chrome campaign preparation", () => {
       return url === profileUrl && stuck ? { ...page, ownerMatches: false, canComment: false, ownerLinks: 0, postUrls: [] } : page;
     });
     browser.reload = vi.fn(async () => { stuck = false; });
-    await expect(runChromeWarmup(browser, profileUrl, 2, async () => validComment)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
+    await expect(run(browser, profileUrl, 2, async () => validComment)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
     expect(browser.reload).toHaveBeenCalledTimes(1);
   });
   it("prepares the profile's posts, confirms each action, and follows last", async () => {
     const { browser, actions } = fixture();
     const write = vi.fn(async () => validComment);
-    await expect(runChromeWarmup(browser, profileUrl, 2, write)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
+    await expect(run(browser, profileUrl, 2, write)).resolves.toEqual({ likes: 2, comments: 2, followed: true });
     expect(write).toHaveBeenCalledTimes(2);
     expect(actions).toEqual([
       `open:${posts[0]}`, "Like", `comment:${validComment}`,
@@ -106,7 +110,7 @@ describe("Chrome campaign preparation", () => {
   it("likes sensitive posts without generating or posting a comment", async () => {
     const { browser } = fixture(["Remembering a loved one at a funeral", "A church celebration"]);
     const write = vi.fn(async () => validComment);
-    await expect(runChromeWarmup(browser, profileUrl, 2, write)).resolves.toEqual({ likes: 2, comments: 0, followed: true });
+    await expect(run(browser, profileUrl, 2, write)).resolves.toEqual({ likes: 2, comments: 0, followed: true });
     expect(write).not.toHaveBeenCalled();
     expect(browser.comment).not.toHaveBeenCalled();
   });
@@ -114,29 +118,31 @@ describe("Chrome campaign preparation", () => {
   it("does not toggle an existing like off", async () => {
     const { browser, liked } = fixture();
     liked.add(posts[0]);
-    await runChromeWarmup(browser, profileUrl, 1, async () => validComment);
+    await run(browser, profileUrl, 1, async () => validComment);
     expect(browser.click).not.toHaveBeenCalledWith("Like");
   });
 
-  it("refuses incomplete post lists before any social action", async () => {
+  it("refuses a profile with no available posts before any social action", async () => {
     const { browser } = fixture();
-    await expect(runChromeWarmup(browser, profileUrl, 10, async () => validComment)).rejects.toThrow("10 available posts");
+    const read = browser.read;
+    browser.read = vi.fn(async (url, comment) => ({ ...(await read(url, comment)), postUrls: [] }));
+    await expect(run(browser, profileUrl, 10, async () => validComment)).rejects.toThrow("at least one available post");
     expect(browser.click).not.toHaveBeenCalled();
     expect(browser.comment).not.toHaveBeenCalled();
   });
 
   it("never posts a comment that breaks the rules; that post only gets a like", async () => {
     const { browser } = fixture();
-    await expect(runChromeWarmup(browser, profileUrl, 1, async () => "Nice 🙌")).resolves.toEqual({ likes: 1, comments: 0, followed: true });
+    await expect(run(browser, profileUrl, 1, async () => "Nice #sale")).resolves.toEqual({ likes: 1, comments: 0, followed: true });
     expect(browser.comment).not.toHaveBeenCalled();
     const { browser: other } = fixture();
-    await expect(runChromeWarmup(other, profileUrl, 1, async () => { throw new Error("Comment writing did not return valid text after 3 attempts. Comments need 3 to 8 words."); })).resolves.toEqual({ likes: 1, comments: 0, followed: true });
+    await expect(run(other, profileUrl, 1, async () => { throw new Error("Comment writing did not return valid text after 3 attempts. Comments cannot contain dashes, hashtags, or links."); })).resolves.toEqual({ likes: 1, comments: 0, followed: true });
     expect(other.comment).not.toHaveBeenCalled();
   });
 
   it("rechecks campaign permission after generating a comment", async () => {
     const { browser } = fixture(); let running = true;
-    await expect(runChromeWarmup(browser, profileUrl, 1, async () => { running = false; return validComment; }, () => running)).rejects.toThrow("stopped");
+    await expect(run(browser, profileUrl, 1, async () => { running = false; return validComment; }, () => running)).rejects.toThrow("stopped");
     expect(browser.click).not.toHaveBeenCalled();
     expect(browser.comment).not.toHaveBeenCalled();
   });
@@ -144,7 +150,7 @@ describe("Chrome campaign preparation", () => {
   it("holds a partial comment failure for review instead of replaying engagement", async () => {
     const { browser } = fixture();
     browser.comment = vi.fn(async () => { throw new Error("connection lost"); });
-    await expect(runChromeWarmup(browser, profileUrl, 1, async () => validComment)).rejects.toBeInstanceOf(InstagramWarmupUncertainError);
+    await expect(run(browser, profileUrl, 1, async () => validComment)).rejects.toBeInstanceOf(InstagramWarmupUncertainError);
     expect(browser.click).toHaveBeenCalledWith("Like");
     expect(browser.click).not.toHaveBeenCalledWith("Follow");
   });
@@ -153,7 +159,7 @@ describe("Chrome campaign preparation", () => {
     const { browser } = fixture();
     const read = browser.read;
     browser.read = vi.fn(async (url: string, comment?: string) => ({ ...await read(url, comment), text: "Action blocked" }));
-    await expect(runChromeWarmup(browser, profileUrl, 1, async () => validComment)).rejects.toBeInstanceOf(InstagramBlockedError);
+    await expect(run(browser, profileUrl, 1, async () => validComment)).rejects.toBeInstanceOf(InstagramBlockedError);
     expect(browser.click).not.toHaveBeenCalled();
   });
 
@@ -161,7 +167,7 @@ describe("Chrome campaign preparation", () => {
     const { browser } = fixture();
     const read = browser.read;
     browser.read = vi.fn(async (url: string, comment?: string): Promise<WarmupPage> => ({ ...await read(url, comment), ownerMatches: false }));
-    await expect(runChromeWarmup(browser, profileUrl, 1, async () => validComment)).rejects.toThrow("no longer signed in");
+    await expect(run(browser, profileUrl, 1, async () => validComment)).rejects.toThrow("no longer signed in");
     expect(browser.click).not.toHaveBeenCalled();
   });
 
@@ -194,15 +200,18 @@ describe("Chrome campaign preparation", () => {
 
 describe("warm-up comment rules", () => {
   it("does not call an incomplete warm-up ready for a first message", () => {
-    expect(warmupComplete({ likes: 10, comments: 0, followed: true }, 10)).toBe(true);
-    for (const value of [{ likes: 9, comments: 9, followed: true }, { likes: 10, comments: 10, followed: false }, { likes: 10, comments: 11, followed: true }]) expect(warmupComplete(value, 10)).toBe(false);
+    for (const value of [{ likes: 10, comments: 0, followed: true }, { likes: 3, comments: 1, followed: true }, { likes: 1, comments: 1, followed: true }]) expect(warmupComplete(value, 10)).toBe(true);
+    for (const value of [{ likes: 0, comments: 0, followed: true }, { likes: 11, comments: 0, followed: true }, { likes: 3, comments: 4, followed: true }, { likes: 3, comments: 1, followed: false }]) expect(warmupComplete(value, 10)).toBe(false);
   });
-  it("accepts 3 to 8 words and 1 to 3 emoji graphemes", () => {
+  it("accepts any length and any number of emoji, within the hard limits", () => {
     expect(warmupCommentError(validComment)).toBeNull();
     expect(warmupCommentError("Your family looks wonderful 👨‍👩‍👦")).toBeNull();
+    for (const text of ["Wow", "Those details look amazing", "One two three four five six seven eight nine ten eleven twelve", "Those details look amazing 🙌🙌🙌🙌🙌"]) {
+      expect(warmupCommentError(text)).toBeNull();
+    }
   });
-  it("rejects missing emoji, excessive words, links, hashtags and every dash form", () => {
-    for (const text of ["Those details look amazing", "One two three four five six seven eight nine 🙌", "Those details look amazing 🙌🙌🙌🙌", "Those details look amazing #wood 🙌", "Those details look-amazing 🙌", "Those details look—amazing 🙌", "Those details https://site.test 🙌"]) {
+  it("rejects an empty or emoji-only comment, a very long one, links, hashtags and every dash form", () => {
+    for (const text of ["", "🙌", "x ".repeat(160), "Those details look amazing #wood 🙌", "Those details look-amazing 🙌", "Those details look—amazing 🙌", "Those details https://site.test 🙌"]) {
       expect(warmupCommentError(text)).not.toBeNull();
     }
   });

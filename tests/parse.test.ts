@@ -29,6 +29,9 @@ describe("instagram text helpers", () => {
   it("spots warnings and logouts", () => {
     expect(looksBlocked("Try Again Later. We limit how often you can do this.", "https://www.instagram.com/")).toBe(true);
     expect(looksBlocked("fine", "https://www.instagram.com/challenge/123/")).toBe(true);
+    expect(looksBlocked("", "https://www.instagram.com/auth_platform/challengepicker/?apc=x")).toBe(true);
+    expect(looksBlocked("We locked your account to protect you from a possible hack. Choose a way to recover", "https://www.instagram.com/direct/inbox/")).toBe(true);
+    expect(looksBlocked("", "https://www.instagram.com/accounts/suspended/")).toBe(true);
     expect(looksBlocked("Welcome back", "https://www.instagram.com/")).toBe(false);
     expect(looksLoggedOut("https://www.instagram.com/accounts/login/?next=/")).toBe(true);
     expect(looksLoggedOut("https://www.instagram.com/public.profile/", "Log in to see photos and videos from friends")).toBe(true);

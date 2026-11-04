@@ -22,11 +22,11 @@ export function qualify(facts: LeadFacts, rules: AudienceRules): Verdict {
   if (facts.onDoNotContact) return fail("On the do-not-contact list");
   if (facts.alreadyContacted) return fail("Already contacted");
   if (!facts.isPublic) return fail("Account is private");
-  if (facts.country === null) return fail("Country not shared, cannot confirm " + rules.country);
-  if (facts.country !== rules.country) return fail(`Based in ${facts.country}`);
+  // Instagram often hides the country or fails to load it; that no longer stops a lead. It is flagged for the person instead.
+  if (facts.country !== null && facts.country !== rules.country) return fail(`Based in ${facts.country}`);
   if (facts.followers < rules.minFollowers) return fail(`Only ${facts.followers} followers (min ${rules.minFollowers})`);
   if (facts.followers > rules.maxFollowers) return fail(`${facts.followers} followers (max ${rules.maxFollowers})`);
-  if (facts.linkedToInfyum) return fail("Connected to Infyum");
+  if (facts.linkedToInfyum) return fail("Already connected: this account follows them, or they follow it");
   return { ok: true };
 }
 

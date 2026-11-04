@@ -11,7 +11,8 @@ import { googleLinkOf } from "@/lib/auth/google-signin";
 import { getIdentityDb } from "@/lib/workspaces/storage";
 import { runMode } from "@/lib/services/run-steps";
 import { saveRunMode } from "../step-actions";
-import { blockHandle, disconnectGoogle, saveApifyCap, savePasswordSignIn, saveProspectFilters, saveSafety, saveTimeZone, saveWriting, unblockHandle } from "./actions";
+import { sheetsStatus } from "@/lib/sheets/connection";
+import { blockHandle, createSheet, disconnectGoogle, disconnectGoogleSheets, saveSheet, saveApifyCap, savePasswordSignIn, saveProspectFilters, saveSafety, saveTimeZone, saveWriting, unblockHandle } from "./actions";
 import { parseProspectFilters } from "@/lib/domain/prospect-filters";
 import { getWritingReadiness } from "@/lib/services/writing-readiness";
 import { parseSafetySettings } from "@/lib/domain/safety-settings";
@@ -20,9 +21,9 @@ import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 
 export const dynamic = "force-dynamic";
 
-export default async function Settings({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
+export default async function Settings({ searchParams }: { searchParams: Promise<{ google?: string; sheets?: string }> }) {
   const user = await requireUser();
-  const { google: googleNote } = await searchParams;
+  const { google: googleNote, sheets: sheetsNote } = await searchParams;
   const googleLink = googleLinkOf(getIdentityDb(), user.id), googleReady = googleOn(), passwordOff = passwordSignInOff();
   const db = (await getDb());
   const writing = await getWritingReadiness(user.hostChromeAllowed);
@@ -34,6 +35,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
   const filters = parseProspectFilters(getSetting(db, "prospect_filters"));
   const safety = parseSafetySettings(getSetting(db, "safety_settings"));
   const mode = runMode(db);
+  const sheets = sheetsStatus(db);
   const writingSettings = parseWritingSettings(getSetting(db, "writing_settings"));
   return (
     <>
@@ -51,7 +53,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Sender details and prompts</h2>
-          <p className="mb-3 mt-1 text-sm text-muted">Who the messages come from, and the instructions the writer follows. The word and emoji limits for comments and the three-message shape of a first DM are checked by the app whatever you write here. In the DM prompt, {"{sender}"} {"{company}"} {"{location}"} {"{offer}"} and {"{link}"} are filled in for you. Leave a box empty to go back to the standard wording.</p>
+          <p className="mb-3 mt-1 text-sm text-muted">Who the messages come from, and the instructions the writer follows. The app always checks a few hard limits whatever you write: no dashes or hashtags, comments of at most 300 characters, only your link in a message, one to three messages per first DM, and no stock agency phrases. In the DM prompt, {"{sender}"} {"{company}"} {"{location}"} {"{offer}"} and {"{link}"} are filled in for you. Leave a box empty to go back to the standard wording.</p>
           <ActionForm action={saveWriting} className="grid gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div><label className="label" htmlFor="senderName">Sender name</label><input id="senderName" name="senderName" maxLength={60} defaultValue={writingSettings.senderName} className="input" /></div>
@@ -118,7 +120,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
 
         <section className="card p-5">
           <h2 className="text-base font-semibold">How work starts</h2>
-          <p className="mb-3 mt-1 text-sm text-muted">With action buttons (recommended), nothing runs until you press Find leads, Engage, Send DMs or Follow up on the Overview page. With automatic, Outreach runs every step by itself within your limits.</p>
+          <p className="mb-3 mt-1 text-sm text-muted">With action buttons (recommended), nothing runs until you press Find leads, Engage, or Send DMs on the Overview page. With automatic, Outreach runs every step by itself within your limits.</p>
           <ActionForm action={saveRunMode} className="flex flex-wrap items-end gap-3">
             <div><label className="label" htmlFor="runMode">Mode</label>
               <select id="runMode" name="runMode" defaultValue={mode} className="input"><option value="buttons">Action buttons (I press each step)</option><option value="automatic">Automatic (all steps on their own)</option></select></div>
@@ -140,6 +142,30 @@ export default async function Settings({ searchParams }: { searchParams: Promise
             </div>
             <button className="btn w-fit">Save caps and hours</button>
           </ActionForm>
+        </section>
+
+        <section className="card p-5" aria-labelledby="sheets-title">
+          <h2 id="sheets-title" className="text-base font-semibold">Google Sheet</h2>
+          <p className="mb-3 mt-1 text-muted">Your team’s view of every lead, in one Google Sheet. Changes in the app appear there within a minute, and a name added to Do-not-contact or a changed Stage in the Sheet flows back. Keys and tokens are never put in the Sheet.</p>
+          {sheetsNote && <p role="status" className="mb-3 text-sm">{({ connected: "Google Sheets is connected.", denied: "Google Sheets access was cancelled.", expired: "That took too long or was not started here. Please try again.", failed: "Google did not accept the connection. Please try again.", off: "Google is not set up on this server (it needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)." } as Record<string, string>)[sheetsNote] ?? ""}</p>}
+          {!googleReady ? <p className="text-muted">Google is not set up on this server yet. It needs a Google client id and secret in the server settings.</p> : (
+            <>
+              <p className="text-sm">{sheets.connected ? "Google Sheets is connected." : "Not connected."}{sheets.sheetId ? <> Using Sheet <a className="text-accent underline" href={`https://docs.google.com/spreadsheets/d/${sheets.sheetId}/edit`} target="_blank" rel="noreferrer">open it</a>.</> : sheets.connected ? " No Sheet chosen yet." : ""}</p>
+              {sheets.syncedAt && <p className="text-sm text-muted">Last synced {sheets.syncedAt.slice(0, 16).replace("T", " ")} UTC.</p>}
+              {sheets.error && <p role="alert" className="text-sm text-red-600">Last sync problem: {sheets.error}. It retries every minute.</p>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a className="btn" href="/api/sheets/google/start">{sheets.connected ? "Reconnect Google Sheets" : "Connect Google Sheets"}</a>
+                {sheets.connected && !sheets.sheetId && <ActionForm action={createSheet}><button className="btn">Create the Sheet</button></ActionForm>}
+                {sheets.connected && <ActionForm action={disconnectGoogleSheets}><button className="btn">Disconnect</button></ActionForm>}
+              </div>
+              {sheets.connected && (
+                <ActionForm action={saveSheet} className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="sm:col-span-2"><label className="label" htmlFor="sheet">Or use a Sheet you already have</label><input id="sheet" name="sheet" className="input" placeholder="Paste the Sheet’s link" autoComplete="off" /></div>
+                  <button className="btn self-end">Use this Sheet</button>
+                </ActionForm>
+              )}
+            </>
+          )}
         </section>
 
         <section className="card p-5">

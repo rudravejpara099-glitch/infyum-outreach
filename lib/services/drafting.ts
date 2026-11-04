@@ -1,8 +1,8 @@
 import type { Db } from "@/lib/db/core";
 import type { AiEngine } from "@/lib/engine/types";
-import { firstDmPrompt, followupPrompt, PORTFOLIO_LINK, systemPrompt } from "@/lib/engine/prompts";
+import { criticPrompt, firstDmPrompt, followupPrompt, PORTFOLIO_LINK, systemPrompt } from "@/lib/engine/prompts";
 import { parseWritingSettings } from "@/lib/domain/writing-settings";
-import { checkDraft, parseParts } from "@/lib/engine/validate";
+import { checkDraft, parseParts, parseVerdict } from "@/lib/engine/validate";
 import { checkAgainstRecent } from "@/lib/domain/similarity";
 import { getCampaign } from "@/lib/db/repos/campaigns";
 import { getLead } from "@/lib/db/repos/leads";
@@ -15,7 +15,7 @@ import type { MeteredAiCall } from "@/lib/engine/types";
 const ATTEMPTS = 3;
 
 /** Asks the AI, checks the answer against the hard rules and the similarity guard, retries with feedback. */
-async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: string, leadId: number, jobId?: number): Promise<string[]> {
+async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: string, leadId: number, jobId?: number, profileNotes = ""): Promise<{ parts: string[]; concern?: string }> {
   const { lead } = context(db, leadId);
   const campaignId = lead.campaignId ?? undefined;
   const campaignPayer = campaignId ? payerFor(db, "campaign", campaignId) : null;
@@ -23,6 +23,8 @@ async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: 
   const payer = campaignPayer && accountPayer && campaignPayer === accountPayer ? campaignPayer : null;
   const link = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
   let feedback = "";
+  // The last draft that passed every hard rule but that the reviewer refused: used only if nothing better comes, and always held for a person.
+  let fallback: { parts: string[]; concern: string } | null = null;
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     const metering: MeteredAiCall | undefined = payer && campaignId && lead.accountId ? {
       db, userId: payer, operationId: `ai:${jobId ?? `lead-${leadId}`}:${kind}:${attempt}`,
@@ -38,12 +40,21 @@ async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: 
         const similar = checkAgainstRecent(parts.join(" "), recentSentTexts(db));
         if (similar.tooSimilar) problem = similar.reason;
       }
+      // Free local writer only: a second strict read catches criticism, unsupported claims and agency-speak. Paid calls skip it so they cost no more.
+      if (!problem && kind === "dm" && !metering) {
+        const w = parseWritingSettings(getSetting(db, "writing_settings"));
+        const sender = `${w.senderName} at ${w.company}, ${w.offer}, based in ${w.location}`;
+        const verdict = parseVerdict(await engine.complete({ system: "You are a strict reviewer. Answer with JSON only.", prompt: criticPrompt(profileNotes, parts, sender), maxOutputTokens: 300 }).catch(() => ""));
+        if (!verdict.ok) { problem = `A reviewer rejected it: ${verdict.problem}`; fallback = { parts, concern: verdict.problem }; }
+      }
     } catch (e) {
       problem = e instanceof Error ? e.message : "Unreadable answer";
     }
-    if (!problem) return parts;
+    if (!problem) return { parts };
     feedback = `\n\nYour last attempt was rejected: ${problem}. Fix that and answer again with JSON only.`;
   }
+  // Only the reviewer objected (every hard rule passed): keep the draft but make a person look at it, rather than leave the lead with no draft.
+  if (fallback) return fallback;
   throw new Error(`Could not get an acceptable ${kind} draft after ${ATTEMPTS} tries`);
 }
 
@@ -58,18 +69,18 @@ const fallbackCampaign: Pick<Campaign, "approvalRequired"> = { approvalRequired:
 export async function draftFirstDm(db: Db, engine: AiEngine, leadId: number, profileNotes: string, actor = "worker", jobId?: number): Promise<Message> {
   const { lead, campaign } = context(db, leadId);
   const openings = recentSentTexts(db).map((t) => t.split(/\s+/).slice(0, 6).join(" "));
-  const parts = await draft(engine, db, "dm", firstDmPrompt({
+  const { parts, concern } = await draft(engine, db, "dm", firstDmPrompt({
     handle: lead.handle, niche: lead.niche, followers: lead.followers, profileNotes,
     audienceText: campaign?.audienceText ?? "", recentOpenings: openings,
     portfolioLink: getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK,
     writing: parseWritingSettings(getSetting(db, "writing_settings")),
-  }), leadId, jobId);
-  return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "dm", parts, campaign: campaign ?? fallbackCampaign }, actor);
+  }), leadId, jobId, profileNotes);
+  return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "dm", parts, campaign: campaign ?? fallbackCampaign, ...(concern ? { extraReasons: [`Reviewer concern: ${concern}`] } : {}) }, actor);
 }
 
 export async function draftFollowup(db: Db, engine: AiEngine, leadId: number, profileNotes = "", actor = "worker", jobId?: number): Promise<Message> {
   const { lead, campaign } = context(db, leadId);
   const previous = listMessages(db, { leadId, limit: 6 }).filter((m) => m.direction === "out" && m.status === "sent").map((m) => m.parts.join(" ")).join("\n---\n");
-  const parts = await draft(engine, db, "followup", followupPrompt({ handle: lead.handle, previous, number: lead.followupsSent + 1, profileNotes }), leadId, jobId);
+  const { parts } = await draft(engine, db, "followup", followupPrompt({ handle: lead.handle, previous, number: lead.followupsSent + 1, profileNotes }), leadId, jobId);
   return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "followup", parts, campaign: campaign ?? fallbackCampaign }, actor);
 }

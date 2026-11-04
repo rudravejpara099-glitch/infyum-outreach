@@ -11,6 +11,8 @@ import { adoptWorker, heartbeatWorker, markOwnedWorkerStopping, releaseWorker, r
 import { AccountInstagramDriver } from "./instagram-driver";
 import { currentLanes, planWork, runOne, type Deps } from "./runner";
 import { syncConsentedBilling } from "@/lib/billing";
+import { getSheetGateway } from "@/lib/sheets/connection";
+import { runSheetCycle } from "@/lib/sheets/cycle";
 
 const db = openDb(config.dbPath);
 let token: string | null = null;
@@ -41,7 +43,9 @@ async function main(): Promise<void> {
     const deps: Deps = {
       db, engine: defaultEngine(), driver, now: () => new Date(),
       apify: process.env.APIFY_TOKEN ? new ApifyClient({ token: process.env.APIFY_TOKEN }) : undefined,
-      humanPace: {},
+      // Human pace is ON: working hours, lunch, rests and waits between jobs. The owner briefly switched it off on 2026-11-03
+      // and Instagram locked the test account minutes later, so it is back on. HUMAN_PACING=off disables it (not recommended).
+      ...(process.env.HUMAN_PACING === "off" ? {} : { humanPace: {} }),
       mayClaim: () => workerMayClaim(db, token!, process.pid),
       pace: () => new Promise((r) => setTimeout(r, humanDelayMs("beforeSend", Math.random))),
     };
@@ -59,6 +63,9 @@ async function main(): Promise<void> {
           if (result.failedUserIds.length) console.error("Periodic billing sync failed for consenting user IDs:", result.failedUserIds.join(", "));
           lastBillingSyncAt = now.getTime();
         }
+        // Google Sheet: take in the team's edits, then write ours out; at most once a minute, and a failure never stops outreach.
+        const sheet = getSheetGateway(db, { clientId: config.google.clientId, clientSecret: config.google.clientSecret, sessionSecret: config.sessionSecret });
+        if (sheet) await runSheetCycle(db, sheet, now).catch((error) => console.error("Sheet sync error:", error instanceof Error ? error.message : error));
         planWork(deps);
         for (const lane of currentLanes(db)) {
           if (stopping || heartbeatWorker(db, token, process.pid) !== "running") { stopping = true; break; }
