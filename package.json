@@ -11,6 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "worker": "tsx worker/index.ts",
     "doctor": "tsx scripts/doctor.ts",
+    "ready": "tsx scripts/ready.ts",
     "setup:claude": "tsx scripts/setup-claude.ts",
     "restart": "tsx scripts/restart.ts",
     "backup": "tsx scripts/backup.ts",
