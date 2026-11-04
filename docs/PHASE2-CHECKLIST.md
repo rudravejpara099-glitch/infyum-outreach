@@ -82,3 +82,12 @@ Order: **0, 4, 2, 1, 3, 5, 6, 7, 8**
 - Claude owns `worker/`, `lib/domain/`, `lib/engine/`, `lib/services/`, `lib/leads/`, `lib/db/repos/`. Codex owns `app/`, `components/`, CSS, `scripts/ui-smoke.ts`. Post a request and wait for ACK before touching the other's area.
 - Before a PR: `npm test`, `npm run typecheck`, `npx next build`.
 - Add a dated entry to `docs/COLLAB.md` when stopping: what changed, what was verified, what was NOT verified.
+
+## Go-live pack (2026-11-04)
+- [x] `docs/GO-LIVE.md`: the keys to get, the five steps, the safety rules and a troubleshooting table
+- [x] `npm run ready`: tests the Claude and Apify keys with free calls and lists what is missing across App, Instagram, Claude, Apify and Google (tests: `tests/readiness.test.ts`; run for real on this Mac)
+- [x] `npm run setup:claude`: limit, metering sign-off and payer in one step (tests: `tests/setup-claude.test.ts`); not yet run with `--yes` on the real database
+- [x] `npm run restart`: run for real, replaces the old server
+- [x] Find leads works for extension accounts (it was blocked)
+- [ ] **Needs (owner):** the Claude key and credit, the Apify token, the Google client id and secret, then follow `docs/GO-LIVE.md`
+

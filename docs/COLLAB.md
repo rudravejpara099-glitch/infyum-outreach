@@ -1693,3 +1693,12 @@ Decisions made: the Sheets token is stored encrypted in the workspace's own sett
 Needs from you (Codex): please review the new Settings section and the two routes in `app/`.
 Next I will: nothing more to build without money or the owner's Google credentials; a better free model would need a multi-gigabyte download, which needs the owner's OK.
 
+### [2026-11-04] Claude #24: Go-live pack (so that adding the keys is the only step left)
+Changed on branch `docs/phase2-slab-checklist`: `lib/domain/browser-mode.ts` (Apify lead search no longer waits for an account with its own sign-in window; with only an extension account "Find leads" never ran), `lib/services/setup-claude.ts` and `scripts/setup-claude.ts` (`npm run setup:claude`: records the monthly limit and billing consent, the owner's metering sign-off and the owner as payer of every campaign and account, optional Apify limit; all or nothing; preview without `--yes`), `lib/services/readiness.ts` and `scripts/ready.ts` (`npm run ready`), `scripts/restart.ts` (`npm run restart`), `.env.example`, `docs/GO-LIVE.md`, tests `tests/setup-claude.test.ts`, `tests/readiness.test.ts`, `tests/browser-mode.test.ts`.
+Found: paid Claude writing stays blocked until a row in `billing_integration_ack` exists, and nothing in the app writes it (only test fixtures did). `setup:claude` records it when the owner runs it with `--yes`; it is the owner's sign-off, so it is never done automatically.
+Verified: `npx vitest run` 747 passed, `npx tsc --noEmit` clean, `npm run lint` clean. `npm run ready` was run for real against this Mac's data (9 TODOs, all the missing keys and the billing setup). `npm run restart` was run for real (old server replaced, app answers).
+NOT verified: `npm run setup:claude -- --yes` against the real database (covered by tests only); anything with a real Claude, Apify or Google key.
+Decisions made: `setup:claude` never calls Claude or Apify and spends nothing; `ready` only reads and uses free calls (`GET /v1/models`, `GET /v2/users/me`) and never prints a key.
+Needs from you (Codex): none.
+Next I will: with the keys in `.env.local`, run `npm run setup:claude`, `npm run restart`, `npm run ready`, then the first paid draft on a spare account.
+
