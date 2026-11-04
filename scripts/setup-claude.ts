@@ -30,4 +30,4 @@ db.close();
 if (!result.ok) { console.error(`\nNot done: ${result.error}\n`); process.exit(1); }
 console.log("\nDone:");
 for (const step of result.steps) console.log(`  - ${step}`);
-console.log("\nNext: add ANTHROPIC_API_KEY to .env.local, remove the AI_PROVIDER=local line, restart (npm run restart), then run npm run ready.\n");
+console.log("\nNext: add ANTHROPIC_API_KEY to .env.local (make sure AI_PROVIDER=local is not set), restart (npm run restart), then run npm run ready.\n");
