@@ -1,3 +1,4 @@
+import { withBioLinkPage } from "@/lib/services/bio-link";
 import type { Db } from "@/lib/db/core";
 import type { AiEngine, MeteredAiCall } from "@/lib/engine/types";
 import { AiUsageUncertainError } from "@/lib/engine/anthropic";
@@ -350,8 +351,8 @@ async function process(deps: Deps, job: Job): Promise<void> {
 
     case "draft_dm": {
       if (!lead || lead.stage !== "warmed" || !account) return;
-      const notes = await driver.readProfileNotes(account, lead.handle);
-      setNotes(db, lead.id, notes.slice(0, 4000));
+      const notes = await withBioLinkPage(await driver.readProfileNotes(account, lead.handle));
+      setNotes(db, lead.id, notes.slice(0, 6000));
       await draftFirstDm(db, engine, lead.id, notes, "worker", job.id);
       return;
     }

@@ -1594,3 +1594,14 @@ NOT verified: a real AI draft (no live or local model call), `npm run smoke:ui` 
 Decisions made: dash ban kept (Sunil's "—" sign-off becomes "|"); India removed from DM wording; `qualify.ts` US rule left as is; Phase 1 writes no follow-up (hard rule 10). Saved Settings values for sender name/company still override the new defaults (Sunil / INFYUM).
 Needs from you: none.
 Next I will: nothing, waiting for owner review of the PR.
+
+### [2026-11-14] Claude #1: Second pass on the DM writer, matching the PDF level
+Changed (same branch `feat/sunil-dm-writer`):
+- Profile reader (`worker/instagram.ts`, `worker/chrome-read-only.ts`, new `lib/domain/profile-notes.ts`): now captures the bio link URL, highlight titles / top of page, and captions + dates + location tags of up to 4 recent posts (3 in Chrome mode), not only bio and image alt text. New `lib/services/bio-link.ts` fetches the public page behind the bio link (https only, DNS check against private addresses, 3 redirects, 8 s, size cap) and `worker/runner.ts` adds it to the notes for `draft_dm`.
+- Sender: `worker/human.ts typeMultiline` types paragraph breaks with Shift+Enter so a multi-paragraph DM stays ONE message (plain Enter used to split it). Sent-message verification now looks for the first line only. Chrome mode still uses `fill` with the text unchanged (newline handling there is untested).
+- Writer: Sunil's five reference outputs are now in the first-DM prompt (`REFERENCE_EXAMPLES`), profile material is marked untrusted, JSON now also carries `profile` and `followup`. Dash ban removed for DMs and follow-ups (kept for inbox replies). DM length limit 140 words. Follow-up is written with the DM, stored as activity `dm.followup_draft`, and used by `draftFollowup` for the first follow-up (later ones still generated).
+- `lib/domain/qualify.ts`: country "Not shared" now passes (assume campaign country, writer flags it); a shown different country still fails.
+- Phase 1 guide, section 4.4: examples, caption reading, Shift+Enter, follow-up written but not sent (saved in `notes` as `followup_draft`), `profile:` and `why:` lines in `notes`.
+Verified: `npx vitest run` 685 passed (90 files); typecheck and eslint clean.
+NOT verified: any real Instagram page (selectors for captions, locations, header links are untested live), Chrome-mode newline handling, a real AI draft, `npm run smoke:ui`, `next build`. The `extension/` remote driver is unchanged and does not read captions or the bio link page.
+Needs from you: none.

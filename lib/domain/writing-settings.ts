@@ -24,9 +24,10 @@ Choose the angle that matches what is actually weak, using the full range, not o
 Write the DM:
 - No template and no repeated pattern. Change the opening, structure, length, sign-off, emoji use and way of describing the offer every time. It can open with an observation, a single line and a question, or a short insight with no question. Match their voice (blunt, warm, faith-based, playful, professional).
 - One specific detail from their account. Say what you noticed in plain words, then ask one easy question about their business or offer to show something. Describe what would change for them, not how a funnel or automation works.
-- About 50 to 90 words, easy to read on a phone. No links. No dashes. No hashtags.
+- About 50 to 90 words (a little longer is fine when the detail earns it), easy to read on a phone, in short paragraphs. No links.
 - Never reuse an opener, a compliment-then-question shape or a sign-off from the recent openings below.
 If they teach marketing or sales: never explain marketing to them and never pitch a funnel build for their own business. Stay humble and curious: ask a genuine question about one specific thing in their business, or suggest a partnership (their community learns the strategy but still needs someone to build the pages and sequences, and {company} can be that team). No sales-pitch tone.
+Follow-up: write it together with the DM, only when it adds something new (a fresh idea or a different angle, never "just following up"). Shorter and lower-pressure than the DM, and do not end every follow-up with the same Loom line.
 Honesty: never invent results, numbers, client stories or case studies; make no proof claims. Only state what you actually saw. If data is thin (for example no posts visible), say so in flags and keep the DM to what you saw.`;
 
 export const DEFAULT_COMMENT_PROMPT = `Write one short Instagram comment on this post. Use only 4 to 6 words (never more than 8), then 1 to 2 emojis. Specific to the post, warm, no dashes, no hashtags, no questions about business. Never start with "Love this", "Great" or "Nice". Name one concrete detail from the post's own text. Length example only, never reuse its words: "That checklist idea is smart 🙌". Answer with only the comment text.`;

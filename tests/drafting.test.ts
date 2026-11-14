@@ -4,7 +4,7 @@ import { createAccount } from "@/lib/db/repos/accounts";
 import { createCampaign } from "@/lib/db/repos/campaigns";
 import { addLead, assignLead, getLead, moveStage } from "@/lib/db/repos/leads";
 import { listActivity } from "@/lib/db/repos/activity";
-import { draftFirstDm } from "@/lib/services/drafting";
+import { draftFirstDm, draftFollowup } from "@/lib/services/drafting";
 import { checkDraft, parseDmResult, parseParts } from "@/lib/engine/validate";
 import type { AiEngine } from "@/lib/engine/types";
 
@@ -35,12 +35,18 @@ describe("draft validation", () => {
   it("rejects wrong shapes", () => {
     expect(checkDraft([DM, DM], "dm")).toMatch(/exactly one/);
     expect(checkDraft([`${DM} ${LINK}`], "dm")).toMatch(/must not contain a link/);
-    expect(checkDraft(["Too short to be a real message."], "dm")).toMatch(/50 to 90 words/);
-    expect(checkDraft([DM.replace("with me", "with me — really")], "dm")).toBe("No dashes");
+    expect(checkDraft(["Too short to be a real message."], "dm")).toMatch(/50 to 110 words/);
+    expect(checkDraft([DM.replace("with me", "with me — really")], "dm")).toBeNull(); // Sunil's own examples use a long dash and arrows
+    expect(checkDraft(["Great reply — thanks"], "reply")).toBe("No dashes");
     expect(checkDraft([DM], "dm")).toBeNull();
     expect(checkDraft(["Just checking in again."], "followup")).toMatch(/Filler/);
     expect(checkDraft(["Hello"], "followup")).toBeNull();
   });
+});
+
+describe("Sunil's reference DMs", () => {
+  const crystal = "Crystal, 10 years of giving the Purpose Planner away for free, and thousands of downloads \u{1F44F}\u{1F3FE} That's a serious audience of women already planning their purpose with you.\n\nSomething I kept thinking about: how many of those planner women have a book or message inside them and don't know DayeLight exists? Feels like a funnel waiting to be built. Download the planner \u2192 a few emails sharing your story and authors like Kemone \u2192 an invite to work with you.\n\nYou said it best yourself: \"No sales, no impact.\" \u{1F604} Would love to show you what that could look like before 2027 planning season kicks off.\n\n\u2014 Sunil from INFYUM";
+  it("pass our checks, including paragraphs, emojis, arrows and a long-dash sign-off", () => expect(checkDraft([crystal], "dm")).toBeNull());
 });
 
 describe("drafting", () => {
@@ -49,6 +55,16 @@ describe("drafting", () => {
     expect(m).toMatchObject({ kind: "dm", status: "approved" });
     expect(m!.parts).toEqual([DM]);
     expect(listActivity(db, { leadId }).some((a) => a.action === "dm.drafted" && /Why this angle/.test(String(a.detail)) && /Flags: location unconfirmed/.test(String(a.detail)))).toBe(true);
+  });
+  it("writes the follow-up with the DM and uses it when the lead has not replied", async () => {
+    const followup = "Kami, one more thought: your podcast guests could lead listeners into a 2027 waitlist. Happy to map it out on a short video.";
+    await draftFirstDm(db, fake([JSON.stringify({ skip: false, profile: "Kami, coach, 2.3K, Denver", why: "w", parts: [DM], followup, flags: "" })]), leadId, "bio");
+    const never = fake(["should not be called"]);
+    const f = await draftFollowup(db, never, leadId, "bio");
+    expect(f).toMatchObject({ kind: "followup" });
+    expect(f.parts).toEqual([followup]);
+    expect(never.calls).toBe(0);
+    expect(listActivity(db, { leadId }).some((a) => a.action === "dm.drafted" && /Profile: Kami, coach/.test(String(a.detail)))).toBe(true);
   });
   it("skips a lead the writer judges not a fit and creates no message", async () => {
     const m = await draftFirstDm(db, fake(['{"skip":true,"reason":"Personal account, no coaching offer"}']), leadId, "");

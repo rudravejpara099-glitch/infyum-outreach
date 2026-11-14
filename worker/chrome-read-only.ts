@@ -1,3 +1,4 @@
+import { formatProfileNotes, type PostSeen } from "@/lib/domain/profile-notes";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -305,12 +306,25 @@ export class ChromeInstagram implements InstagramDriver {
   async readProfileNotes(account: IgAccount, handle: string): Promise<string> {
     await this.verifyOwner(account);
     const page = await this.openProfile(account, handle);
-    const result = await this.evaluate(page.pageId, "() => ({ text: document.querySelector('header')?.innerText ?? '', alts: Array.from(document.querySelectorAll('main img[alt]')).map(image => image.alt).filter(value => value.length > 20).slice(0, 8) })", "Chrome could not read Instagram profile notes.");
-    const parsed = jsonFromToolResult(result) as { text?: unknown; alts?: unknown } | null;
+    const result = await this.evaluate(page.pageId, "() => ({ text: document.querySelector('header')?.innerText ?? '', top: (document.querySelector('main')?.innerText ?? '').slice(0, 2500), links: Array.from(document.querySelectorAll('header a[href]')).map(a => a.href), alts: Array.from(document.querySelectorAll('main img[alt]')).map(image => image.alt).filter(value => value.length > 20).slice(0, 8), posts: Array.from(new Set(Array.from(document.querySelectorAll('a[href*=\"/p/\"], a[href*=\"/reel/\"]')).map(a => a.href))).slice(0, 3) })", "Chrome could not read Instagram profile notes.");
+    const parsed = jsonFromToolResult(result) as { text?: unknown; top?: unknown; links?: unknown; alts?: unknown; posts?: unknown } | null;
     if (!parsed || typeof parsed.text !== "string" || !Array.isArray(parsed.alts)) throw new Error("Instagram profile notes were unavailable.");
     if (looksBlocked(parsed.text, page.url)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
-    const alts = parsed.alts.filter((value): value is string => typeof value === "string");
-    return [`Profile header:\n${parsed.text}`, alts.length ? `Recent posts (image descriptions):\n- ${alts.join("\n- ")}` : ""].filter(Boolean).join("\n\n");
+    const strings = (value: unknown) => Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+    // Read a few post captions by opening each post in the same tab, then return to the profile. Best effort.
+    const posts: PostSeen[] = [];
+    for (const url of strings(parsed.posts).filter((u) => isAllowedInstagramUrl(u) && /^\/(p|reel)\//.test(new URL(u).pathname)).slice(0, 3)) {
+      try {
+        ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "navigate_page", arguments: { pageId: page.pageId, type: "url", url } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not open an Instagram post.");
+        await this.pause("read");
+        const post = jsonFromToolResult(await this.evaluate(page.pageId, "() => ({ caption: (document.querySelector('main h1, article h1')?.innerText ?? ''), date: document.querySelector('time[datetime]')?.getAttribute('datetime') ?? '', location: document.querySelector('a[href*=\"/explore/locations/\"]')?.innerText ?? '' })", "Chrome could not read an Instagram post.")) as { caption?: unknown; date?: unknown; location?: unknown } | null;
+        if (post && typeof post.caption === "string" && post.caption.trim()) posts.push({ caption: post.caption, date: typeof post.date === "string" ? post.date.slice(0, 10) : undefined, location: typeof post.location === "string" && post.location ? post.location : undefined });
+      } catch (error) { if (error instanceof InstagramBlockedError) throw error; }
+    }
+    if (posts.length) {
+      try { ensureChromeToolSucceeded(await (await this.connect()).callTool({ name: "navigate_page", arguments: { pageId: page.pageId, type: "url", url: instagramProfileUrl(handle) } }, undefined, { timeout: CHROME_REQUEST_TIMEOUT_MS }) as ToolTextResult, "Chrome could not return to the Instagram profile."); } catch { /* the next job opens its own page */ }
+    }
+    return formatProfileNotes({ header: parsed.text, pageTop: typeof parsed.top === "string" ? parsed.top : undefined, links: strings(parsed.links), posts, alts: strings(parsed.alts) });
   }
   async readInbox(account: IgAccount): Promise<{ handle: string; text: string }[]> {
     await this.verifyOwner(account);
@@ -445,7 +459,8 @@ export class ChromeInstagram implements InstagramDriver {
         await this.sendPart(target.pageId, part, () => { check(); attempted = true; }, mayContinue);
         // Instagram opens chats either on /direct/ pages or as a pop-up over the profile; accept both,
         // and give the sent text a few seconds to appear before deciding.
-        const expected = JSON.stringify(part.slice(0, Math.min(30, part.length)));
+        const firstLine = part.split(/\r?\n/)[0];
+        const expected = JSON.stringify(firstLine.slice(0, Math.min(30, firstLine.length)));
         const receipt = await this.evaluate(target.pageId, `async () => {
           const onInstagram = location.protocol === 'https:' && (location.hostname === 'www.instagram.com' || location.hostname === 'instagram.com');
           const chatOpen = () => location.pathname.startsWith('/direct/') || Boolean(document.querySelector('[contenteditable="true"][role="textbox"]'));
@@ -456,7 +471,7 @@ export class ChromeInstagram implements InstagramDriver {
         const parsed = jsonFromToolResult(receipt) as { allowed?: unknown; text?: unknown } | null;
         if (parsed?.allowed !== true || typeof parsed.text !== "string") throw new Error("Instagram chat identity could not be verified after sending.");
         if (looksBlocked(parsed.text, `https://www.instagram.com/direct/inbox/`)) throw new InstagramBlockedError("Instagram showed a warning or human check. Review the account in Chrome.");
-        if (!parsed.text.includes(part.slice(0, Math.min(30, part.length)))) throw new Error(`The message to @${handle} did not appear in the conversation.`);
+        if (!parsed.text.includes(firstLine.slice(0, Math.min(30, firstLine.length)))) throw new Error(`The message to @${handle} did not appear in the conversation.`);
         if (index < parts.length - 1) await this.pause("betweenParts");
       }
     } catch (error) {

@@ -3,6 +3,7 @@ import type { IgAccount } from "@/lib/db/types";
 import { InstagramBlockedError, InstagramSendUncertainError, InstagramWarmupUncertainError, type InstagramDriver, type ProfileFacts, type WarmUpResult } from "./driver";
 import { humanDelayMs } from "@/lib/domain/pacing";
 import * as human from "./human";
+import { formatProfileNotes, type PostSeen } from "@/lib/domain/profile-notes";
 import { followersFromText, hasInstagramSession, looksBlocked, looksLoggedOut, skipComment } from "./parse";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -111,11 +112,28 @@ export class PlaywrightInstagram implements InstagramDriver {
     return found;
   }
 
+  /** Bio, bio link, highlight titles and the captions of a few recent posts: what Sunil's DM guide expects the writer to see. */
   async readProfileNotes(account: IgAccount, handle: string): Promise<string> {
-    const page = await this.go(account, `https://www.instagram.com/${handle}/`);
+    const profileUrl = `https://www.instagram.com/${handle}/`;
+    const page = await this.go(account, profileUrl);
     const header = (await page.locator("header").first().innerText()).replace(/\n{2,}/g, "\n");
+    const pageTop = await page.locator("main").first().innerText().then((t) => t.slice(0, 2500)).catch(() => "");
+    const links = await page.locator("header a[href]").evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).href)).catch(() => [] as string[]);
     const alts = await page.locator('article img[alt], main img[alt]').evaluateAll((els) => els.map((e) => (e as HTMLImageElement).alt).filter((a) => a.length > 20).slice(0, 8));
-    return [`Profile header:\n${header}`, alts.length ? `Recent posts (image descriptions):\n- ${alts.join("\n- ")}` : ""].filter(Boolean).join("\n\n");
+    const postUrls = await page.locator('a[href*="/p/"], a[href*="/reel/"]').evaluateAll((els) => [...new Set(els.map((e) => (e as HTMLAnchorElement).href))]).catch(() => [] as string[]);
+    const posts: PostSeen[] = [];
+    for (const url of postUrls.slice(0, 4)) {
+      try {
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+        await human.wait("read");
+        await this.guard(page);
+        const caption = await page.locator("main h1, article h1").first().innerText({ timeout: 3_000 }).catch(() => "");
+        const date = await page.locator("time[datetime]").first().getAttribute("datetime", { timeout: 1_500 }).catch(() => null);
+        const location = await page.locator('a[href*="/explore/locations/"]').first().innerText({ timeout: 1_000 }).catch(() => "");
+        if (caption.trim()) posts.push({ caption, date: date?.slice(0, 10), location: location || undefined });
+      } catch (error) { if (error instanceof InstagramBlockedError) throw error; }
+    }
+    return formatProfileNotes({ header, pageTop, links, posts, alts });
   }
 
   async warmUp(account: IgAccount, handle: string, pieces: number, makeComment: (context: string) => Promise<string>, mayContinue = () => true): Promise<WarmUpResult> {
@@ -178,14 +196,14 @@ export class PlaywrightInstagram implements InstagramDriver {
       for (const part of parts) {
         check();
         await human.click(page, box);
-        await human.type(page, part);
+        await human.typeMultiline(page, part);
         await sleep(Math.max(1000, humanDelayMs("beforeSend", Math.random)));   // never under 1 second, or two messages can merge into one
         check();
         sendAttempted = true;
         await page.keyboard.press("Enter");
         await human.wait("betweenParts");
         await this.guard(page);
-        if (!(await page.getByText(part.slice(0, 30), { exact: false }).count())) throw new Error(`Message to @${handle} did not appear in the thread`);
+        if (!(await page.getByText(part.split(/\r?\n/)[0].slice(0, 30), { exact: false }).count())) throw new Error(`Message to @${handle} did not appear in the thread`);
       }
     } catch (error) {
       if (!sendAttempted) throw error;

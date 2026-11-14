@@ -236,7 +236,7 @@ These are the DM-writing rules. They replace the earlier free-form rules for the
 
 **When to skip.** Write no DM and mark the lead Skipped with a one-line `skip_reason` when: the profile is clearly outside the US; it is not a coach or consultant business, or has no offer INFYUM can improve (a personal account, or a creator or public figure with no coaching or consulting offer); or the business is clearly winding down.
 
-**Step 1: analyze the profile.** Read the whole profile before writing, in this order: (1) name line and bio, what they sell and to whom; (2) the link in bio and the page it leads to (freebies, booking pages, offers, waitlists; funnel problems show up here, not only in posts; read only, hard rule 7); (3) recent posts, the offers they push, events, launches and calls to action such as "comment X" or "DM X"; (4) size and location signals. Then find the one real gap: where does interest from a post or freebie have nowhere useful to go? Pick one specific, recent detail you can mention (a post, an event, an offer, a line from their bio) to show you looked. A line in `notes` starting with `funnel:` is optional.
+**Step 1: analyze the profile.** Read the whole profile before writing, in this order: (1) name line and bio, what they sell and to whom; (2) the link in bio and the page it leads to (freebies, booking pages, offers, waitlists; funnel problems show up here, not only in posts; read only, hard rule 7); (3) recent posts, the offers they push, events, launches and calls to action such as "comment X" or "DM X"; (4) size and location signals. Then find the one real gap: where does interest from a post or freebie have nowhere useful to go? Pick one specific, recent detail you can mention (a post, an event, an offer, a line from their bio) to show you looked. Read the **captions** of the 3 or 4 most recent posts (open each one) and any location tag on them, and the highlight titles. A line in `notes` starting with `funnel:` is optional.
 
 **Step 2: choose the angle.** Pick the angle that matches what is actually weak in this prospect's business and use INFYUM's full range (funnels, landing pages, automation), not only follow-up. Examples: a lead magnet or freebie that leads nowhere (fix the funnel behind it); a link in bio that is a busy page or a plain list of links (a clearer landing page); a single link straight to a call, or a booking page that may not convert (a lower-pressure step before the call); a webinar, challenge, event or launch with no clear path afterwards (a launch or event funnel); high engagement but no lead capture, such as "DM X" keywords (comment-to-DM and lead capture); several offers with no path between them (a guided path from one offer to the next); leads piling up with no nurturing (follow-up automation, only when that is the real gap); a founder doing everything by hand (a business that runs without the founder). **Do not default to the follow-up angle.**
 
@@ -248,16 +248,82 @@ These are the DM-writing rules. They replace the earlier free-form rules for the
 - **Say what you noticed in plain words,** then ask one easy question about their business, or offer to show something. Describe what would change for them, not how the funnel or automation works.
 - **Offer softly.** The free 2-minute Loom audit or free idea is a question, never a demand or a pitch.
 - **Keep it short:** about 50 to 90 words, easy to read on a phone.
-- **No links** in the first DM. No long dashes, no hashtags.
+- **No links** in the first DM. Use short paragraphs separated by a blank line, like the examples below. Emojis are optional and should vary from one DM to the next.
 - **Avoid repeating yourself across DMs:** do not reuse the same opener, the same compliment-then-question shape, or the same sign-off.
 
 **Special case: prospects who teach marketing or sales.** If they coach other people on marketing, funnels or sales, never explain marketing to them and do not pitch a funnel build for their own business. Stay humble and curious. Either ask a genuine question about one specific thing in their business, or suggest a partnership: their community learns the strategy but still needs someone to build the pages and sequences, and INFYUM can be that team. Match their tone and avoid anything that sounds like a sales pitch.
 
 **Honesty rules.** Never invent results, numbers, client stories or case studies for INFYUM; none have been provided, so make no proof claims. Only state what you actually saw on the profile or the link-in-bio page. If you could not see something, do not claim it. If the data is thin (for example no posts were visible), keep the DM to what you did see and put `limited data visible` in `notes`. Never a guessed first name.
 
-**Follow-ups are not part of Phase 1.** The INFYUM guidelines also describe a follow-up for 3 to 4 days later. Phase 1 ends after the first message (hard rule 10), so do not write or send one; a teammate handles it.
+**The follow-up.** Sunil's guidelines have you write a short follow-up together with the first DM, to be sent 3 to 4 days later if there is no reply. Write it only when it adds something new (a fresh idea or a different angle, never "just following up"), shorter and lower-pressure than the DM, and do not end every follow-up with the same Loom line. **Do not send it** (Phase 1 ends after the first message, hard rule 10). Save it in the lead's `notes` as `followup_draft: ...` so a teammate can send it later.
+
+**The `profile` and `why` notes.** Also put two short lines in `notes`: `profile: name, what they do, followers, location (confirmed or assumed US)` and `why: the gap you chose and the detail you used`.
+
+**Typing a DM with paragraphs.** In Instagram's message box, a plain Enter sends the message. Type a paragraph break with Shift+Enter, and press plain Enter only once, at the very end, so the whole DM goes out as ONE message. Check the sent message in the thread shows all paragraphs together.
 
 **The test (silent, every time).** Read it once as the prospect. Does it make sense? Would a real person who actually looked at this account send it? If not, rewrite it. The user is not asked.
+
+**Reference examples.** These are complete outputs for real profiles, from Sunil's guidelines. Use them only to see the expected quality, level of specificity and range of angles. Never copy their structure, openers, phrasing or sign-offs; build each new DM from the new profile alone, and make sure it does not resemble these.
+
+Example 1. Profile: business coach for women entrepreneurs, Denver, about 2.3K followers. Gap: her 12th Ignite event just ended but her top bio link still points to it, and recap-video viewers have no next step (early-bird or waitlist).
+DM:
+Kami, 12 years of Ignite is something else. Those Day 2 clips had real energy.
+
+One thing I noticed though: your top bio link still points to Ignite, which has just wrapped. Right now is probably when the most women are discovering you through the recap videos, and there's nowhere for them to raise their hand for 2027 yet.
+
+Is an early-bird or waitlist page already in the works? If not, I'd be glad to sketch what that could look like for you.
+
+Sunil | INFYUM
+Follow-up: Hi Kami, one more thought and then I'll leave you be 🙂 Your podcast guests (Tiffany, Jess, Ariana) are basically Ignite's best advertisement. Each episode could lead listeners into the 2027 waitlist instead of just a general "link in bio." Happy to map that out on a short video if it's useful.
+
+Example 2. Profile: sales coach for women of faith and publisher, about 9.9K followers, location unconfirmed. Gap: a free planner running for 10 years is a proven lead magnet, but the bio goes to a general Linktree and nothing guides downloaders toward coaching or publishing.
+DM:
+Crystal, 10 years of giving the Purpose Planner away for free, and thousands of downloads 👏🏾 That's a serious audience of women already planning their purpose with you.
+
+Something I kept thinking about: how many of those planner women have a book or message inside them and don't know DayeLight exists? Feels like a funnel waiting to be built. Download the planner → a few emails sharing your story and authors like Kemone → an invite to work with you.
+
+You said it best yourself: "No sales, no impact." 😄 Would love to show you what that could look like before 2027 planning season kicks off.
+
+— Sunil from INFYUM
+Follow-up: Hi Crystal, I know November is busy with R.E.A.P. coming up! Just leaving this here: I put together a rough outline of how the planner could feed into your coaching and publishing offers. Happy to send it over as a short video whenever suits you 🙏🏾
+Flags: location unconfirmed, assumed US.
+
+Example 3. Profile: business coach for coaches and health coaches, Chicago, about 13.6K followers. Gap: free offers (LinkedIn class, free gifts, free consult) are not connected to her private coaching, group program and membership; the angle uses her own post about keeping upsells "ready & visible".
+DM:
+Hailey, your Edgewood takeaway stuck with me: "have upsell opportunities ready & visible." 👌
+Funny thing is, when I went through your world as a new follower, I found a LinkedIn class, free gifts on Linktree, a consult link and your membership, but nothing guiding me from one to the next. You've built three great offers (private, group, membership). They don't seem to hand people off to each other yet.
+
+That's the stuff we build at INFYUM: funnels where someone grabs the LinkedIn freebie and naturally ends up in the right offer for them.
+
+Curious, which of your three offers do you most want to fill in 2027?
+
+Sunil
+Follow-up: Hi Hailey! Loved your point about spending 13 hrs/week on content not being the best use of time. A funnel is basically the fix for that: your content does its job once, and the system takes it from there. If you're curious, I can map your freebie → membership → group path in a short video. No pressure either way 🙂
+
+Example 4. Profile: credit and funding consultant, High Point NC, about 2.9K followers. Gap: nearly every post says to DM a different keyword and the only link goes straight to a Calendly, so anyone not ready to book has no softer first step.
+DM:
+Anthony, "3 down, 21 to go" is a real target. Respect.
+
+I noticed your posts use four different DM words (MORE, READY, APPROVED, TEAM MORE), and the link in bio goes straight to a Calendly. So anyone who isn't ready to book a call has nowhere to go, and I'd guess each DM is a hand-typed reply.
+
+What if each keyword started its own path: a quick "approval readiness" check for clients, a separate one for Team MORE, and the call only for people who qualify? That could help you get to 21 without living in your DMs.
+
+Want a 2-min Loom of how I'd set it up?
+
+Sunil, INFYUM
+Follow-up: Anthony, one thing I'd test first: swap the Calendly for a short "Are you approval ready?" quiz as your link in bio, so there's a gentler first step than a call. Happy to mock one up for MORE Approvals if you want to see it.
+
+Example 5. Profile: credit and funding specialist, about 2.5K followers, location unconfirmed, only bio and highlights visible. Gap: promise of "excellent credit in 90 days" with highlights split into three topics, so a visitor must guess which is theirs; suits a guided path (quiz, 90-day plan, call).
+DM:
+Travis, "$200K funded and 1000+ deletions" is a strong proof line.
+
+One thing I noticed: your highlights split into Credit Repair, Homeownership and Ebooks, so someone landing on your page has to work out which one is theirs. And "excellent credit in 90 days" is made for a guided path: a 2-minute quiz, then a 90-day plan, then the call.
+
+That's what we build at INFYUM. Want a 2-min Loom of how it could look for your page?
+
+Sunil
+Follow-up: Travis, quick question: do your ebooks lead anywhere right now, or are they a one-off sale? They could be the first step in the path instead (ebook, then credit call). Happy to sketch it if you're curious.
+Flags: only his bio and highlights were visible, no recent posts; location unconfirmed, assumed US.
 
 **The variety check.** Before sending, read the `dm_text` of the **last 10 first messages sent** (newest rows with `dm_sent_at`, any member) and the other drafts in this batch. If the new DM shares an opener, a shape or a sign-off with any of them, rewrite it from scratch.
 

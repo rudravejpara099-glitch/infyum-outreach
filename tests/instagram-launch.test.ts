@@ -107,6 +107,7 @@ describe("Instagram login browser launch", () => {
     browserMocks.page.locator.mockImplementation((selector: string) => {
       if (selector === "body") return { innerText: vi.fn().mockResolvedValue("Public profile") };
       if (selector === "header") return { first: () => ({ innerText: vi.fn().mockResolvedValue("Public profile\n1,234 followers") }) };
+      if (selector === "main") return { first: () => ({ innerText: vi.fn().mockResolvedValue("Public profile\n1,234 followers\nHighlights") }) };
       return { evaluateAll: vi.fn().mockResolvedValue([]) };
     });
     const driver = new AccountInstagramDriver();

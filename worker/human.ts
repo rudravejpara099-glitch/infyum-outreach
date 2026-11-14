@@ -46,6 +46,15 @@ export async function type(page: Page, text: string): Promise<void> {
   }
 }
 
+/** Types a message that has paragraph breaks: Shift+Enter makes a new line, plain Enter would send the message. */
+export async function typeMultiline(page: Page, text: string): Promise<void> {
+  const lines = text.split(/\r?\n/);
+  for (const [index, line] of lines.entries()) {
+    if (index > 0) { await page.keyboard.press("Shift+Enter"); await sleep(rand(250, 700)); }
+    if (line) await type(page, line);
+  }
+}
+
 /** Scrolls down in a few uneven steps, like reading. */
 export async function scroll(page: Page, totalPx: number): Promise<void> {
   let done = 0;

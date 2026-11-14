@@ -6,7 +6,7 @@ import { checkDraft, parseDmResult, parseParts } from "@/lib/engine/validate";
 import { checkAgainstRecent } from "@/lib/domain/similarity";
 import { getCampaign } from "@/lib/db/repos/campaigns";
 import { getLead, moveStage } from "@/lib/db/repos/leads";
-import { logActivity } from "@/lib/db/repos/activity";
+import { listActivity, logActivity } from "@/lib/db/repos/activity";
 import { createOutgoing, listMessages, recentSentTexts } from "@/lib/db/repos/messages";
 import { getSetting } from "@/lib/db/repos/settings";
 import type { Campaign, Message } from "@/lib/db/types";
@@ -16,7 +16,7 @@ import type { MeteredAiCall } from "@/lib/engine/types";
 const ATTEMPTS = 3;
 
 /** Asks the AI, checks the answer against the hard rules and the similarity guard, retries with feedback. */
-type Drafted = { skip: true; reason: string } | { skip: false; parts: string[]; why: string; flags: string };
+type Drafted = { skip: true; reason: string } | { skip: false; parts: string[]; profile: string; why: string; flags: string; followup: string };
 async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: string, leadId: number, jobId?: number): Promise<Drafted> {
   const { lead } = context(db, leadId);
   const campaignId = lead.campaignId ?? undefined;
@@ -32,12 +32,12 @@ async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: 
     const raw = await engine.complete({ system: systemPrompt(parseWritingSettings(getSetting(db, "writing_settings"))), prompt: prompt + feedback, format: kind, metering });
     let problem: string | null = null;
     let parts: string[] = [];
-    let why = "", flags = "";
+    let profile = "", why = "", flags = "", followup = "";
     try {
       if (kind === "dm") {
         const result = parseDmResult(raw);
         if (result.skip) return result;
-        ({ parts, why, flags } = result);
+        ({ parts, profile, why, flags, followup } = result);
       } else parts = parseParts(raw);
       problem = checkDraft(parts, kind);
       if (!problem) {
@@ -47,7 +47,7 @@ async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: 
     } catch (e) {
       problem = e instanceof Error ? e.message : "Unreadable answer";
     }
-    if (!problem) return { skip: false, parts, why, flags };
+    if (!problem) return { skip: false, parts, profile, why, flags, followup };
     feedback = `\n\nYour last attempt was rejected: ${problem}. Fix that and answer again with JSON only.`;
   }
   throw new Error(`Could not get an acceptable ${kind} draft after ${ATTEMPTS} tries`);
@@ -79,13 +79,19 @@ export async function draftFirstDm(db: Db, engine: AiEngine, leadId: number, pro
     return null;
   }
   const message = createOutgoing(db, { leadId, accountId: lead.accountId, kind: "dm", parts: result.parts, campaign: campaign ?? fallbackCampaign }, actor);
-  const notes = [result.why && `Why this angle: ${result.why}`, result.flags && `Flags: ${result.flags}`].filter(Boolean).join(" | ");
+  const notes = [result.profile && `Profile: ${result.profile}`, result.why && `Why this angle: ${result.why}`, result.flags && `Flags: ${result.flags}`].filter(Boolean).join(" | ");
   if (notes) logActivity(db, actor, "dm.drafted", { leadId, accountId: lead.accountId, detail: notes.slice(0, 1500) });
+  // The follow-up is written with the first DM, from the same profile. It is used later when the lead has not replied.
+  if (result.followup && !checkDraft([result.followup], "followup")) logActivity(db, actor, "dm.followup_draft", { leadId, accountId: lead.accountId, detail: result.followup });
   return message;
 }
 
 export async function draftFollowup(db: Db, engine: AiEngine, leadId: number, profileNotes = "", actor = "worker", jobId?: number): Promise<Message> {
   const { lead, campaign } = context(db, leadId);
+  if (lead.followupsSent === 0) {
+    const prepared = listActivity(db, { leadId, limit: 200 }).find((a) => a.action === "dm.followup_draft" && typeof a.detail === "string" && !checkDraft([a.detail], "followup"));
+    if (prepared) return createOutgoing(db, { leadId, accountId: lead.accountId, kind: "followup", parts: [String(prepared.detail)], campaign: campaign ?? fallbackCampaign }, actor);
+  }
   const previous = listMessages(db, { leadId, limit: 6 }).filter((m) => m.direction === "out" && m.status === "sent").map((m) => m.parts.join(" ")).join("\n---\n");
   const result = await draft(engine, db, "followup", followupPrompt({ handle: lead.handle, previous, number: lead.followupsSent + 1, profileNotes }), leadId, jobId);
   if (result.skip) throw new Error("Unexpected skip on a follow-up");

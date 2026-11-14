@@ -39,7 +39,7 @@ export function localMessageFormat(kind?: "dm" | "followup") {
   if (!kind) return undefined;
   if (kind === "dm") return {
     type: "object",
-    properties: { skip: { type: "boolean" }, reason: { type: "string" }, why: { type: "string" }, flags: { type: "string" }, parts: { type: "array", items: { type: "string" }, maxItems: 1 } },
+    properties: { skip: { type: "boolean" }, reason: { type: "string" }, profile: { type: "string" }, why: { type: "string" }, flags: { type: "string" }, followup: { type: "string" }, parts: { type: "array", items: { type: "string" }, maxItems: 1 } },
     required: ["skip"], additionalProperties: false,
   };
   return { type: "object", properties: { parts: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 1 } }, required: ["parts"], additionalProperties: false };

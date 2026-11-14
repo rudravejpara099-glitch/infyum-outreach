@@ -22,8 +22,9 @@ export function qualify(facts: LeadFacts, rules: AudienceRules): Verdict {
   if (facts.onDoNotContact) return fail("On the do-not-contact list");
   if (facts.alreadyContacted) return fail("Already contacted");
   if (!facts.isPublic) return fail("Account is private");
-  if (facts.country === null) return fail("Country not shared, cannot confirm " + rules.country);
-  if (facts.country !== rules.country) return fail(`Based in ${facts.country}`);
+  // Country "Not shared" passes: Sunil's DM guidelines assume the campaign country unless the profile clearly shows otherwise,
+  // and the writer flags it ("location unconfirmed"). A country that IS shown and differs still fails.
+  if (facts.country !== null && facts.country !== rules.country) return fail(`Based in ${facts.country}`);
   if (facts.followers < rules.minFollowers) return fail(`Only ${facts.followers} followers (min ${rules.minFollowers})`);
   if (facts.followers > rules.maxFollowers) return fail(`${facts.followers} followers (max ${rules.maxFollowers})`);
   if (facts.linkedToInfyum) return fail("Connected to Infyum");
