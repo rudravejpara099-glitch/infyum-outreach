@@ -80,3 +80,19 @@ describe("drafting", () => {
     expect(bad.calls).toBe(3);
   });
 });
+
+describe("quality bar for first DMs", () => {
+  const notes = "Michelle Kuei. Hosts the Make It Visible podcast, 250+ episodes. Coach With Clients Academy $397/month. Client Enrollment Method for coaches.";
+  const good = "Michelle, 250+ episodes of Make It Visible is a serious body of work.\n\nGenuine question: after coaches join the Academy, who builds their pages and sequences once they have learned the Client Enrollment Method? I'd guess plenty stall on building it. That's the part we build at INFYUM, so if a partnership ever made sense for your community, I'd love to chat.\n\nSunil | INFYUM";
+  it("passes a grounded DM with a question", () => expect(checkDraft([good], "dm", { notes, teachesMarketing: true })).toBeNull());
+  it("rejects a DM with no question", () => expect(checkDraft([good.replaceAll("?", ".")], "dm", { notes })).toMatch(/easy question/));
+  it("rejects defensive pitch phrasing", () => expect(checkDraft([good.replace("I'd love to chat.", "No pitch, I'd love to chat?")], "dm", { notes })).toMatch(/no pitch/i));
+  it("rejects a DM that names nothing from the profile", () => {
+    const generic = "Hey Michelle, love what you are doing for coaches and your content is great.\n\nMost people in your space struggle with getting consistent leads and a lot of them lose time to manual follow up every single week. Want me to record a short video showing a few ideas that could help your business grow faster this year, no cost at all?\n\nSunil | INFYUM";
+    expect(checkDraft([generic], "dm", { notes })).toMatch(/specific detail/);
+  });
+  it("rejects marketing advice to a marketing teacher", () => {
+    const advice = "Michelle, Make It Visible has 250+ episodes, impressive.\n\nI noticed Eve's result is the only hard number, and more social proof would carry the page for coaches deciding on the Academy. You should add a few more. Want a short Loom on that?\n\nSunil | INFYUM";
+    expect(checkDraft([advice], "dm", { notes, teachesMarketing: true })).toMatch(/never advise/);
+  });
+});

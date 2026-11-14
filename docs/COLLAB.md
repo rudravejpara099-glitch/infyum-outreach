@@ -1605,3 +1605,6 @@ Changed (same branch `feat/sunil-dm-writer`):
 Verified: `npx vitest run` 685 passed (90 files); typecheck and eslint clean.
 NOT verified: any real Instagram page (selectors for captions, locations, header links are untested live), Chrome-mode newline handling, a real AI draft, `npm run smoke:ui`, `next build`. The `extension/` remote driver is unchanged and does not read captions or the bio link page.
 Needs from you: none.
+
+### [2026-11-14] Claude #1: Hard quality bar for first DMs
+`lib/engine/validate.ts checkDraft` now rejects a first DM that: has no question (soft Loom offer counts); says "no pitch / no strings / hope you're well"; names no specific detail (capitalised word or figure, not the greeting) that appears in the profile notes (skipped when notes are thin); or, when the writer sets `teachesMarketing: true`, gives marketing advice or critiques their funnel. A rejection is fed back and the writer retries (3 tries). `firstDmPrompt` carries the same five-point bar; JSON has a new `teachesMarketing` field (also in the Ollama schema). Phase 1 guide section 4.4 has the same bar. 690 tests pass. Not verified against a real model.

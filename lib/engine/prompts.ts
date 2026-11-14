@@ -109,7 +109,13 @@ Recent openings to avoid repeating:
 ${c.recentOpenings.map((o) => `- ${o}`).join("\n") || "- none"}
 
 Use short paragraphs separated by a blank line. Address them by the first name shown on the profile when there is one.
-If they are a fit return exactly this JSON: {"skip":false,"profile":"one line: name, what they do, follower count, location (confirmed or assumed US)","why":"two to four short lines on what you noticed and the gap you chose","parts":["the DM, ready to send"],"followup":"a short follow-up to send 3 to 4 days later if there is no reply, only when it adds something new, otherwise an empty string","flags":"only when needed, for example location unconfirmed, assumed US, or limited data visible, otherwise an empty string"}
+Quality bar, check before you answer (a draft that fails any of these is rejected):
+1. It opens on, or quickly names, ONE specific recent thing you actually saw in the material above: a post, an event, a launch, a quote, a figure, an offer, a line from the bio or the bio link page. The reference DMs all do this. Never a generic compliment.
+2. It says the gap in plain words and what would change for them, not how a funnel works.
+3. It asks one easy question (the soft Loom offer as a question counts). It never says "no pitch", "no strings" or "hope you're well".
+4. If they teach marketing, sales, funnels or launches to other people, set "teachesMarketing" to true. Then never advise them or critique their funnel: ask one genuine question about one specific thing, or suggest a partnership where INFYUM builds the pages and sequences their community still needs.
+5. Nothing invented: no results, numbers or client stories for INFYUM, and nothing you did not see.
+If they are a fit return exactly this JSON: {"skip":false,"teachesMarketing":false,"profile":"one line: name, what they do, follower count, location (confirmed or assumed US)","why":"two to four short lines on what you noticed and the gap you chose","parts":["the DM, ready to send"],"followup":"a short follow-up to send 3 to 4 days later if there is no reply, only when it adds something new, otherwise an empty string","flags":"only when needed, for example location unconfirmed, assumed US, or limited data visible, otherwise an empty string"}
 If they are not a fit return exactly: {"skip":true,"reason":"one line"}`;
 }
 

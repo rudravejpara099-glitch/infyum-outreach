@@ -13,7 +13,7 @@ import { armStep, isArmed } from "@/lib/services/run-steps";
 
 const DM_TEXT = "Your 5% rule reel stuck with me, and I noticed the link in your bio sends people to a busy page with four options. Anyone who watched the reel and is not ready to book a call has nowhere easy to go next. Want me to show you a simpler path in a quick 2 minute Loom? Sunil | INFYUM";
 const dm = JSON.stringify({ skip: false, why: "Reel gets attention, bio link is a busy page.", parts: [DM_TEXT], flags: "" });
-const uniqueDm = (n: number) => JSON.stringify({ skip: false, why: "", parts: [Array.from({ length: 45 }, (_, i) => `w${n}x${i}`).join(" ")], flags: "" });
+const uniqueDm = (n: number) => JSON.stringify({ skip: false, why: "", parts: [Array.from({ length: 45 }, (_, i) => `w${n}x${i}`).join(" ") + " ok?"], flags: "" });
 
 class FakeDriver implements InstagramDriver {
   sent: { handle: string; parts: string[] }[] = [];

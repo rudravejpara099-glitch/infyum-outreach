@@ -17,7 +17,7 @@ const ATTEMPTS = 3;
 
 /** Asks the AI, checks the answer against the hard rules and the similarity guard, retries with feedback. */
 type Drafted = { skip: true; reason: string } | { skip: false; parts: string[]; profile: string; why: string; flags: string; followup: string };
-async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: string, leadId: number, jobId?: number): Promise<Drafted> {
+async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: string, leadId: number, jobId?: number, notes = ""): Promise<Drafted> {
   const { lead } = context(db, leadId);
   const campaignId = lead.campaignId ?? undefined;
   const campaignPayer = campaignId ? payerFor(db, "campaign", campaignId) : null;
@@ -32,14 +32,14 @@ async function draft(engine: AiEngine, db: Db, kind: "dm" | "followup", prompt: 
     const raw = await engine.complete({ system: systemPrompt(parseWritingSettings(getSetting(db, "writing_settings"))), prompt: prompt + feedback, format: kind, metering });
     let problem: string | null = null;
     let parts: string[] = [];
-    let profile = "", why = "", flags = "", followup = "";
+    let profile = "", why = "", flags = "", followup = "", teachesMarketing = false;
     try {
       if (kind === "dm") {
         const result = parseDmResult(raw);
         if (result.skip) return result;
-        ({ parts, profile, why, flags, followup } = result);
+        ({ parts, profile, why, flags, followup, teachesMarketing } = result);
       } else parts = parseParts(raw);
-      problem = checkDraft(parts, kind);
+      problem = checkDraft(parts, kind, { notes, teachesMarketing });
       if (!problem) {
         const similar = checkAgainstRecent(parts.join(" "), recentSentTexts(db));
         if (similar.tooSimilar) problem = similar.reason;
@@ -70,7 +70,7 @@ export async function draftFirstDm(db: Db, engine: AiEngine, leadId: number, pro
     audienceText: campaign?.audienceText ?? "", recentOpenings: openings,
     portfolioLink: getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK,
     writing: parseWritingSettings(getSetting(db, "writing_settings")),
-  }), leadId, jobId);
+  }), leadId, jobId, profileNotes);
   if (result.skip) {
     db.transaction(() => {
       moveStage(db, leadId, "skipped", actor, result.reason);
