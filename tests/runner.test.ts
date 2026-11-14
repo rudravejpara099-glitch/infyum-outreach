@@ -11,8 +11,9 @@ import { handleIncoming } from "@/lib/services/outreach";
 import { setKillSwitch } from "@/lib/services/kill-switch";
 import { armStep, isArmed } from "@/lib/services/run-steps";
 
-const LINK = "https://portfolio.infyum.com/sales-funnel";
-const dm = JSON.stringify({ parts: ["The 5% rule reel stuck with me.", `I'm Rudra at Infyum, a small team in India. ${LINK}`, "Which link do most callers use?"] });
+const DM_TEXT = "Your 5% rule reel stuck with me, and I noticed the link in your bio sends people to a busy page with four options. Anyone who watched the reel and is not ready to book a call has nowhere easy to go next. Want me to show you a simpler path in a quick 2 minute Loom? Sunil | INFYUM";
+const dm = JSON.stringify({ skip: false, why: "Reel gets attention, bio link is a busy page.", parts: [DM_TEXT], flags: "" });
+const uniqueDm = (n: number) => JSON.stringify({ skip: false, why: "", parts: [Array.from({ length: 45 }, (_, i) => `w${n}x${i}`).join(" ")], flags: "" });
 
 class FakeDriver implements InstagramDriver {
   sent: { handle: string; parts: string[] }[] = [];
@@ -273,7 +274,7 @@ describe("worker pipeline", () => {
     await runUntilIdle(deps);
     expect(getLead(db, lead.id)!.stage).toBe("dm_sent");
     expect(driver.sent).toHaveLength(1);
-    expect(driver.sent[0].parts).toHaveLength(3);
+    expect(driver.sent[0].parts).toHaveLength(1);
   });
 
   it("waits at the approval queue and sends only after a human approves", async () => {
@@ -488,21 +489,7 @@ describe("worker pipeline", () => {
     deps.engine = { async complete({ prompt }) {
       if (prompt.includes("Write one short Instagram comment")) return "Nice 🙌";
       n++;
-      const topics = [
-        "Your credit rebuild reel about disputing old collections accounts was genuinely useful, especially the part on goodwill letters",
-        "That bookkeeping checklist carousel for freelancers made quarterly estimated taxes feel manageable for once",
-        "The tax season story highlight showing real refund timelines cleared up a question I had last spring",
-        "Your podcast clip on paying down revolving debt before applying for funding changed how I think about utilization",
-        "The funding story highlight where you walk through a business line approval was refreshingly specific and honest",
-      ];
-      const asks = [
-        "Which page do most of your callers land on before they book a consultation with your team these days?",
-        "How do people usually reach you after watching one of these reels, is it mostly through direct messages?",
-        "What does the path from a new follower to a booked call look like for your business right now exactly?",
-        "Where do most of your warm leads drop off between the first message and a scheduled strategy call?",
-        "Who on your team handles inbound messages when a prospect asks about pricing or timelines on a weekend?",
-      ];
-      return JSON.stringify({ parts: [`${topics[(n - 1) % 5]}`, `I'm Rudra at Infyum, a small team in India building ${["sales funnels", "booking pages", "landing pages", "lead capture forms", "offer pages"][(n - 1) % 5]} for coaches. ${LINK}`, asks[(n - 1) % 5]] });
+      return uniqueDm(n);
     } };
     await runUntilIdle(deps);
     expect(driver.sent).toHaveLength(2);
@@ -647,7 +634,7 @@ describe("parallel accounts", () => {
     deps = { ...deps, driver: new SlowDriver(), engine: { async complete({ prompt }) {
       if (prompt.includes("Write one short Instagram comment")) return "Nice 🙌";
       n++;
-      return JSON.stringify({ parts: [`Opener ${n} about topic${n}x${n}y here`, `Rudra here from Infyum, builder number ${n} of funnels${n}q for sector${n}w firms. ${LINK}`, `Question ${n} about funnel${n}z?`] });
+      return uniqueDm(n);
     } } };
     await runLanesUntilIdle(deps);
 

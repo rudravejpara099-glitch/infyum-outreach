@@ -133,11 +133,10 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
               <textarea name="notes" rows={5} defaultValue={lead.notes} className="input" aria-label="Notes" /><button className="btn">Save notes</button></ActionForm></section>
           {campaign?.status === "active" && campaign.approvalRequired && lead.stage === "warmed" && !hasFirstDm && !isDnc(db, lead.handle) && (
             <section><h2 className="mb-2 text-base font-semibold">Write a first message</h2>
-              <p className="mb-3 text-sm text-muted">Write three short parts. This does not call AI. The message goes to review and cannot send until you approve it.</p>
+              <p className="mb-3 text-sm text-muted">Write one short message (about 50 to 90 words, no link). This does not call AI. The message goes to review and cannot send until you approve it.</p>
               <ActionForm action={createManualFirstDm} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={lead.id} />
-                {[1, 2, 3].map((part) => <div key={part}><label className="label" htmlFor={`manual-part-${part}`}>Message {part}</label><textarea id={`manual-part-${part}`} name={`part${part}`} rows={3} className="input" required maxLength={380} /></div>)}
-                <p className="text-xs text-muted">Include the campaign link once in message 2.</p>
+                <div><label className="label" htmlFor="manual-part-1">Message</label><textarea id="manual-part-1" name="part1" rows={5} className="input" required maxLength={900} /></div>
                 <button className="btn">Send to review</button>
               </ActionForm>
             </section>

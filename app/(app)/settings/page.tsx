@@ -51,7 +51,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         </section>
         <section className="card p-5">
           <h2 className="text-base font-semibold">Sender details and prompts</h2>
-          <p className="mb-3 mt-1 text-sm text-muted">Who the messages come from, and the instructions the writer follows. The word and emoji limits for comments and the three-message shape of a first DM are checked by the app whatever you write here. In the DM prompt, {"{sender}"} {"{company}"} {"{location}"} {"{offer}"} and {"{link}"} are filled in for you. Leave a box empty to go back to the standard wording.</p>
+          <p className="mb-3 mt-1 text-sm text-muted">Who the messages come from, and the instructions the writer follows. The word and emoji limits for comments and the shape of a first DM (one message, about 50 to 90 words, no link) are checked by the app whatever you write here. In the DM prompt, {"{sender}"} {"{company}"} {"{location}"} and {"{offer}"} are filled in for you. Leave a box empty to go back to the standard wording.</p>
           <ActionForm action={saveWriting} className="grid gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div><label className="label" htmlFor="senderName">Sender name</label><input id="senderName" name="senderName" maxLength={60} defaultValue={writingSettings.senderName} className="input" /></div>

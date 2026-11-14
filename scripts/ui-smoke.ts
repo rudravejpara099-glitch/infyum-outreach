@@ -266,9 +266,7 @@ try {
   db.prepare("UPDATE leads SET stage='warmed',account_id=? WHERE id=?").run(manualAccount.id, manualLead.id);
   await page.goto(`${base}/leads/${manualLead.id}`);
   await page.getByRole("heading", { name: "Write a first message" }).waitFor();
-  await page.getByLabel("Message 1").fill("Your workshop has a clear and practical structure.");
-  await page.getByLabel("Message 2").fill("I’m Rudra at Infyum. https://portfolio.infyum.com/sales-funnel");
-  await page.getByLabel("Message 3").fill("What do people usually do after attending?");
+  await page.getByLabel("Message", { exact: true }).fill("Your weekly planning workshop has a clear, practical structure, and I noticed your bio link goes straight to a calendar with no softer first step. Anyone not ready to book a call has nowhere to go. Want me to show you a simple idea in a quick 2 minute Loom? Sunil | INFYUM");
   await page.getByRole("button", { name: "Send to review", exact: true }).click();
   await page.getByText("First message · Needs review", { exact: false }).waitFor();
   assert.equal((db.prepare("SELECT status FROM messages WHERE lead_id=? AND direction='out' AND kind='dm'").get(manualLead.id) as { status: string }).status, "pending_approval");
@@ -342,7 +340,7 @@ try {
   await page.goto(campaignUrl);
   for (const lead of listLeads(db, { campaignId: id }).filter((lead) => lead.id !== manualLead.id && lead.id !== movableLead.id)) {
     db.prepare("UPDATE leads SET stage='warmed',account_id=? WHERE id=?").run(manualAccount.id, lead.id);
-    createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"], campaign: { approvalRequired: true } }, "ui-fixture");
+    createOutgoing(db, { leadId: lead.id, accountId: null, kind: "dm", parts: ["Your weekly planning workshop has a clear, practical structure, and I noticed your bio link goes straight to a calendar with no softer first step. Anyone not ready to book a call has nowhere to go. Want me to show you a simple idea in a quick 2 minute Loom? Sunil | INFYUM"], campaign: { approvalRequired: true } }, "ui-fixture");
   }
   const unrelated = addLead(db, { handle: "another.campaign", campaignId: other.id }, "ui-fixture").lead;
   createOutgoing(db, { leadId: unrelated.id, accountId: null, kind: "dm", parts: ["Other campaign draft"], campaign: { approvalRequired: true } }, "ui-fixture");
@@ -437,13 +435,13 @@ try {
   assert.equal(await page.locator("article").count(), 3);
   assert.equal(await page.getByText("@another.campaign", { exact: true }).count(), 0);
   const firstDraft = page.locator("article").first();
-  const originalSecondPart = await firstDraft.locator("textarea").nth(1).inputValue();
-  await firstDraft.locator("textarea").nth(1).fill("An edited draft with an unapproved link https://example.test");
+  const originalDmText = await firstDraft.locator("textarea").nth(0).inputValue();
+  await firstDraft.locator("textarea").nth(0).fill("An edited draft with an unapproved link https://example.test");
   await firstDraft.getByRole("button", { name: "Approve and queue", exact: true }).click();
-  await firstDraft.getByRole("alert").filter({ hasText: "portfolio link" }).waitFor();
+  await firstDraft.getByRole("alert").filter({ hasText: "must not contain a link" }).waitFor();
   assert.equal(await page.locator("article").count(), 3);
-  assert.equal(await firstDraft.locator("textarea").nth(1).inputValue(), "An edited draft with an unapproved link https://example.test");
-  await firstDraft.locator("textarea").nth(1).fill(originalSecondPart);
+  assert.equal(await firstDraft.locator("textarea").nth(0).inputValue(), "An edited draft with an unapproved link https://example.test");
+  await firstDraft.locator("textarea").nth(0).fill(originalDmText);
   const firstMessageId = Number((await firstDraft.getAttribute("id"))!.replace("message-", ""));
   const firstLeadId = (db.prepare("SELECT lead_id FROM messages WHERE id=?").get(firstMessageId) as { lead_id: number }).lead_id;
   db.prepare("UPDATE leads SET stage='replied' WHERE id=?").run(firstLeadId);

@@ -100,6 +100,6 @@ it("includes rejected text and word-count guidance so retries can correct a shor
 
 it("makes the decided sender identity and direct recipient address explicit in first-contact instructions", () => {
   const prompt = firstDmPrompt({ handle: "synthetic", niche: "", followers: null, profileNotes: "A public checklist", audienceText: "", recentOpenings: [], portfolioLink: "https://portfolio.infyum.com/sales-funnel" });
-  expect(prompt).toContain('using "you" or "your"');
-  expect(prompt).toContain("MUST include all three names: Rudra, Infyum, India");
+  expect(prompt).toContain("ONE first Instagram DM from Sunil at INFYUM");
+  expect(prompt).toContain("Sign off with the name and INFYUM");
 });

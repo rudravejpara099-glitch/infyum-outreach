@@ -13,10 +13,8 @@ import { campaignAccountIds, getCampaign } from "@/lib/db/repos/campaigns";
 import { getAccount, leastLoadedAccount, listAccounts } from "@/lib/db/repos/accounts";
 import { logActivity } from "@/lib/db/repos/activity";
 import { createOutgoing, listMessages } from "@/lib/db/repos/messages";
-import { getSetting } from "@/lib/db/repos/settings";
 import { manualFirstDmError } from "@/lib/domain/manual-first-dm";
 import { browserModeAllowsJob } from "@/lib/domain/browser-mode";
-import { PORTFOLIO_LINK } from "@/lib/engine/prompts";
 import { workerStatus } from "@/lib/queries/worker-status";
 const validId = (id: number) => Number.isSafeInteger(id) && id > 0;
 function refresh(id: number) { revalidatePath(`/leads/${id}`); revalidatePath("/pipeline"); revalidatePath("/"); }
@@ -111,9 +109,8 @@ export async function createManualFirstDm(form: FormData): Promise<ActionResult>
   const user = await requireUser();
   const id = Number(form.get("id")), db = (await getDb(form));
   if (!validId(id)) return { error: "This lead could not be found. Refresh the page." };
-  const parts = [1, 2, 3].map((index) => String(form.get(`part${index}`) ?? "").trim());
-  const portfolioLink = getSetting(db, "portfolio_link") ?? PORTFOLIO_LINK;
-  const writingError = manualFirstDmError(parts, portfolioLink);
+  const parts = [String(form.get("part1") ?? "").trim()];
+  const writingError = manualFirstDmError(parts);
   if (writingError) return { error: writingError, field: "part1" };
 
   const result: ActionResult = db.transaction(() => {

@@ -37,6 +37,10 @@ export function localRequestOutputLimit(requested?: number, metered?: number): n
 /** Constrain the model to the existing message contract; content is still validated afterward. */
 export function localMessageFormat(kind?: "dm" | "followup") {
   if (!kind) return undefined;
-  const count = kind === "dm" ? 3 : 1;
-  return { type: "object", properties: { parts: { type: "array", items: { type: "string" }, minItems: count, maxItems: count } }, required: ["parts"], additionalProperties: false };
+  if (kind === "dm") return {
+    type: "object",
+    properties: { skip: { type: "boolean" }, reason: { type: "string" }, why: { type: "string" }, flags: { type: "string" }, parts: { type: "array", items: { type: "string" }, maxItems: 1 } },
+    required: ["skip"], additionalProperties: false,
+  };
+  return { type: "object", properties: { parts: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 1 } }, required: ["parts"], additionalProperties: false };
 }

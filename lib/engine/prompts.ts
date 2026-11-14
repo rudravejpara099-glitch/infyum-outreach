@@ -4,9 +4,9 @@ import { DEFAULT_WRITING, fillDmPrompt, type WritingSettings } from "@/lib/domai
 export const PORTFOLIO_LINK = "https://portfolio.infyum.com/sales-funnel";
 
 export function systemPrompt(w: WritingSettings = DEFAULT_WRITING): string {
-  return `You write Instagram DMs for ${w.senderName} at ${w.company}, ${w.offer} based in ${w.location}.
-Voice: a real person. Warm, direct, specific, professional. Short sentences. No filler openers, no hype, no dashes, no emojis unless the lead used one.
-Never invent results, prices, client names or guarantees. Never guess a first name. Never mention anything you did not see in the material given.
+  return `You write Instagram DMs for ${w.senderName} at ${w.company}, to US-based coaches and consultants.
+Voice: a real person. Casual, friendly, direct, specific. Short sentences. No filler openers, no hype, no dashes, no hashtags. Emojis are optional and vary from one DM to the next.
+Never invent results, numbers, client stories, prices or guarantees. Never guess a first name. Never mention anything you did not see in the material given.
 Always answer with JSON only, no other text.`;
 }
 export const SYSTEM = systemPrompt();
@@ -29,23 +29,24 @@ export type DraftContext = {
 
 export function firstDmPrompt(c: DraftContext): string {
   const w = c.writing ?? DEFAULT_WRITING;
-  return `Write the first contact for @${c.handle} as THREE separate messages.
+  return `Write the first DM for @${c.handle}.
 ${fillDmPrompt(c.writing?.dmPrompt ?? DEFAULT_WRITING.dmPrompt, w, c.portfolioLink)}
 
 Who they are: ${c.niche || "unknown niche"}, ${c.followers ?? "unknown"} followers.
 Audience we target: ${c.audienceText || "not specified"}
-What we saw on their profile:
+What we saw on their profile (including what their bio link leads to, when captured):
 ${c.profileNotes || "(nothing captured)"}
 
 Recent openings to avoid repeating:
 ${c.recentOpenings.map((o) => `- ${o}`).join("\n") || "- none"}
 
-Return exactly: {"parts":["...","...","..."]}`;
+If they are a fit return exactly: {"skip":false,"why":"two to four short lines on what you noticed and the gap you chose","parts":["the DM, ready to send"],"flags":"only when needed, else empty string"}
+If they are not a fit return exactly: {"skip":true,"reason":"one line"}`;
 }
 
 export function followupPrompt(opts: { handle: string; previous: string; number: number; profileNotes: string }): string {
-  return `@${opts.handle} did not reply to our first DMs. Write follow-up number ${opts.number} (max 2).
-It must add something new: a specific observation or one useful point about their funnel. Never "just checking in", no guilt, no pressure, do not repeat earlier wording. Two to three sentences, no link.
+  return `@${opts.handle} did not reply to our first DM. Write follow-up number ${opts.number} (max 2), sent 3 to 4 days later.
+It must add something new, such as a fresh idea or a different angle. Never "just following up", "just checking in", no guilt, no pressure, and do not repeat earlier wording. Make it shorter and lower-pressure than the first DM, two to three sentences, no link. Do not end it with the same Loom line as other follow-ups; vary how you offer to show something.
 
 What we sent before:
 ${opts.previous}

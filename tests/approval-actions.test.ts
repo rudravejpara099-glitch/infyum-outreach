@@ -10,7 +10,8 @@ vi.mock("@/lib/db", () => ({ getDb: () => state.db }));
 vi.mock("@/lib/auth/dal", () => ({ requireUser: vi.fn(async () => ({ email: "test@example.test" })) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 let db: Db, campaignId: number, accountId: number;
-const parts = ["Your weekly workshop has a practical structure.", "I’m Rudra at Infyum, a small team in India. https://portfolio.infyum.com/sales-funnel", "How do people book a call after a workshop?"];
+const DM = "Your weekly workshop has a practical structure, and I noticed the link in your bio goes straight to a calendar with no softer first step. Anyone who is not ready to book a call has nowhere to go. Want me to show you a simple idea in a quick 2 minute Loom? Sunil | INFYUM";
+const parts = [DM];
 beforeEach(() => { db = openDb(":memory:"); state.db = db; accountId = createAccount(db, { handle: "sender", profileDir: "/tmp/sender" }, "test").id; campaignId = createCampaign(db, { name: "Approval", niches: [], audienceText: "", country: "United States", minFollowers: 2000, maxFollowers: 150000, approvalRequired: true, followupsEnabled: true }, [accountId], "test").id; });
 afterEach(() => { db.close(); state.db = null; });
 function draft(stage: "found" | "qualified" | "warmed" | "dm_sent", kind: "dm" | "followup" = "dm") {
@@ -69,7 +70,7 @@ it("bulk approval rechecks edited sensitive text and similarity instead of trust
   const { approveSelected } = await import("@/app/(app)/approvals/actions");
   const first = draft("warmed");
   const form = new FormData(); form.set("reviewed", "on"); form.append("selected", String(first.message.id));
-  first.message.parts.forEach((part, index) => form.append(`part-${first.message.id}`, index === 2 ? "What is the price you would pay?" : part));
+  first.message.parts.forEach((part, index) => form.append(`part-${first.message.id}`, index === 0 ? `${DM} What is the price you would pay?` : part));
   expect((await approveSelected(form)).error).toBeTruthy();
   expect(getMessage(db, first.message.id)?.status).toBe("pending_approval");
 });
@@ -77,9 +78,9 @@ it("bulk approval saves the exact reviewed edits for eligible drafts", async () 
   const { approveSelected } = await import("@/app/(app)/approvals/actions");
   const first = draft("warmed");
   const form = new FormData(); form.set("reviewed", "on"); form.append("selected", String(first.message.id));
-  first.message.parts.forEach((part, index) => form.append(`part-${first.message.id}`, index === 0 ? "Your weekly workshop explores practical goal setting." : part));
+  first.message.parts.forEach((part, index) => form.append(`part-${first.message.id}`, index === 0 ? DM.replace("has a practical structure", "explores practical goal setting") : part));
   expect((await approveSelected(form)).error).toBeUndefined();
-  expect(getMessage(db, first.message.id)).toMatchObject({ status: "approved", parts: ["Your weekly workshop explores practical goal setting.", parts[1], parts[2]] });
+  expect(getMessage(db, first.message.id)).toMatchObject({ status: "approved", parts: [DM.replace("has a practical structure", "explores practical goal setting")] });
 });
 it("refuses two similar edited drafts in one selection atomically", async () => {
   const { approveSelected } = await import("@/app/(app)/approvals/actions");
