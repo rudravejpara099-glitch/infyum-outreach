@@ -3,8 +3,12 @@ import type { NextConfig } from "next";
 import { PHASE_PRODUCTION_SERVER } from "next/constants";
 import { nextDistDir, nextTsconfigPath } from "./lib/config/next-dist-dir";
 import { assertProductionSecret } from "./lib/auth/production-secret";
+import { securityHeaders } from "./lib/config/security-headers";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders(process.env.NODE_ENV === "production") }];
+  },
   // Live internal data stays uncached; keep the native SQLite module external.
   serverExternalPackages: ["better-sqlite3"],
   distDir: nextDistDir(),
