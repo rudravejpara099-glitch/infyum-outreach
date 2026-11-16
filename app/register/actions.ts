@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/db/repos/activity";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { clearLoginAttempts, consumeLoginAttempt } from "@/lib/auth/login-throttle";
+import { REGISTRATION_CLOSED_MESSAGE, registrationOpen } from "@/lib/auth/registration";
 
 type State = { error?: string } | undefined;
 const schema = z.object({
@@ -18,6 +19,8 @@ const schema = z.object({
 });
 
 export async function register(_: State, form: FormData): Promise<State> {
+  // Enforced here, not only on the page: a server action can be called without ever opening the page.
+  if (!registrationOpen()) return { error: REGISTRATION_CLOSED_MESSAGE };
   const parsed = schema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const db = getIdentityDb();

@@ -136,7 +136,7 @@ async function main() {
   try {
     build = process.env.WORKSPACE_SMOKE_DIST ? { distDir: process.env.WORKSPACE_SMOKE_DIST, tsconfigPath: `${process.env.WORKSPACE_SMOKE_DIST.replace(".next-smoke-", ".tsconfig-smoke-")}.json` } : buildIsolatedNextApp("ui", [sessionSecret]);
     server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3192"], {
-      env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, APIFY_TOKEN: "", ANTHROPIC_API_KEY: "", STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "", BILLING_OWNER_USER_ID: "", APP_URL: base },
+      env: { ...process.env, NODE_ENV: "production", OUTREACH_SMOKE_MODE: "1", AI_PROVIDER: "anthropic", LOCAL_AI_MODEL: "", OUTREACH_SMOKE_DIST_DIR: build.distDir, OUTREACH_SMOKE_TSCONFIG: build.tsconfigPath, DB_PATH: dbPath, PROFILES_DIR: path.join(temp, "profiles"), SESSION_SECRET: sessionSecret, APIFY_TOKEN: "", ANTHROPIC_API_KEY: "", STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "", BILLING_OWNER_USER_ID: "", APP_URL: base, ALLOW_REGISTRATION: "true" },
       stdio: ["ignore", "pipe", "pipe"],
     });
     const capture = (chunk: Buffer) => { serverOutput = `${serverOutput}${chunk.toString("utf8")}`.slice(-4_000); };

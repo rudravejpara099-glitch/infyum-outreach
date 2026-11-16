@@ -11,6 +11,7 @@ import { consumeLoginAttempt, clearLoginAttempts } from "@/lib/auth/login-thrott
 import { createSession, destroySession } from "@/lib/auth/session";
 import { requireUser } from "@/lib/auth/dal";
 import { passwordSignInOff } from "@/lib/auth/google-config";
+import { registrationOpen } from "@/lib/auth/registration";
 
 type State = { error?: string } | undefined;
 const loginSchema = z.object({ email: z.string().trim().toLowerCase().max(254).email(), password: z.string().min(1).max(256) });
@@ -25,7 +26,9 @@ export async function login(_: State, form: FormData): Promise<State> {
   const user = findUserByEmail(db, parsed.data.email);
   if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) return { error: "Email or password is wrong." };
   const workspace = listWorkspaces(db, user.id)[0];
-  if (!workspace) return { error: "You no longer belong to a workspace. Choose Create a private workspace below and use your existing email and password, or use a new team invitation." };
+  if (!workspace) return { error: registrationOpen()
+    ? "You no longer belong to a workspace. Choose Create a private workspace below and use your existing email and password, or use a new team invitation."
+    : "You no longer belong to a workspace. Ask the owner of your team for a new invitation." };
   clearLoginAttempts(db, parsed.data.email);
   await createSession(user.id, workspace.id);
   logActivity(getWorkspaceDb(workspace.id), user.email, "auth.login");

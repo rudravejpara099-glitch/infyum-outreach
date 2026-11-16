@@ -8,7 +8,7 @@ Instagram outreach from a campaign to a prospect's first real reply. The app org
 
 The person running Outreach gives you its address. You do not need to install Node.js, run a terminal or sign in to Claude.
 
-- **Your own company (default):** choose **Create a private workspace**, enter your company name and create your account. Your company's campaigns, Instagram accounts, history and billing records are separate from other companies.
+- **Your own company (only when the owner has turned on sign-up with `ALLOW_REGISTRATION=true`; it is off by default):** choose **Create a private workspace**, enter your company name and create your account. Your company's campaigns, Instagram accounts, history and billing records are separate from other companies.
 - **Joining a team:** open the owner's invitation link, use the invited email, and enter your existing password or create a new account. Invitations expire and work once.
 - **Both:** one account can belong to several workspaces. Open **Workspaces** to switch between your private company and teams you have joined. Workspace owners manage invitations and members there.
 
