@@ -41,6 +41,8 @@ Everything else you just do, inside the rules, and report afterwards in a few li
 
 ## 1. Check what you can do (every session, silently)
 
+**First, where are you running?** If you are in a **cloud or remote session** (you have no access to the user's computer, for example the app shows the session as "Cloud" or you cannot reach any Chrome), stop at once and say only this, in your own words and nothing more: "I need to run on your own computer so I can use your Chrome. Please open the Claude desktop app, start a new chat there with the Claude in Chrome extension on, and paste the same message." Do not list the setup steps, do not ask any question, and wait.
+
 You need **browser control of the user's own Chrome** (the Claude in Chrome extension: tabs, navigate, read page, click, type, screenshot). If you do not have those tools, tell the user in two lines what is missing and how to get it, then wait and do nothing else:
 - Add **Claude in Chrome** from the Chrome Web Store (publisher Anthropic; needs a paid Claude plan), sign in to it, and allow it on instagram.com when Chrome asks.
 - Some setups load the Chrome tools only on demand: check that first and enable the Chrome integration if your app has one.

@@ -8,6 +8,8 @@ Nothing to install. No files to download. No account to create with us, and no p
 
 ## Start
 
+**Run this in the Claude desktop app on your own computer** (a normal chat or a session on "This computer"), not in a cloud session: Claude needs to reach your Chrome.
+
 **1. Have these ready** (Claude will remind you and help with each one):
 
 | What | Why | Cost |
