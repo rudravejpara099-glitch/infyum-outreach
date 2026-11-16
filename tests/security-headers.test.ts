@@ -37,4 +37,10 @@ describe("security headers", () => {
     expect(rules[0].source).toBe("/:path*");
     expect(value(rules[0].headers, "X-Frame-Options")).toBe("DENY");
   });
+
+  it("let Server Actions accept posts only from exact hosts, never a wildcard", () => {
+    const origins = configuration("phase-development-server").experimental?.serverActions?.allowedOrigins ?? [];
+    expect(origins.length).toBeGreaterThan(0);
+    expect(origins.filter((o) => o.includes("*"))).toEqual([]);
+  });
 });
