@@ -99,6 +99,6 @@ Liking, commenting, following, reacting and messaging automatically can go again
 | [`docs/BUILD-PLAN-AUDIT.md`](docs/BUILD-PLAN-AUDIT.md) | How far the Phase 2 app is from the build plan. |
 | `app/`, `lib/`, `worker/`, `components/`, `tests/` | The Phase 2 web app (Next.js, TypeScript, SQLite) and its tests. |
 | `extension/`, `companion/` | The Phase 2 Chrome extension and the older Node connector that drive Instagram from the app. |
-| [`AGENTS.md`](AGENTS.md), [`HANDOFF.md`](HANDOFF.md), [`docs/COLLAB.md`](docs/COLLAB.md) | Notes for the AI agents and people who build the app. |
+| [`AGENTS.md`](AGENTS.md), [`docs/STATUS.md`](docs/STATUS.md), [`docs/README.md`](docs/README.md) | Rules for the AI agents and people who build the app, what is true right now, and a map of every doc. Old logs are in `docs/archive/`. |
 
 Phase 1 (this kit) needs none of the app code.

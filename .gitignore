@@ -46,3 +46,6 @@ next-env.d.ts
 /data/
 .env*
 !.env.example
+
+# Claude Code local overrides
+/.claude/settings.local.json

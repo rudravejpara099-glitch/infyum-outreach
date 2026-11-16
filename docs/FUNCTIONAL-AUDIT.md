@@ -130,7 +130,7 @@ Validation on the final code: 328 unit tests, typecheck, lint, Webpack productio
 
 ## Backend requests already posted
 
-The older requests below are historical. Current source, runner tests, and the Oct 22 `HANDOFF.md` entries confirm team-time-zone daily boundaries and final first-reply/send guards. One restart-recovery gap was fixed under the owner's authorization in the current branch: crashes no longer automatically replay Instagram writes or paid work, and failed read-only qualification is not silently re-created forever. Metered paid provider calls, real Apify use, and Stripe TEST remain unverified because no spend is authorized.
+The older requests below are historical. Current source, runner tests, and the Oct 22 entries in `docs/archive/HANDOFF.md` confirm team-time-zone daily boundaries and final first-reply/send guards. One restart-recovery gap was fixed under the owner's authorization in the current branch: crashes no longer automatically replay Instagram writes or paid work, and failed read-only qualification is not silently re-created forever. Metered paid provider calls, real Apify use, and Stripe TEST remain unverified because no spend is authorized.
 
 ## Verification commands
 

@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-11-16. History only, frozen.** Do not follow it as instructions and do not add entries. It predates later scope decisions (for example: the system now stops after the first DM) and its numbers are stale. Current facts: `docs/STATUS.md`. Current rules: `AGENTS.md` and `.claude/rules/`.
+
 # Handoff: Infyum Outreach (read this first)
 
 You are taking over a half-finished internal web app. Everything below is decided. Do not re-litigate decisions, build on them. Keep the code simple and reliable: one language (TypeScript), small files, pure rules separated from I/O, tests on anything risky.
