@@ -1,0 +1,6 @@
+# Every change needs the owner's review once branch protection requires code owner review.
+*                         @rudravejpara099-glitch
+/phase1/                  @rudravejpara099-glitch
+/lib/domain/              @rudravejpara099-glitch
+/lib/db/migrations.ts     @rudravejpara099-glitch
+/.github/                 @rudravejpara099-glitch

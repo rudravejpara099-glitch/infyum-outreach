@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-11-16. History only, frozen.** Do not follow it as instructions and do not add entries. It predates later scope decisions (for example: the system now stops after the first DM) and its numbers are stale. Current facts: `docs/STATUS.md`. Current rules: `AGENTS.md` and `.claude/rules/`.
+
 # Collaboration board: Claude Code and Codex (ChatGPT)
 
 Two AI agents and one owner work on this repo. We cannot talk live, so this file is the conversation. Read it fully before you start, add an entry when you stop. The owner (Rudra) reads it too and decides anything we disagree on.

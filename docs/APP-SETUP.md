@@ -74,7 +74,7 @@ LOCAL_AI_MODEL=qwen2.5:7b npx tsx scripts/local-writing-smoke.ts
 
 Browser smoke tests use disposable data. Billing smoke uses a local fake payment provider. Workspace smoke checks two separate companies, invitations, switching, access removal and session revocation without a worker or external provider calls. These checks do not substitute for an approved live first-message and first-reply test.
 
-Read `HANDOFF.md` for current evidence and remaining verification, `docs/DESIGN.md` for the interface rules, `docs/COLLAB.md` for ownership, and `AGENTS.md` before changing code.
+Read `docs/STATUS.md` for what is true right now, `docs/DESIGN.md` for the interface rules, and `AGENTS.md` before changing code.
 
 ## Code map
 

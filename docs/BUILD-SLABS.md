@@ -2,7 +2,7 @@
 
 **Scope decision, 2026-10-29: the whole system stops after the first DM.** A human takes over from there, so follow-ups, reply reading and every stage after "DM sent" are out of scope (slabs 2 and 3 below are replaced accordingly). Source of truth for what is left to build and how each piece is proven. It follows Sunil's "Architecture and Build Plan". `docs/BUILD-PLAN-AUDIT.md` holds the original line-by-line gap list; this file is the current status and the work order.
 
-**How we work.** One slab at a time. A slab is finished only when every acceptance line is true and its proof has been run, not when the code exists. Each slab ends on `main` green (`npx vitest run`, `npx tsc --noEmit`, `npm run lint`) and is logged in `docs/COLLAB.md`. Anything that needs the owner is listed under **Needs**, up front.
+**How we work.** One slab at a time. A slab is finished only when every acceptance line is true and its proof has been run, not when the code exists. Each slab ends on `main` green (`npx vitest run`, `npx tsc --noEmit`, `npm run lint`) and is logged in its pull request and `docs/STATUS.md`. Anything that needs the owner is listed under **Needs**, up front.
 
 Status key: ✅ done and proven · 🟡 built, not fully proven · ⬜ not started.
 

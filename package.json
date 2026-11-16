@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "check": "npm run typecheck && npm run lint && npm test",
     "typecheck": "next typegen && tsc --noEmit",
     "worker": "tsx worker/index.ts",
     "doctor": "tsx scripts/doctor.ts",
