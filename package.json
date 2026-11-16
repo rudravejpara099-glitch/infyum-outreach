@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm test",
+    "kit:check": "vitest run tests/phase1-kit.test.ts",
+    "kit:lock": "tsx scripts/kit-lock.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "worker": "tsx worker/index.ts",
     "doctor": "tsx scripts/doctor.ts",

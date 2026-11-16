@@ -17,6 +17,7 @@
 <!-- Be explicit. Live Instagram, paid APIs and real sending are never run in a PR. -->
 
 ## Rules touched
-- [ ] I changed a rule in `lib/domain/` or the guide in `phase1/`: I added or updated a test or scenario for it, and removed any older line it contradicts.
+- [ ] I changed a rule in `lib/domain/`: I added or updated a test for it.
+- [ ] I changed the guide in `phase1/`: I re-read the whole file, removed any older line it contradicts, ran `npm run kit:check` and `npm run kit:lock -- "..."`, and updated `docs/kit-scenarios.json` if a safety behaviour changed on purpose.
 - [ ] I added a migration: I appended a new one and did not edit a shipped one.
 - [ ] None of the above.

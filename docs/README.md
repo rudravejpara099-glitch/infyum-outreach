@@ -13,6 +13,8 @@ Every document, and whether you can trust it as current. If a doc is not listed 
 | [`BUILD-SLABS.md`](BUILD-SLABS.md) | The work order and status per slab. |
 | [`BILLING.md`](BILLING.md), [`BILLING-INTEGRATION.md`](BILLING-INTEGRATION.md) | At-cost billing design and integration (Stripe test mode only). |
 | [`decisions/`](decisions/) | Short notes on why the repo is the way it is. |
+| [`kit-scenarios.json`](kit-scenarios.json) | Safety behaviours the Phase 1 guide must keep saying. Checked by `npm run kit:check`. |
+| [`kit-lock.json`](kit-lock.json), [`kit-changelog.md`](kit-changelog.md) | Version and hash of the guide, and every recorded change. Written by `npm run kit:lock`; never edit by hand. |
 | [`skills/`](skills/) | Skills agents use: grilling (settle decisions), HIG checklists (UI). |
 
 ## Reference (dated snapshots, may be partly stale)
