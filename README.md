@@ -22,7 +22,7 @@ Nothing to install. No files to download. No account to create with us, and no p
 ```
 Set me up with the INFYUM Instagram outreach kit (Phase 1). Read
 https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/GUIDE-FOR-CLAUDE.md
-and follow it exactly. Keep setup short and simple: one thing at a time, ask my goal, and never ask me anything you can find out yourself or that doesn't matter. Then do the work for me, and only come back to me for anything unexpected.
+and follow it exactly. Keep setup short and simple: one thing at a time, ask me exactly which niche I'm targeting, and never ask me anything you can find out yourself or that doesn't matter. Then do the work for me, and only come back to me for anything unexpected.
 ```
 
 **3. Follow Claude.** It tells you everything you'll do before you do it:
@@ -35,7 +35,7 @@ and follow it exactly. Keep setup short and simple: one thing at a time, ask my 
 | Tell it **how many profiles** (for example "do 7 profiles") | Finds them, checks each one against your rules itself, warms them up, then writes a fresh first message for each. No list to approve. |
 | Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps finding and messaging new prospects every day |
 
-It is a few minutes the first time. **Claude asks one thing at a time: your goal, then only what it can't find itself.** (INFYUM teammates already on the team Sheet: usually just the goal.) After that you just talk to it, and it only comes back to you for anything unexpected. It never asks about a like, a comment or a message: it writes and sends those itself.
+It is a few minutes the first time. **Claude asks one thing at a time: your specific niche, who qualifies, which accounts are yours or your team's, and how many today.** Each comes with a suggestion, so you mostly just say yes. After that you just talk to it, and it only comes back to you for anything unexpected. It never asks about a like, a comment or a message: it writes and sends those itself.
 
 ---
 
