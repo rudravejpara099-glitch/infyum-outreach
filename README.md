@@ -20,20 +20,21 @@ Nothing to install. No files to download. No account to create with us, and no p
 ```
 Set me up with the INFYUM Instagram outreach kit (Phase 1). Read
 https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/GUIDE-FOR-CLAUDE.md
-and follow it exactly. Tell me up front what I need to do, guide me step by step, do the work for me, and only ask me about the list of prospects and anything unexpected.
+and follow it exactly. Tell me up front what I need to do, guide me step by step, ask me the setup questions once at the start, then do the work for me and only come back to me for anything unexpected.
 ```
 
 **3. Follow Claude.** It tells you everything you'll do before you do it:
 
 | You | Claude |
 |---|---|
+| **Answer a short interview** (each question has a recommended answer; say "yes" to accept) | Asks about your niche, who you want to reach, the problem you solve, who to skip, how many profiles, and whether to do the full run or only part. Reads it back for your OK. |
 | **Sign in to Instagram** in Chrome | Checks it worked, asks a few quick questions (each with a recommended answer; say "yes" to accept) |
 | **Connect Apify** (required): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
 | **Connect Google Sheets** (optional for your own business; **required for the INFYUM team**, using the Google account the team Sheet was shared with): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
 | Tell it **how many profiles** (for example "do 7 profiles") | Finds them, checks each one against your rules itself, warms them up, then writes a fresh first message for each. No list to approve. |
 | Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps finding and messaging new prospects every day |
 
-It is a few minutes the first time. After that you just talk to it. **Claude only asks you about the things that matter**: the list of prospects, and anything unexpected. It never asks about a like, a comment or a message: it writes and sends those itself.
+It is a few minutes the first time. **Claude starts with a short client interview, once** (your niche, who you want to reach, the problem you solve, who to skip, how many profiles, and whether to do the full run or only part). After that you just talk to it, and it only comes back to you for anything unexpected. It never asks about a like, a comment or a message: it writes and sends those itself.
 
 ---
 
