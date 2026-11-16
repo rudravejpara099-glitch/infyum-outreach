@@ -9,7 +9,7 @@ Work kept breaking things that had worked: steps were forgotten, one tool was sw
 - The 414-line Phase 1 guide was patched 18 times in 30 days with no check that earlier behaviour survived.
 
 ## Decision
-1. CI runs typecheck, lint, tests and build on every pull request and on `main` (`.github/workflows/ci.yml`; **not yet added**: pushing a workflow file needs the `workflow` permission on the GitHub login, see `docs/STATUS.md`). `npm run check` is the same gate locally and applies from now on.
+1. CI (`.github/workflows/ci.yml`) runs typecheck, lint, tests and build on every pull request and on `main`. `npm run check` is the same gate locally.
 2. Docs describe the present. `docs/STATUS.md` is edited in place. The old logs are frozen in `docs/archive/` with a banner, and a hook blocks edits to them.
 3. The Claude/Codex message board is retired. Pull requests (template with **Verified** and **NOT verified**) replace it. Area guidance moves to `AGENTS.md` and `.claude/rules/`.
 4. Edits to the kit follow `.claude/rules/phase1-kit.md`: edit in place, never append patches.

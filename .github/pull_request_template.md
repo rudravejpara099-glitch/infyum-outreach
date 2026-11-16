@@ -10,7 +10,7 @@
 ## Verified
 <!-- Paste what you actually ran and what it printed. "Should work" is not verification. -->
 - [ ] `npm run check` (typecheck, lint, tests): result:
-- [ ] CI is green (skip until CI is enabled, see `docs/STATUS.md`)
+- [ ] CI is green
 - [ ] Anything else you ran (screen checked in light and dark, smoke test, ...):
 
 ## NOT verified

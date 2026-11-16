@@ -18,7 +18,7 @@ Last verified: 2026-11-16, on a fresh clone of `main` (after PR #100).
 - **Phase 2 app** (`app/`, `lib/`, `worker/`, `extension/`, `companion/`): a Next.js web app that automates the same process on the user's own computer. Its slab-by-slab status against the build plan is in `docs/BUILD-SLABS.md`.
 
 ## Known gaps (found in the 2026-11-16 audit)
-- **CI is not active yet.** The workflow file (typecheck, lint, test, build on every pull request) could not be pushed because the GitHub login used for pushing lacks the `workflow` permission. Until it is added at `.github/workflows/ci.yml`, **`npm run check` run by hand is the only gate**. Remove this line when CI is live.
+- **Pushing workflow files from this Mac fails.** The GitHub CLI login lacks the `workflow` permission (refreshing it did not take). `.github/workflows/ci.yml` was added through the GitHub website instead. To change a workflow file again, either fix that login or edit it on github.com.
 - **The kit has no automated checks.** `phase1/GUIDE-FOR-CLAUDE.md` is 414 lines and changed 18 times in 30 days. Nothing verifies that an edit keeps earlier behaviour or that section references still exist.
 - **The app and the kit may disagree on message rules.** The archived handoff describes three DMs plus follow-ups; the kit sends one to three messages and stops. Not verified whether `lib/engine/` still reflects the older rules. Ask the owner before changing either.
 - **Not verified:** `npm run smoke:ui` on a fresh clone; the Chrome extension; anything that needs live Instagram, Apify, Anthropic or Stripe.

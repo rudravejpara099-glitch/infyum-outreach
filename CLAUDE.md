@@ -19,7 +19,7 @@ npm run build      # production build (CI also runs it)
 npm run dev        # http://localhost:3000
 ```
 
-**Definition of done.** `npm run check` is green (and CI is green, once it is enabled: see `docs/STATUS.md`). You ran it and can say what it printed. You say what you did NOT verify. Live Instagram, paid APIs and real sending are never run as part of a change.
+**Definition of done.** `npm run check` is green and CI is green. You ran it and can say what it printed. You say what you did NOT verify. Live Instagram, paid APIs and real sending are never run as part of a change.
 
 **Never.** Commit to `main` (branch, then pull request). Edit `.env*` files (except `.env.example`). Edit `docs/archive/` (frozen history). Edit a shipped migration (append a new one). Add a dependency without a stated reason.
 

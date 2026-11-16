@@ -8,7 +8,7 @@ Read `docs/STATUS.md` for what is true right now. Read `docs/DESIGN.md` before t
 1. `git pull`, then one branch per task (`feat/...`, `fix/...`, `docs/...`, `chore/...`). Never commit to `main`.
 2. Make the change. Add or update a test for any rule you change.
 3. Run `npm run check`. Fix what it reports; do not skip or weaken a test to get green.
-4. Open a pull request using the template. Fill in **Verified** with what you actually ran and **NOT verified** honestly. Once CI is enabled (see `docs/STATUS.md`) it must be green before merge.
+4. Open a pull request using the template. Fill in **Verified** with what you actually ran and **NOT verified** honestly. CI must be green before merge.
 5. One owner per task. If two tasks touch the same files, finish one first.
 
 ## Rules that have broken things before
