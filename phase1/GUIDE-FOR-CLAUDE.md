@@ -74,7 +74,21 @@ Do this when you do not yet know the user's Sheet and settings. Keep it light, s
 
 **Interview them the way the "grilling" method does: relentlessly, until you reach a shared understanding.** Work it as a tree of decisions, in **rounds**:
 - The **frontier** is every question you can ask *now* without guessing at an answer you have not heard yet. Ask the whole frontier in one round, numbered, each with your recommended answer. Then wait.
-- Word each question so **"yes" accepts your recommended answer**. Format each one: the question in bold, then "My recommendation:" and the answer.
+- Word each question so **"yes" accepts your recommended answer**. **Use exactly this layout for every round, and nothing else** (no paragraphs of explanation, no intro beyond one short line):
+
+```
+❓ **Q1** - **<short question title>**: <the question, one or two lines, with the choices if there are any>
+
+➡️ <your recommended answer, one line>
+
+---
+
+❓ **Q2** - **<short question title>**: <the question>
+
+➡️ <your recommended answer>
+```
+
+  Keep each question and each recommendation short. Do not explain why you are asking unless the user asks. A question with no sensible default (their name) still gets a ➡️ line, for example "➡️ No default: just type it."
 - The answers reshape the tree: settled decisions unblock the questions that depended on them. Recompute the frontier and ask the next round. A question that depends on one still open belongs to a **later** round.
 - **Facts are your job, not the user's.** Never ask the user for something you can look up (their Instagram account, their bio link, what their website says, what is in the team Sheet once connected). Decisions are the user's: put each to them and wait.
 - You are done when nothing is left to ask and nothing is silently assumed. Then **read the answers back in plain words (a short summary) and ask the user to confirm** before you act on any of it. Keep a short running record of the answers; you write them to the Sheet in 2.6.
