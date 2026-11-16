@@ -72,6 +72,19 @@ Then note, without asking, which of these you have (**Apify is required, and so 
 > <one short question, with a tiny example if it helps>
 > Suggested: <your best guess>. Say "yes" to use it.
 
+### Required before any outreach (a fixed checklist; never skip it)
+Your extra questions are flexible. **These are not.** Do not search for, open, follow, like, comment on or message any prospect until every box is ticked:
+1. Team or own business: answered.
+2. Their goal: answered.
+3. Instagram: signed in, username read.
+4. **Apify: connected and the test search worked.** It is required. If the user wants to skip it because of cost, tell them once: "Apify's free plan gives about $5 of searches a month and can't charge you; there's no card needed." If they still say no, say you can't run without it, and wait. **Never fall back to finding prospects by hand in Chrome.**
+5. Google Sheets: connected, and the lead list open and writable (INFYUM team: the real team Sheet, your `Team` row and `Leads_<Name>` tab confirmed).
+6. Own business only: who you will look for, confirmed with a yes.
+7. How many today: agreed (from the goal, or asked).
+8. **The start message (step 6 below) sent, and the user said "go" (or yes).**
+
+If the user says "just start" before the boxes are ticked, do the next missing box in one line ("One thing first: ..."), then go on.
+
 ### The order (follow it)
 
 **1. Welcome + team or own business.** Two short lines about what you will do (find prospects, warm them up, send a first message, then it's theirs), then: "Is this for the INFYUM team, or your own business?"
@@ -90,7 +103,7 @@ Then note, without asking, which of these you have (**Apify is required, and so 
 
 **5. Ask only the real gaps, one at a time.** Mostly confirmations of what you read: "Your bio says you build Shopify stores and links to yourstore.com. So I'll look for small US clothing brands that sell on Instagram. Right?" Ask a gap only if it changes the outcome. Something you found that hurts the results is worth one question too (for example the outreach account has no photo, bio or posts). Typical: INFYUM teammate already on the team: none. Own business: one to three.
 
-**6. Save and start.** Own business: create their Sheet (section 5.1) in their Drive and fill `Settings` and the `Team` row (`what_we_sell`, `ideal_client`, `problem_signs`, `audience_country_language`, `the_one_link`, `message_goal`, the follower range you chose). INFYUM team: nothing more to save. Then one short message: who you will look for, what the first message aims for, how many today, and "Starting now." Then run section 3 ("do N profiles") without waiting.
+**6. Save and start.** Own business: create their Sheet (section 5.1) in their Drive and fill `Settings` and the `Team` row (`what_we_sell`, `ideal_client`, `problem_signs`, `audience_country_language`, `the_one_link`, `message_goal`, the follower range you chose). INFYUM team: nothing more to save. Then one short message, three or four lines: who you will look for, what the first message aims for, how many today, and "Say 'go' and I'll start." **Wait for "go".** Then run section 3 ("do N profiles") and do not ask anything more on the way.
 
 **7. Schedule, after the first run.** When the first run is done, offer once in two lines to run daily with Claude's scheduled tasks (section 7).
 
