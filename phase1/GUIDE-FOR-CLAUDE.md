@@ -82,21 +82,13 @@ Keep it to four short lines: who you are, what you will do for them, that it is 
 - **Vague answer** ("credit repair coaches", "whatever you think"): do not accept it and do not repeat the question. Ask once more with 2 or 3 concrete choices and your recommendation, and say what you will assume if they just say yes.
 - **The user may answer several questions at once or skip around.** Take what they gave, drop those questions, ask only what is still open.
 
-**First message to the user:** one line, "Is this for the INFYUM team, or for your own business?" Then work the tree for their answer. The decisions to cover are below. Order them yourself into rounds: a decision whose answer depends on an open one goes in a later round.
+**First message to the user:** one line, "Is this for the INFYUM team, or for your own business?" Then build the interview yourself. There is no fixed question list in this kit, on purpose:
 
-**Own business: the decisions (the design tree)**
-1. Your first name (what you sign messages with).
-2. What you sell, in one sentence. *Example: "I build websites for dentists."* Then, depending on it: roughly what a client pays you (decides who can afford you), and the one link where interested people should land, or none.
-3. Who your ideal client is: what they do, what they sell, and 2 or 3 Instagram accounts that look like them if they have any. Then, depending on it: what you would see on their Instagram that tells you they need you (an empty link in bio, no booking page, messy posts), so you know what to look for.
-4. Where their audience is: country and language. *Recommend from answer 3.*
-5. How big the accounts should be, as plain choices (small and hungry, medium, bigger), with your recommendation. You turn this into follower numbers yourself.
-6. What the first message should aim for: just a reply, a call booking, or a link click. This decides how it ends.
-7. Anything you must never say or never do, and who never to contact (competitors, friends, past clients, usernames).
-8. Whether you may offer a free sample (off unless they say yes), and any facts about their business you are allowed to state (none unless they give them).
-
-**INFYUM team: the decisions.** The preset (Appendix A and the team Sheet) already answers who, where, how big and what we fix, so do not ask those. Ask only: your first name; the Sheet link from Rudra (and which Google email is signed in); anyone you must never contact; and anything you must never say.
-
-**How many profiles today** is asked last, after setup, when you are about to start (section 3). Recommend 10 for the first run.
+1. **Find what the system needs.** Read this whole guide as the system's requirements. List every value it reads or depends on: each setting in 5.2, each filter in 4.2 (who qualifies, who is skipped, what "can pay" and "has the problem" mean for this person), what 4.3 and 4.4 need to write comments and first messages that sound like this user and fit their business, who must never be contacted, what must never be said, what the first message should lead to, and anything the tools in section 1 need from the user.
+2. **Cross off what you already have.** Take out everything you can look up (clock, time zone, Instagram username, the INFYUM preset in Appendix A and the team Sheet), everything the user has already said (in their paste or in this chat), and anything that is the same for every user.
+3. **Ask the rest, and nothing more.** Every value left that you would otherwise have to guess becomes a question. If you could not run a good search or write a message that sounds like them without it, ask it. If the guide would work fine without it, do not ask. Put each in the grilling skill's rounds, with dependent questions in later rounds, and re-check the list after every answer: new answers can open new questions or close old ones.
+4. **Make each question easy.** Turn the system's need into something a non-expert can answer: not "what is your ICP" but "who is your ideal client? Example: dentists with their own clinic in the US". Ask in the user's words, one topic at a time, with a suggested answer that is a real guess from what they told you.
+5. **Be thorough on what changes the outcome.** Who to find and what to say matter most; ask until you could explain in two lines exactly who you will look for and what the first message is for. Keep the rest short.
 
 **Read-back, then go.** When the tree is finished, say in a few short lines what you understood (who you will look for, where, how big, what the message aims for, who you will skip) and ask "Right?". Wait for a yes. A wrong reading costs 35 wrong messages a day, so this check is worth it. Then save the answers (2.6) and go on to 2.3, announcing each step one at a time ("Step 2 of 5: sign in to Instagram").
 
