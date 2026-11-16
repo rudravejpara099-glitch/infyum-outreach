@@ -10,7 +10,7 @@ Last verified: 2026-11-16, on a fresh clone of `main` (after PR #100).
 | `npm ci` | installs cleanly (Node 22) |
 | `npm run typecheck` | passes |
 | `npm run lint` | passes |
-| `npm test` | 88 files, 717 tests, all pass (46 of them are the Phase 1 kit checks) |
+| `npm test` | 89 files, 722 tests, all pass (46 are Phase 1 kit checks, 5 are security headers) |
 | `npm run build` | passes (with `SESSION_SECRET` set, as CI does) |
 
 ## The two products
@@ -24,6 +24,21 @@ Last verified: 2026-11-16, on a fresh clone of `main` (after PR #100).
 - **The app and the kit may disagree on message rules.** The archived handoff describes three DMs plus follow-ups; the kit sends one to three messages and stops. Not verified whether `lib/engine/` still reflects the older rules. Ask the owner before changing either.
 - **Not verified:** `npm run smoke:ui` on a fresh clone; the Chrome extension; anything that needs live Instagram, Apify, Anthropic or Stripe.
 - **Branches:** the remote has many stale branches. Delete only with the owner's OK.
+
+## Security (first-pass review, 2026-11-16)
+Reviewed by reading the code, not by attacking a running deployment. This is not a penetration test.
+
+**Held up:** session cookie (httpOnly, sameSite lax, secure in production, server-side revocable); scrypt passwords with constant-time compare; per-email login throttle; production refuses to start with a weak `SESSION_SECRET`; Google sign-in (PKCE, state, nonce, ID-token checks); Stripe webhook (signature check, 1 MB cap, test mode only); connector endpoints (device token, origin allowlist, 128 KB cap, authority re-checked on every task); invite and device tokens (32 random bytes, stored hashed); SQL (parameterised; the three interpolations only use constants); no committed secrets in files or history.
+
+**Fixed in this change:** no security headers on pages (added frame blocking, nosniff, referrer policy, permissions policy, HSTS in production; checked on a running production build); 3 production dependency vulnerabilities, one high (`npm audit fix`, now 0 in production).
+
+**Still open:**
+- `main` is not protected (GitHub needs a paid plan or a public repo for a private repo).
+- No full Content-Security-Policy for scripts (needs per-request nonces; inline scripts exist). Own change.
+- `next.config.ts` lets Server Actions accept posts from any `*.trycloudflare.com` address. Cookies are sameSite lax, which limits the risk, but the wildcard exists because the quick-tunnel address changes. A named tunnel would allow an exact address.
+- Login throttle counts per email only, not per address: someone can lock a known email out, and guessing across many emails is not slowed.
+- 8 moderate vulnerabilities remain in dev-only tooling (eslint and TypeScript lint plugins). They need breaking upgrades and are not shipped.
+- The app is reachable from the internet through a Vercel address forwarding to a tunnel to one Mac. Not verified: who can use the public `/register` and `/setup` pages on that address.
 
 ## Open decisions for the owner
 - Whether the repo should go back to private (raised in the old collaboration board, never answered).
