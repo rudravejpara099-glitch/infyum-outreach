@@ -5,6 +5,7 @@ import { countUsers } from "@/lib/db/repos/users";
 import { AuthForm } from "@/components/auth-form";
 import { AuthPanel } from "@/components/auth-panel";
 import { GOOGLE_MESSAGES, googleEnabled, passwordSignInOff } from "@/lib/auth/google-config";
+import { registrationOpen } from "@/lib/auth/registration";
 import { login } from "./actions";
 
 export const dynamic = "force-dynamic"; // reads the database on every request
@@ -25,7 +26,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           { name: "password", label: "Password", type: "password", autoComplete: "current-password" },
         ]} />
       </>}
-      <p className="mt-5 text-sm text-muted">New here? <Link className="text-accent underline" href="/register">Create a private workspace</Link></p>
+      {registrationOpen() && <p className="mt-5 text-sm text-muted">New here? <Link className="text-accent underline" href="/register">Create a private workspace</Link></p>}
       <p className="mt-3 text-sm text-muted">Invited by your team? <Link className="text-accent underline" href="/join">Join a workspace</Link></p>
     </AuthPanel>
   );

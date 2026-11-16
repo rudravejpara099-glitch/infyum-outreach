@@ -17,8 +17,9 @@ import { login, setup } from "@/app/login/actions";
 let db: Db, operational: Db;
 const form = (data: Record<string, string>) => { const result = new FormData(); for (const [key, value] of Object.entries(data)) result.set(key, value); return result; };
 const credentials = { name: "New user", email: "new@example.test", password: "fixture-password" };
-beforeEach(() => { db = openDb(":memory:"); operational = openDb(":memory:"); mocks.identity = db; mocks.operational = operational; vi.clearAllMocks(); });
-afterEach(() => { db.close(); operational.close(); });
+// These tests cover how registration behaves when the owner has turned sign-up on; the closed default is in registration-gate.test.ts.
+beforeEach(() => { vi.stubEnv("ALLOW_REGISTRATION", "true"); db = openDb(":memory:"); operational = openDb(":memory:"); mocks.identity = db; mocks.operational = operational; vi.clearAllMocks(); });
+afterEach(() => { vi.unstubAllEnvs(); db.close(); operational.close(); });
 
 describe("private company registration", () => {
   it("creates a new identity and an owned empty workspace", async () => {

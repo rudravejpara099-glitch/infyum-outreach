@@ -10,7 +10,7 @@ Last verified: 2026-11-16, on a fresh clone of `main` (after PR #100).
 | `npm ci` | installs cleanly (Node 22) |
 | `npm run typecheck` | passes |
 | `npm run lint` | passes |
-| `npm test` | 89 files, 722 tests, all pass (46 are Phase 1 kit checks, 5 are security headers) |
+| `npm test` | 90 files, 730 tests, all pass (46 Phase 1 kit checks, 5 security headers, 8 registration gate) |
 | `npm run build` | passes (with `SESSION_SECRET` set, as CI does) |
 
 ## The two products
@@ -30,7 +30,9 @@ Reviewed by reading the code, not by attacking a running deployment. This is not
 
 **Held up:** session cookie (httpOnly, sameSite lax, secure in production, server-side revocable); scrypt passwords with constant-time compare; per-email login throttle; production refuses to start with a weak `SESSION_SECRET`; Google sign-in (PKCE, state, nonce, ID-token checks); Stripe webhook (signature check, 1 MB cap, test mode only); connector endpoints (device token, origin allowlist, 128 KB cap, authority re-checked on every task); invite and device tokens (32 random bytes, stored hashed); SQL (parameterised; the three interpolations only use constants); no committed secrets in files or history.
 
-**Fixed in this change:** no security headers on pages (added frame blocking, nosniff, referrer policy, permissions policy, HSTS in production; checked on a running production build); 3 production dependency vulnerabilities, one high (`npm audit fix`, now 0 in production).
+**Fixed:**
+- No security headers on pages: added frame blocking, nosniff, referrer policy, permissions policy, HSTS in production (checked on a running production build). 3 production dependency vulnerabilities, one high (`npm audit fix`, now 0 in production).
+- **Public sign-up is closed by default.** `/register` used to let anyone who reached the address create an account and a workspace (no approval, no cap, no email check, per-email throttle only, and it revealed which emails were registered). Now `ALLOW_REGISTRATION=true` must be set to open it; the gate is enforced in the server action itself, not only on the page. Invitations (`/join`) and first-time setup (`/setup`, only while there are no users) are unchanged. **If your team relied on open sign-up, set `ALLOW_REGISTRATION=true` in `.env.local` and restart.** Verified on a production build in both modes.
 
 **Still open:**
 - `main` is not protected (GitHub needs a paid plan or a public repo for a private repo).
@@ -38,7 +40,7 @@ Reviewed by reading the code, not by attacking a running deployment. This is not
 - `next.config.ts` lets Server Actions accept posts from any `*.trycloudflare.com` address. Cookies are sameSite lax, which limits the risk, but the wildcard exists because the quick-tunnel address changes. A named tunnel would allow an exact address.
 - Login throttle counts per email only, not per address: someone can lock a known email out, and guessing across many emails is not slowed.
 - 8 moderate vulnerabilities remain in dev-only tooling (eslint and TypeScript lint plugins). They need breaking upgrades and are not shipped.
-- The app is reachable from the internet through a Vercel address forwarding to a tunnel to one Mac. Not verified: who can use the public `/register` and `/setup` pages on that address.
+- The app is reachable from the internet through a Vercel address forwarding to a tunnel to one Mac. If the database there is ever empty, `/setup` lets the first visitor claim the owner account. Not verified: whether a stranger with an invitation-less login could use the Mac's worker, local AI or paid API keys (Apify, Anthropic); workspaces are separate databases, but the worker is shared.
 
 ## Open decisions for the owner
 - Whether the repo should go back to private (raised in the old collaboration board, never answered).
