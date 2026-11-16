@@ -68,9 +68,16 @@ Then note, without asking, which of these you have (**Apify is required, and so 
 
 **Thinking: the `grill-me` skill. Delivery: one question per message.** Use the skill's method to decide what to ask: work out what you need, cross off what you can look up, put the rest in a sensible order, give a suggested answer so "yes" accepts it, and stop when nothing important is left. If you have a `grill-me` or `grilling` skill, invoke it; if not, read https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/docs/skills/grilling/SKILL.md (the one other file here you may read). **But ask one question per message, not a numbered round:** the user's answer often makes the next question unnecessary.
 
+**You gather, the user confirms or picks.** Before every question, gather everything you can yourself (the Sheet, their Instagram profile and bio link, Appendix A, a quick Apify look at the niche). Then the question is never open-ended homework: it is either **your suggestion to confirm** ("I'll target X. Right?") or **2 to 4 short options to pick from**, with your recommended one first. The user should only ever type "yes", a letter, or a small correction. Only a fact nobody but them can know (a first name, their own accounts) is asked open, and still with a suggestion when you have one.
+
 **Question format** (plain words, no jargon, a suggested answer):
 > <one short question, with a tiny example if it helps>
 > Suggested: <your best guess>. Say "yes" to use it.
+
+or, for a choice:
+> <one short question>
+> A) <recommended option>  B) <option>  C) <option>
+> Say A, B, C, or tell me something else.
 
 ### Required before any outreach (a fixed checklist; never skip it)
 Your extra questions are flexible. **These are not.** Do not search for, open, follow, like, comment on or message any prospect until every box is ticked:
