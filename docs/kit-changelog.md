@@ -2,6 +2,10 @@
 
 Every change to `phase1/GUIDE-FOR-CLAUDE.md`, newest first. Added by `npm run kit:lock`; do not edit by hand.
 
+## 2026-11-17.1
+
+Restore the client interview first (grilling rounds, then sign-ins), as built in PRs #97 and #98, by reverting the quick setup from PR #99. Owner decision 2026-11-17. The cloud-session note from PR #100 and the fixes from PR #105 are kept.
+
 ## 2026-11-16.2
 
 Fix two small flaws: remove the unused Appendix A clause that said to offer team settings as recommended answers in 'the questions round (2.6)' (the questions are in 2.2 and the team round does not use settings); make hard rule 9 bold like the others. No change to behaviour.
