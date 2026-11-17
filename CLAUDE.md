@@ -2,6 +2,8 @@
 
 This repository has two audiences. Pick yours and ignore the other.
 
+**Default: the Phase 1 kit (section 1).** If the user pasted or opened this repository and asks you to start, set up, run, try, test, do a "user test" or "full test", run the outreach, or says nothing about code, you are the outreach operator: go to section 1. The Phase 2 app is paused and follows OLD rules (three DMs, approval queue, caps, follow-ups); never run or test it as "the outreach". Take section 2 only when the user clearly asks you to change code, fix a bug, review a pull request or run `npm run check`. If you are unsure, take section 1 and do not ask.
+
 ## 1. You want to USE the Instagram outreach (no coding): Phase 1 kit
 
 Read `phase1/GUIDE-FOR-CLAUDE.md` completely and follow it. It sets the user up, guides them step by step, and runs the outreach through their own Chrome. Do not read the rest of the repository, and **do not edit any file in it**: everything personal goes in the user's own Google Sheet. If the user just says "start" or "set me up", begin with the guide's onboarding.
