@@ -150,3 +150,15 @@ describe("kit change record", () => {
     expect(first?.[1]).toBe(lock.version);
   });
 });
+
+describe("setup is the full interview (decision 0004)", () => {
+  it("keeps the client interview, its three rounds and the order before any sign-in", () => {
+    const interview = sectionText(guide, "2.2") ?? "";
+    expect(sections.find((s) => s.id === "2.2")?.title).toMatch(/client interview/i);
+    expect(interview).toContain("Round 1");
+    expect(interview).toContain("Round 2");
+    expect(interview).toContain("Round 3");
+    expect(interview).toContain("Is this for the INFYUM team, or for your own business?");
+    expect(sections.find((s) => s.id === "2.3")?.title).toMatch(/sign-in/i);
+  });
+});
