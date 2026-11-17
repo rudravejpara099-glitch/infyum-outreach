@@ -2,6 +2,10 @@
 
 Every change to `phase1/GUIDE-FOR-CLAUDE.md`, newest first. Added by `npm run kit:lock`; do not edit by hand.
 
+## 2026-11-17.2
+
+INFYUM team: do not ask the niche, audience and problem questions (Appendix A fixes them); say them in one line and ask only whether to change anything. Same rounds and order as decision 0004. Reason: the owner answered 'you already know of infyum' in a real test.
+
 ## 2026-11-17.1
 
 Restore the client interview first (grilling rounds, then sign-ins), as built in PRs #97 and #98, by reverting the quick setup from PR #99. Owner decision 2026-11-17. The cloud-session note from PR #100 and the fixes from PR #105 are kept.
