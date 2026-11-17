@@ -22,7 +22,7 @@ Nothing to install. No files to download. No account to create with us, and no p
 ```
 Set me up with the INFYUM Instagram outreach kit (Phase 1). Read
 https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/GUIDE-FOR-CLAUDE.md
-and follow it exactly. Tell me up front what I need to do, guide me step by step, ask me the setup questions once at the start, then do the work for me and only come back to me for anything unexpected.
+and follow it exactly. Read the whole file as plain text (if your web-fetch tool summarises it or refuses, download it instead, for example with curl, and read the file itself; never work from a summary). Tell me up front what I need to do, guide me step by step, ask me the setup questions once at the start, then do the work for me and only come back to me for anything unexpected.
 ```
 
 **3. Follow Claude.** It tells you everything you'll do before you do it:
