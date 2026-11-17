@@ -31,14 +31,14 @@ completely and follow it exactly. I am a user, not a developer: ignore app/, lib
 
 | You | Claude |
 |---|---|
-| **Answer a few quick questions** (about a minute; each has an example or a default) | Asks your first name, how many profiles, who never to contact (and, for your own business, what you sell and who your ideal client is). Everything else it works out itself. |
+| **Answer a short interview** (each question has a recommended answer; say "yes" to accept) | Asks about your niche, who you want to reach, the problem you solve, who to skip, how many profiles, and whether to do the full run or only part. Reads it back for your OK. |
 | **Sign in to Instagram** in Chrome | Checks it worked, asks a few quick questions (each with a recommended answer; say "yes" to accept) |
 | **Connect Apify** (required): one click, then sign in. No key to copy. | Uses it to search Instagram for prospects. [Apify's free plan](https://docs.apify.com/integrations/mcp) includes about $5 a month. |
 | **Connect Google Sheets** (optional for your own business; **required for the INFYUM team**, using the Google account the team Sheet was shared with): one click, then sign in | Keeps your lead list in a Google Sheet in your own Drive, so nothing is ever lost |
 | Tell it **how many profiles** (for example "do 7 profiles") | Finds them, checks each one against your rules itself, warms them up, then writes a fresh first message for each. No list to approve. |
 | Say **"schedule"** when you're happy | Sets up Claude's **scheduled tasks** so it keeps finding and messaging new prospects every day |
 
-It is a few minutes the first time. **Claude asks its few setup questions once, in one message, at the start.** After that you just talk to it, and it only comes back to you for anything unexpected. It never asks about a like, a comment or a message: it writes and sends those itself.
+It is a few minutes the first time. **Claude starts with a short client interview, once** (your niche, who you want to reach, the problem you solve, who to skip, how many profiles, and whether to do the full run or only part). After that you just talk to it, and it only comes back to you for anything unexpected. It never asks about a like, a comment or a message: it writes and sends those itself.
 
 ---
 
