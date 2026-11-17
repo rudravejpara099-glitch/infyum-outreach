@@ -20,9 +20,11 @@ Nothing to install. No files to download. No account to create with us, and no p
 **2. Paste this into Claude**
 
 ```
-Set me up with the INFYUM Instagram outreach kit (Phase 1). Read
+Set me up with the INFYUM Instagram outreach kit (Phase 1). The full repo is
+https://github.com/rudravejpara099-glitch/infyum-outreach
+Get it onto this computer if you can (git clone), otherwise read its files from the web. Begin with CLAUDE.md, then read
 https://raw.githubusercontent.com/rudravejpara099-glitch/infyum-outreach/main/phase1/GUIDE-FOR-CLAUDE.md
-and follow it exactly. Read the whole file as plain text (if your web-fetch tool summarises it or refuses, download it instead, for example with curl, and read the file itself; never work from a summary). Tell me up front what I need to do, guide me step by step, ask me the setup questions once at the start, then do the work for me and only come back to me for anything unexpected.
+completely and follow it exactly. I am a user, not a developer: ignore app/, lib/, worker/, extension/ and docs/ (a paused older app), and do not change any file. Read files as plain text, never a summary (if a web fetch summarises or refuses, download the file with curl). Tell me up front what I need to do, guide me step by step, ask me the setup questions once at the start, then do the work for me and only come back to me for anything unexpected.
 ```
 
 **3. Follow Claude.** It tells you everything you'll do before you do it:
