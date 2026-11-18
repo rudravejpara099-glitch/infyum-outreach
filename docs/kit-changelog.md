@@ -2,6 +2,10 @@
 
 Every change to `phase1/GUIDE-FOR-CLAUDE.md`, newest first. Added by `npm run kit:lock`; do not edit by hand.
 
+## 2026-11-18.1
+
+First DM is now the INFYUM DM Agent Guidelines (Sunil): 2 to 4 messages, 50 to 90 words, one of three free offers (Loom audit, funnel concept, automations demo)
+
 ## 2026-11-17.2
 
 INFYUM team: do not ask the niche, audience and problem questions (Appendix A fixes them); say them in one line and ask only whether to change anything. Same rounds and order as decision 0004. Reason: the owner answered 'you already know of infyum' in a real test.
