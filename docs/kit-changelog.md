@@ -2,6 +2,10 @@
 
 Every change to `phase1/GUIDE-FOR-CLAUDE.md`, newest first. Added by `npm run kit:lock`; do not edit by hand.
 
+## 2026-11-19.6
+
+DM section is the document's own text word for word, plus three offers and name inside the message
+
 ## 2026-11-19.5
 
 DM section back to the document: name and company inside the message, no sign-off line; three offers; quality bar removed
