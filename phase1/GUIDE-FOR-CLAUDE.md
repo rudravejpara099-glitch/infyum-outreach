@@ -276,7 +276,7 @@ Still true, always:
 
 **About the company, the sender and the offer.** INFYUM builds high-converting funnels and automation systems for businesses: funnel design, landing pages and lead capture, and automated lead nurturing and follow-up. The result for the client is a business that scales, stops relying on manual follow-up, and depends less on the founder. **Do not describe INFYUM with that wording in the DM.** Coaches and consultants think in their own problems, such as "my calendar isn't full", "leads ghost me", or "I'm stuck doing follow-ups myself". Name their problem in their words and say what would change for them. Mention funnels or automation only lightly, in plain terms.
 - **Sender:** the user running the kit. Sign off with the user's first name and the company, and vary the format (for example "Name, Company", "Name | Company", or just "Name").
-- **Offer:** a free 2-minute Loom audit of their funnel or page, or a free idea for what to improve or automate. Pick whichever fits the prospect, and offer it softly as a question ("Want me to show you?").
+- **Offer** (three, pick whichever fits the prospect): (1) a free 2-minute Loom audit of their funnel or page; (2) an explanation of where we can add specific funnel-related automations into their current funnel or a future funnel; (3) a free funnel concept designed for them. Offer it softly as a question ("Want me to show you?").
 - **Tone:** casual and friendly, like one business owner talking to another.
 
 **Who we target.** Only **US-based coaches and consultants.** Assume the prospect is in the US unless the profile clearly shows otherwise (the bio, post location tags, currency, or a stated move abroad). If the location is unclear, treat the prospect as US-based, write the DM, and add "location unconfirmed, assumed US" under Flags.
@@ -302,7 +302,7 @@ Still true, always:
 - **Match their voice.** Read how they write and speak (blunt, warm, faith-based, playful, professional) and sound like someone they would talk to.
 - **Use one specific detail from their account** so it is clear the sender looked.
 - **Say what you noticed in plain words, then ask one easy question** about their business, or offer to show something. Describe what would change for them, not how the funnel or automation works.
-- **Offer softly.** The free 2-minute Loom audit or free idea is offered as a question, never as a demand or a pitch.
+- **Offer softly.** The offer (Loom audit, where automations fit into their funnel, or a free funnel concept) is offered as a question, never as a demand or a pitch.
 - **Keep it short.** About **50 to 90 words**, easy to read on a phone.
 - **Avoid repeating yourself across DMs.** Do not reuse the same opener, the same compliment-then-question shape, or the same sign-off.
 
@@ -312,7 +312,7 @@ Still true, always:
 
 **Honesty rules.** Never invent results, numbers, client stories or case studies. None have been provided, so make no proof claims: rely on a specific detail from the prospect's profile and an easy question. Only state what you actually saw on the profile or the link-in-bio page; if you could not see something, do not claim it. If the data is thin (for example no posts were visible), say so under Flags and keep the DM to what you did see.
 
-**Output for each profile.** For a prospect who is a fit, produce these parts in this order (show them in your report to the user): (1) **Profile:** one line with their name, what they do, follower count, and location (confirmed, or assumed US); (2) **Why this angle:** two to four short lines on what you noticed and the gap you chose; (3) **First DM:** ready to send; (4) **Follow-up:** only when it adds something new; (5) **Flags:** only when needed, for example "location unconfirmed, assumed US" or "limited data visible". For a prospect who is not a fit, return "SKIP" and a one-line reason, and nothing else. In the Sheet: the First DM goes in `dm_text`; the rest goes in `notes` as `angle: ...`, `offer: loom` or `offer: free idea`, `flags: ...` and `followup draft: ...`.
+**Output for each profile.** For a prospect who is a fit, produce these parts in this order (show them in your report to the user): (1) **Profile:** one line with their name, what they do, follower count, and location (confirmed, or assumed US); (2) **Why this angle:** two to four short lines on what you noticed and the gap you chose; (3) **First DM:** ready to send; (4) **Follow-up:** only when it adds something new; (5) **Flags:** only when needed, for example "location unconfirmed, assumed US" or "limited data visible". For a prospect who is not a fit, return "SKIP" and a one-line reason, and nothing else. In the Sheet: the First DM goes in `dm_text`; the rest goes in `notes` as `angle: ...`, `offer: loom`, `offer: automations` or `offer: funnel concept`, `flags: ...` and `followup draft: ...`.
 
 **The test (silent, every time).** Read the DM once as the prospect. Does it make sense? Would a real person who actually looked at this account send it? If not, rewrite it. The user is not asked.
 

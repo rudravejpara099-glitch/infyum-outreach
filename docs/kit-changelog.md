@@ -2,6 +2,10 @@
 
 Every change to `phase1/GUIDE-FOR-CLAUDE.md`, newest first. Added by `npm run kit:lock`; do not edit by hand.
 
+## 2026-11-19.3
+
+DM offers: Loom audit, where funnel automations fit, or a free funnel concept (replaces 'free idea')
+
 ## 2026-11-19.2
 
 Wording: first message is one DM
