@@ -326,6 +326,7 @@ Every DM must be customized to the one prospect. Follow these rules:
 - **Match their voice.** Read how they write and speak (blunt, warm, faith-based, playful, professional) and sound like someone they would talk to.
 - **Use one specific detail from their account** so it is clear the sender looked. Say what you noticed in plain words, then ask one easy question about their business, or offer to show something. Describe what would change for them, not how the funnel or automation works.
 - **Offer softly.** The offer is offered as a question, never as a demand or a pitch.
+- **Split it into 3 to 4 short paragraphs** (blank line between them, each 1 to 2 sentences), still sent as **one message**. For example: an opening line about something specific of theirs; what you noticed; the idea or what would change for them; the offer as a question, with your name and INFYUM in plain words inside it.
 - **Keep it short.** About 50 to 90 words, easy to read on a phone.
 - **Avoid repeating yourself across DMs.** Do not reuse the same opener, the same compliment-then-question shape, or the same way of introducing yourself.
 
