@@ -237,7 +237,7 @@ Log only what really happened.
 | Like a post | 1 like |
 | Comment on a post | 1 comment |
 | Like a story frame, emoji reaction on a story, answer a story poll, quiz or slider | 1 like each |
-| First message (all its parts together) | 1 DM |
+| First message | 1 DM |
 
 **Never reply to a story with text.** A story reply is a message, and it would bypass the first-message rules. Reacting with an emoji is fine.
 
@@ -356,7 +356,7 @@ For a new Sheet (own business), create these tabs with these columns and put the
 - **`fit`:** High, Medium, Low. **`warmup_status`:** not_started, in_progress, done, partial. **`niche`:** a short phrase. **`source`:** apify, followers of @name, commenters of @name, hashtag, manual.
 - **`skip_reason`:** a short phrase: private, restricted profile, under min followers, over max followers, outside market, no message button, dms closed, connected to team, competitor or agency, big brand, wrong niche, inactive, low engagement, cannot pay, duplicate, already contacted, dropped by user, not found.
 - **`notes`:** `funnel: …` for the funnel note; `do not contact` on a Skipped row means nobody ever touches that account (team accounts, people who asked to stop, earlier outreach); `duplicate`; anything useful.
-- **Activity Log `action`:** found, qualified, skipped, follow, like (story likes and reactions too), comment, dm (one line per first message, all parts together), warning, pause, resume, note. **`result`:** confirmed, unconfirmed, failed, skipped. The `Team` "used" counts count every `follow`, `like`, `comment` and `dm` line of today by action name, whatever the result, so **never log a failure under those names**: use `note` with result `failed`.
+- **Activity Log `action`:** found, qualified, skipped, follow, like (story likes and reactions too), comment, dm (one line per first message), warning, pause, resume, note. **`result`:** confirmed, unconfirmed, failed, skipped. The `Team` "used" counts count every `follow`, `like`, `comment` and `dm` line of today by action name, whatever the result, so **never log a failure under those names**: use `note` with result `failed`.
 - **Dates and times** in `dm_sent_at`, `claimed_at`, `updated_at`: UTC, like `2026-10-29 14:05`.
 
 ### 5.4 Writing safely

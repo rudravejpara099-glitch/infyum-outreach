@@ -2,6 +2,10 @@
 
 Every change to `phase1/GUIDE-FOR-CLAUDE.md`, newest first. Added by `npm run kit:lock`; do not edit by hand.
 
+## 2026-11-19.2
+
+Wording: first message is one DM
+
 ## 2026-11-19.1
 
 First DM rebuilt from the INFYUM DM Agent Guidelines document only: one 50 to 90 word DM, Loom audit or free idea, follow-up drafted not sent
