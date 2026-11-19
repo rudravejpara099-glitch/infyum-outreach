@@ -2,6 +2,10 @@
 
 Every change to `phase1/GUIDE-FOR-CLAUDE.md`, newest first. Added by `npm run kit:lock`; do not edit by hand.
 
+## 2026-11-19.4
+
+DM section: three offers with when-to-use, a quality bar, and the five reference DMs from the document (names removed)
+
 ## 2026-11-19.3
 
 DM offers: Loom audit, where funnel automations fit, or a free funnel concept (replaces 'free idea')
